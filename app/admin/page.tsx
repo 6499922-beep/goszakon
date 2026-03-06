@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 const TAG_OPTIONS = [
   "Национальный режим",
@@ -13,7 +14,33 @@ const TAG_OPTIONS = [
   "Судебная практика",
 ];
 
+const ADMIN_KEY = "goszakon2026";
+
 export default function AdminPage() {
+  const searchParams = useSearchParams();
+  const key = searchParams.get("key");
+
+  if (key !== ADMIN_KEY) {
+    return (
+      <main
+        style={{
+          maxWidth: "700px",
+          margin: "80px auto",
+          padding: "40px",
+          fontFamily: "Arial",
+          textAlign: "center",
+        }}
+      >
+        <h1 style={{ fontSize: "36px", marginBottom: "20px" }}>
+          Доступ запрещён
+        </h1>
+        <p style={{ color: "#475569", fontSize: "18px", lineHeight: "1.7" }}>
+          Эта страница доступна только по специальной ссылке.
+        </p>
+      </main>
+    );
+  }
+
   const [id, setId] = useState("4");
   const [title, setTitle] = useState("");
   const [number, setNumber] = useState("");
@@ -286,24 +313,15 @@ export default function AdminPage() {
           </pre>
 
           <div style={{ display: "flex", gap: "12px", marginTop: "16px", flexWrap: "wrap" }}>
-            <button
-              onClick={copyToClipboard}
-              style={primaryButton}
-            >
+            <button onClick={copyToClipboard} style={primaryButton}>
               Скопировать кейс
             </button>
 
-            <button
-              onClick={clearForm}
-              style={secondaryButton}
-            >
+            <button onClick={clearForm} style={secondaryButton}>
               Очистить форму
             </button>
 
-            <button
-              onClick={nextCase}
-              style={secondaryButton}
-            >
+            <button onClick={nextCase} style={secondaryButton}>
               Следующий кейс
             </button>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 const TAG_OPTIONS = [
@@ -17,6 +17,14 @@ const TAG_OPTIONS = [
 const ADMIN_KEY = "goszakon2026";
 
 export default function AdminPage() {
+  return (
+    <Suspense fallback={<AdminLoading />}>
+      <AdminPageContent />
+    </Suspense>
+  );
+}
+
+function AdminPageContent() {
   const searchParams = useSearchParams();
   const key = searchParams.get("key");
 
@@ -312,7 +320,14 @@ export default function AdminPage() {
             {generatedCase}
           </pre>
 
-          <div style={{ display: "flex", gap: "12px", marginTop: "16px", flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              marginTop: "16px",
+              flexWrap: "wrap",
+            }}
+          >
             <button onClick={copyToClipboard} style={primaryButton}>
               Скопировать кейс
             </button>
@@ -328,10 +343,16 @@ export default function AdminPage() {
 
           <div style={{ marginTop: "24px", color: "#475569", lineHeight: "1.7" }}>
             <p>1. Заполните форму.</p>
-            <p>2. Нажмите <b>Скопировать кейс</b>.</p>
-            <p>3. Откройте <b>app/data/cases.ts</b>.</p>
+            <p>
+              2. Нажмите <b>Скопировать кейс</b>.
+            </p>
+            <p>
+              3. Откройте <b>app/data/cases.ts</b>.
+            </p>
             <p>4. Вставьте новый объект в массив кейсов.</p>
-            <p>5. Положите PDF в <b>public/docs</b>.</p>
+            <p>
+              5. Положите PDF в <b>public/docs</b>.
+            </p>
           </div>
         </div>
       </div>
@@ -339,11 +360,27 @@ export default function AdminPage() {
   );
 }
 
+function AdminLoading() {
+  return (
+    <main
+      style={{
+        maxWidth: "700px",
+        margin: "80px auto",
+        padding: "40px",
+        fontFamily: "Arial",
+        textAlign: "center",
+      }}
+    >
+      <h1 style={{ fontSize: "32px", marginBottom: "20px" }}>Загрузка...</h1>
+      <p style={{ color: "#475569", fontSize: "18px", lineHeight: "1.7" }}>
+        Подготавливаем админку GOSZAKON.
+      </p>
+    </main>
+  );
+}
+
 function escapeString(value: string) {
-  return value
-    .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, " ");
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, " ");
 }
 
 const primaryButton: React.CSSProperties = {

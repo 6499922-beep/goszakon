@@ -1,178 +1,334 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { SITE_CONTACTS } from "@/lib/site-config";
 
 export const metadata: Metadata = {
-  title: "GOSZAKON — практика жалоб в ФАС по 223-ФЗ",
+  title: "GOSZAKON — практика ФАС и защита интересов в закупках",
   description:
-    "Экспертный портал по практике жалоб в ФАС по 223-ФЗ. Реальные кейсы, защита интересов поставщиков, анализ закупок.",
+    "Практика ФАС, РНП, нарушения в закупках, аналитика закупочных споров, услуги для поставщиков и заказчиков, судебная защита и правовая помощь в закупках.",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
+  const navigation = [
+    { title: "Главная", href: "/" },
+    { title: "Практика ФАС", href: "/cases" },
+    { title: "Нарушения", href: "/narusheniya" },
+    { title: "РНП", href: "/rnp" },
+    { title: "Аналитика", href: "/analitika" },
+    { title: "Услуги", href: "/uslugi" },
+    { title: "Заказчикам", href: "/zakazchikam" },
+    { title: "Судебная защита", href: "/sudebnaya-zashita-v-zakupkah" },
+    { title: "О проекте", href: "/o-proekte" },
+  ];
+
+  const footerLinks = [
+    {
+      title: "Практика",
+      links: [
+        { title: "Практика ФАС", href: "/cases" },
+        { title: "Нарушения", href: "/narusheniya" },
+        { title: "РНП", href: "/rnp" },
+        { title: "Аналитика", href: "/analitika" },
+      ],
+    },
+    {
+      title: "Услуги",
+      links: [
+        { title: "Услуги поставщикам", href: "/uslugi" },
+        { title: "Не платит заказчик", href: "/neoplata-po-goskontraktu" },
+        { title: "Заказчикам", href: "/zakazchikam" },
+        { title: "Судебная защита", href: "/sudebnaya-zashita-v-zakupkah" },
+        { title: "О проекте", href: "/o-proekte" },
+      ],
+    },
+  ];
+
   return (
     <html lang="ru">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-slate-900`}
-      >
-        <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-            <Link href="/" className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#081a4b] shadow-sm">
-                <span className="text-sm font-bold tracking-[0.24em] text-white">
-                  GZ
-                </span>
-              </div>
+      <body className="min-h-screen bg-white text-slate-900 antialiased">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(m,e,t,r,i,k,a){
+                  m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+                  m[i].l=1*new Date();
+                  for (var j = 0; j < document.scripts.length; j++) {
+                    if (document.scripts[j].src === r) { return; }
+                  }
+                  k=e.createElement(t),a=e.getElementsByTagName(t)[0],
+                  k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+              })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js?id=107419495", "ym");
 
-              <div>
-                <div className="text-lg font-bold tracking-tight text-[#081a4b]">
-                  GOSZAKON
-                </div>
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                  Практика жалоб в ФАС по 223-ФЗ
-                </div>
-              </div>
-            </Link>
+              ym(107419495, "init", {
+                ssr:true,
+                webvisor:true,
+                clickmap:true,
+                trackLinks:true,
+                accurateTrackBounce:true
+              });
+            `,
+          }}
+        />
 
-            <nav className="hidden items-center gap-6 text-sm font-medium lg:flex">
-              <Link href="/cases" className="text-slate-700 hover:text-[#081a4b]">
-                Практика ФАС
-              </Link>
-
-              <Link href="/o-proekte" className="text-slate-700 hover:text-[#081a4b]">
-                О проекте
-              </Link>
-
-              <Link
-                href="/narusheniya-tovarnyj-znak"
-                className="text-slate-700 hover:text-[#081a4b]"
-              >
-                Нарушения
-              </Link>
-
-              <Link
-                href="/uslugi/skrytaya-zhaloba"
-                className="text-slate-700 hover:text-[#081a4b]"
-              >
-                Услуги
-              </Link>
-
-              <Link href="/#request" className="text-slate-700 hover:text-[#081a4b]">
-                Проверить закупку
-              </Link>
-            </nav>
-
-            <div className="hidden items-center gap-5 lg:flex">
-              <a
-                href="tel:84956680706"
-                className="text-sm font-semibold text-[#081a4b]"
-              >
-                8 (495) 668-07-06
-              </a>
-
-              <a
-                href="mailto:info@goszakon.ru"
-                className="text-sm text-slate-600 hover:text-[#081a4b]"
-              >
-                info@goszakon.ru
-              </a>
-
-              <a
-                href="/#request"
-                className="rounded-2xl bg-[#081a4b] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d2568]"
-              >
-                Отправить закупку
-              </a>
-            </div>
+        <noscript>
+          <div>
+            <img
+              src="https://mc.yandex.ru/watch/107419495"
+              style={{ position: "absolute", left: "-9999px" }}
+              alt=""
+            />
           </div>
-        </header>
+        </noscript>
 
-        {children}
-
-        <footer className="border-t border-slate-200 bg-white">
-          <div className="mx-auto max-w-7xl px-6 py-10">
-            <div className="grid gap-8 md:grid-cols-2">
-              <div>
-                <Link href="/" className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#081a4b]">
-                    <span className="text-xs font-bold tracking-[0.22em] text-white">
-                      GZ
-                    </span>
+        <div className="flex min-h-screen flex-col">
+          <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+            <div className="mx-auto max-w-7xl px-6">
+              <div className="flex items-center justify-between gap-6 py-5">
+                <Link href="/" className="flex min-w-0 items-center gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#081a4b] text-base font-bold text-white">
+                    GZ
                   </div>
 
-                  <div>
-                    <div className="text-lg font-bold text-[#081a4b]">
+                  <div className="min-w-0">
+                    <div className="text-3xl font-bold tracking-tight text-[#081a4b]">
                       GOSZAKON
                     </div>
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                      Практика жалоб в ФАС
+                    <div className="mt-1 text-sm text-slate-500">
+                      Правовая помощь в закупках
                     </div>
                   </div>
                 </Link>
 
-                <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600">
-                  Экспертный портал по практике жалоб в ФАС по 223-ФЗ, защите
-                  интересов поставщиков и анализу закупочной документации.
-                </p>
+                <div className="hidden items-center gap-5 xl:flex">
+                  <div className="text-right">
+                    <a
+                      href={SITE_CONTACTS.phoneHref}
+                      className="whitespace-nowrap text-2xl font-bold tracking-tight text-[#081a4b] transition hover:opacity-80"
+                    >
+                      {SITE_CONTACTS.phoneDisplay}
+                    </a>
+
+                    <div className="mt-1 text-sm text-slate-500">
+                      <a
+                        href={SITE_CONTACTS.emailHref}
+                        className="transition hover:text-[#081a4b]"
+                      >
+                        {SITE_CONTACTS.email}
+                      </a>
+                    </div>
+
+                    <div className="mt-1 text-sm text-slate-500">
+                      <a
+                        href={SITE_CONTACTS.telegramUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="transition hover:text-[#081a4b]"
+                      >
+                        Telegram
+                      </a>
+                    </div>
+                  </div>
+
+                  <Link
+                    href="/cases"
+                    className="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-[#081a4b] px-6 py-3 text-base font-semibold text-white transition hover:bg-[#0d2568]"
+                  >
+                    Практика ФАС
+                  </Link>
+                </div>
               </div>
 
-              <div className="grid gap-3 text-sm text-slate-600 md:justify-end">
-                <Link href="/cases" className="hover:text-[#081a4b]">
-                  Практика ФАС
-                </Link>
+              <div className="hidden border-t border-slate-100 xl:block">
+                <nav className="flex flex-wrap justify-center gap-x-10 gap-y-3 py-5">
+                  {navigation.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="text-[15px] font-medium text-slate-700 transition hover:text-[#081a4b]"
+                    >
+                      {item.title}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
 
-                <Link href="/o-proekte" className="hover:text-[#081a4b]">
-                  О проекте
-                </Link>
+              <div className="border-t border-slate-100 xl:hidden">
+                <div className="flex gap-5 overflow-x-auto py-4">
+                  {navigation.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="whitespace-nowrap text-sm font-medium text-slate-700"
+                    >
+                      {item.title}
+                    </Link>
+                  ))}
+                </div>
 
-                <Link
-                  href="/narusheniya-tovarnyj-znak"
-                  className="hover:text-[#081a4b]"
-                >
-                  Нарушения
-                </Link>
+                <div className="flex flex-wrap items-center gap-3 pb-4">
+                  <a
+                    href={SITE_CONTACTS.phoneHref}
+                    className="whitespace-nowrap text-lg font-bold text-[#081a4b]"
+                  >
+                    {SITE_CONTACTS.phoneDisplay}
+                  </a>
 
-                <Link
-                  href="/uslugi/skrytaya-zhaloba"
-                  className="hover:text-[#081a4b]"
-                >
-                  Защита поставщика
-                </Link>
+                  <a
+                    href={SITE_CONTACTS.emailHref}
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    {SITE_CONTACTS.email}
+                  </a>
 
-                <a href="tel:84956680706" className="hover:text-[#081a4b]">
-                  8 (495) 668-07-06
-                </a>
+                  <a
+                    href={SITE_CONTACTS.telegramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    Telegram
+                  </a>
 
-                <a href="mailto:info@goszakon.ru" className="hover:text-[#081a4b]">
-                  info@goszakon.ru
-                </a>
+                  <Link
+                    href="/cases"
+                    className="rounded-2xl bg-[#081a4b] px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    Практика ФАС
+                  </Link>
+                </div>
               </div>
             </div>
+          </header>
 
-            <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm leading-7 text-slate-600">
-              <div className="mb-2 font-semibold text-slate-900">
-                Дисклеймер
+          <main className="flex-1">{children}</main>
+
+          <footer className="border-t border-slate-200 bg-slate-50">
+            <div className="mx-auto max-w-7xl px-6 py-16">
+              <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr]">
+                <div>
+                  <Link href="/" className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#081a4b] text-sm font-bold text-white">
+                      GZ
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold tracking-tight text-[#081a4b]">
+                        GOSZAKON
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        Правовая помощь в закупках
+                      </div>
+                    </div>
+                  </Link>
+
+                  <p className="mt-5 max-w-2xl text-base leading-8 text-slate-700">
+                    Экспертный сайт о практике ФАС, РНП, нарушениях в закупках,
+                    аналитике закупочных споров, судебной защите и правовой помощи
+                    поставщикам и заказчикам.
+                  </p>
+
+                  <div className="mt-4 text-sm font-medium text-slate-500">
+                    Практика ФАС • Нарушения • РНП • Аналитика • Судебная защита
+                  </div>
+
+                  <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-5">
+                    <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Контакты
+                    </div>
+
+                    <a
+                      href={SITE_CONTACTS.phoneHref}
+                      className="mt-3 block text-2xl font-bold tracking-tight text-[#081a4b]"
+                    >
+                      {SITE_CONTACTS.phoneDisplay}
+                    </a>
+
+                    <a
+                      href={SITE_CONTACTS.emailHref}
+                      className="mt-3 block text-base font-medium text-slate-700 transition hover:text-[#081a4b]"
+                    >
+                      {SITE_CONTACTS.email}
+                    </a>
+
+                    <a
+                      href={SITE_CONTACTS.telegramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 inline-flex rounded-2xl bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                    >
+                      Telegram
+                    </a>
+
+                    <div className="mt-3 text-sm text-slate-500">
+                      Для связи используйте телефон, электронную почту или Telegram.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-8 sm:grid-cols-3">
+                  {footerLinks.map((group) => (
+                    <div key={group.title}>
+                      <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+                        {group.title}
+                      </div>
+
+                      <div className="mt-4 flex flex-col gap-3">
+                        {group.links.map((item) => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className="text-sm leading-7 text-slate-700 transition hover:text-[#081a4b]"
+                          >
+                            {item.title}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  <div>
+                    <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Связь
+                    </div>
+
+                    <div className="mt-4 flex flex-col gap-3 text-sm leading-7 text-slate-700">
+                      <a
+                        href={SITE_CONTACTS.phoneHref}
+                        className="transition hover:text-[#081a4b]"
+                      >
+                        {SITE_CONTACTS.phoneDisplay}
+                      </a>
+                      <a
+                        href={SITE_CONTACTS.emailHref}
+                        className="transition hover:text-[#081a4b]"
+                      >
+                        {SITE_CONTACTS.email}
+                      </a>
+                      <a
+                        href={SITE_CONTACTS.telegramUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="transition hover:text-[#081a4b]"
+                      >
+                        Telegram
+                      </a>
+                    </div>
+                  </div>
+                </div>
               </div>
-              Информация на сайте носит информационный характер и основана на
-              практике рассмотрения жалоб в ФАС России. Публикуемые материалы
-              не являются индивидуальной юридической консультацией.
+
+              <div className="mt-12 border-t border-slate-200 pt-6 text-sm text-slate-500">
+                © {new Date().getFullYear()} GOSZAKON. Практика ФАС и защита
+                интересов в закупках. При использовании материалов сайта активная
+                ссылка на источник обязательна.
+              </div>
             </div>
-          </div>
-        </footer>
+          </footer>
+        </div>
       </body>
     </html>
   );

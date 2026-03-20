@@ -1,284 +1,232 @@
 import Link from "next/link";
+import { SITE_CONTACTS } from "@/lib/site-config";
 
-export default function AboutPage() {
-  const principles = [
+export default function AboutUsPage() {
+  const stats = [
+    { value: "10+ лет", label: "на рынке государственного заказа" },
+    { value: "6000+", label: "исполненных тендеров и контрактов" },
+    { value: "1000+", label: "судебных заседаний в личной практике" },
+    { value: "400+", label: "заседаний ФАС в личной практике" },
+  ];
+
+  const strengths = [
     {
-      title: "Ежедневная практика в ФАС",
-      text: "Основа проекта — постоянная работа с жалобами по 223-ФЗ, участие в заседаниях и анализ реальных закупок, а не пересказ общих норм.",
+      title: "Мы знаем закупки изнутри",
+      text: "Наша команда выросла из реальной практики поставщика. Мы понимаем систему закупок не только как юристы, но и как участники рынка.",
     },
     {
-      title: "Узкая специализация",
-      text: "GOSZAKON сфокусирован на защите интересов поставщиков именно в закупках по 223-ФЗ, что позволяет глубже понимать специфику споров.",
+      title: "Понимаем логику поставщика",
+      text: "Мы знаем, как выглядит закупочный конфликт на практике: риски, сроки, давление и экономика контракта.",
     },
     {
-      title: "Практический подход",
-      text: "Для нас важна не формальная публикация кейсов, а прикладная польза: понять перспективу жалобы, выстроить позицию и довести дело до результата.",
+      title: "Работаем с реальными спорами",
+      text: "Практика ФАС и судов для нас — не теория, а путь, который мы сами проходили в реальных закупочных конфликтах.",
     },
     {
-      title: "Доверие через реальные кейсы",
-      text: "Сайт строится вокруг практики: категории нарушений, позиции сторон, решения ФАС и конкретные результаты по каждому делу.",
+      title: "Ориентируемся на результат",
+      text: "Наша задача — не просто выявить нарушение, а помочь выбрать стратегию, которая даст реальный результат.",
     },
   ];
 
-  const focus = [
-    "Жалобы в ФАС по 223-ФЗ",
-    "Проверка закупки и оценка перспективы обращения",
-    "Защита поставщиков при ограничении конкуренции",
-    "Споры по товарным знакам и документации",
-    "Вопросы национального режима",
-    "Неоплата и дальнейшее сопровождение спора",
+  const directions = [
+    "жалобы в ФАС по закупкам;",
+    "споры по документации и ограничению конкуренции;",
+    "вопросы РНП и защита поставщика;",
+    "судебное оспаривание решений ФАС;",
+    "споры по исполнению и оплате контрактов;",
+    "правовая помощь поставщикам и заказчикам.",
+  ];
+
+  const steps = [
+    {
+      title: "1. Анализ ситуации",
+      text: "Изучаем закупку, документацию, контракт, переписку и документы, чтобы понять реальную картину спора.",
+    },
+    {
+      title: "2. Оценка перспективы",
+      text: "Определяем, есть ли основания для жалобы в ФАС, претензии, переговоров или судебной защиты.",
+    },
+    {
+      title: "3. Выбор стратегии",
+      text: "Понимаем, что будет эффективнее: переговоры, жалоба в ФАС, претензия или судебное взыскание.",
+    },
+    {
+      title: "4. Подготовка позиции",
+      text: "Формируем аргументацию, документы и правовую позицию для защиты интересов клиента.",
+    },
+    {
+      title: "5. Сопровождение до результата",
+      text: "Представляем позицию в ФАС, суде и помогаем довести ситуацию до практического результата.",
+    },
   ];
 
   return (
     <main className="min-h-screen bg-white text-slate-900">
       <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
+        <div className="mx-auto grid max-w-7xl gap-12 px-6 py-20 lg:grid-cols-[1.05fr_0.95fr]">
           <div>
             <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
-              О проекте GOSZAKON
+              О нас
             </div>
 
-            <h1 className="mt-5 max-w-4xl text-5xl font-bold tracking-tight text-[#081a4b] md:text-6xl">
-              Экспертный портал по защите интересов поставщиков в ФАС по 223-ФЗ
+            <h1 className="mt-6 max-w-5xl text-5xl font-bold tracking-tight text-[#081a4b] md:text-6xl">
+              GOSZAKON — проект, выросший из реальной практики в сфере закупок
             </h1>
 
-            <p className="mt-6 max-w-3xl text-lg leading-9 text-slate-700">
-              GOSZAKON создан как практическая база и рабочий инструмент для
-              поставщиков, которым важно быстро понять перспективу жалобы,
-              оценить нарушение и получить юридическое сопровождение по делу.
+            <p className="mt-6 text-lg leading-9 text-slate-700">
+              Мы — практикующие участники рынка государственного заказа, которые более
+              10 лет работают в сфере закупок и знают систему не только по нормативной
+              базе, но и по собственному опыту участия в процедурах и исполнении контрактов.
             </p>
 
-            <p className="mt-4 max-w-3xl text-lg leading-9 text-slate-700">
-              Проект вырос из реальной ежедневной практики: участия в заседаниях
-              ФАС, анализа закупочной документации, подготовки жалоб и защиты
-              интересов поставщиков в спорах по 223-ФЗ.
+            <p className="mt-4 text-lg leading-9 text-slate-700">
+              За это время нами исполнено более 6000 тендеров и контрактов. Работая
+              в закупках, мы неоднократно сталкивались с ситуациями ограничения
+              конкуренции, спорной документации и конфликтов между заказчиками
+              и поставщиками.
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/cases"
-                className="inline-flex items-center justify-center rounded-2xl bg-[#081a4b] px-6 py-4 text-base font-semibold text-white transition hover:bg-[#0d2568]"
+            <div className="mt-8 flex flex-wrap gap-4">
+              <a
+                href={SITE_CONTACTS.phoneHref}
+                className="rounded-2xl bg-[#081a4b] px-6 py-4 font-semibold text-white transition hover:bg-[#0d2568]"
               >
-                Смотреть практику ФАС
-              </Link>
+                {SITE_CONTACTS.phoneDisplay}
+              </a>
 
-              <Link
-                href="/#request"
-                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-4 text-base font-semibold text-[#081a4b] transition hover:bg-slate-50"
+              <a
+                href={SITE_CONTACTS.emailHref}
+                className="rounded-2xl border border-slate-300 px-6 py-4 font-semibold transition hover:bg-slate-50"
               >
-                Проверить закупку
-              </Link>
+                {SITE_CONTACTS.email}
+              </a>
+
+              <a
+                href={SITE_CONTACTS.telegramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-2xl border border-slate-300 px-6 py-4 font-semibold transition hover:bg-slate-50"
+              >
+                Telegram
+              </a>
             </div>
           </div>
 
-          <div className="grid gap-5">
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm">
-              <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
-                Практика в цифрах
-              </div>
-
-              <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                  <div className="text-3xl font-bold tracking-tight text-[#081a4b]">
-                    3–5
-                  </div>
-                  <div className="mt-2 text-base text-slate-600">
-                    заседаний ФАС ежедневно
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                  <div className="text-3xl font-bold tracking-tight text-[#081a4b]">
-                    ≈ 50%
-                  </div>
-                  <div className="mt-2 text-base text-slate-600">
-                    жалоб признаются обоснованными
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                  <div className="text-3xl font-bold tracking-tight text-[#081a4b]">
-                    223-ФЗ
-                  </div>
-                  <div className="mt-2 text-base text-slate-600">
-                    ключевая специализация
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                  <div className="text-3xl font-bold tracking-tight text-[#081a4b]">
-                    50+
-                  </div>
-                  <div className="mt-2 text-base text-slate-600">
-                    кейсов уже в базе
-                  </div>
-                </div>
-              </div>
+          <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-8 shadow-sm">
+            <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
+              Правовая помощь в закупках
             </div>
 
-            <div className="rounded-3xl bg-[#081a4b] p-7 text-white shadow-sm">
-              <div className="text-sm uppercase tracking-[0.14em] text-white/60">
-                Зачем создан проект
+            <h2 className="mt-4 text-3xl font-bold tracking-tight text-[#081a4b]">
+              Почему нам доверяют
+            </h2>
+
+            <p className="mt-4 text-lg leading-9 text-slate-700">
+              Мы понимаем закупочный спор не как внешний наблюдатель, а как
+              участники рынка, которые сами проходили через закупочные конфликты
+              и судебные споры.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-[#081a4b] text-white">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {stats.map((item) => (
+              <div key={item.label} className="rounded-3xl bg-white/5 p-7">
+                <div className="text-4xl font-bold">{item.value}</div>
+                <div className="mt-3 text-sm text-white/80">{item.label}</div>
               </div>
-              <p className="mt-4 text-lg leading-9 text-white/90">
-                Мы создаём не формальный юридический сайт, а экспертный портал,
-                где каждая публикация, кейс и услуга опираются на реальную
-                практику рассмотрения жалоб в ФАС по 223-ФЗ.
-              </p>
-            </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <h2 className="text-4xl font-bold text-[#081a4b]">
+            Наш подход к закупочным спорам
+          </h2>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {strengths.map((item) => (
+              <div key={item.title} className="rounded-3xl border p-7">
+                <h3 className="text-xl font-semibold text-[#081a4b]">
+                  {item.title}
+                </h3>
+                <p className="mt-3 text-base text-slate-700">{item.text}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       <section className="border-b border-slate-200 bg-slate-50">
         <div className="mx-auto max-w-7xl px-6 py-20">
-          <div className="max-w-3xl">
-            <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
-              Как мы работаем
-            </div>
+          <h2 className="text-4xl font-bold text-[#081a4b]">Как мы работаем</h2>
 
-            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
-              Проект строится на реальной юридической работе, а не на абстрактной экспертизе
-            </h2>
-
-            <p className="mt-5 text-lg leading-9 text-slate-700">
-              Для поставщика важно не просто узнать, что закупка вызывает
-              сомнения, а понять, есть ли реальная перспектива обращения,
-              насколько сильна правовая позиция и что можно сделать для защиты
-              своих интересов.
-            </p>
-          </div>
-
-          <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {principles.map((item) => (
-              <div
-                key={item.title}
-                className="flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-7 shadow-sm"
-              >
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
-                  <div className="h-3 w-3 rounded-full bg-[#081a4b]" />
-                </div>
-
-                <h3 className="text-xl font-semibold leading-8 text-[#081a4b]">
+          <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-5">
+            {steps.map((item) => (
+              <div key={item.title} className="rounded-3xl bg-white p-7 shadow-sm">
+                <h3 className="text-xl font-semibold text-[#081a4b]">
                   {item.title}
                 </h3>
-                <p className="mt-3 text-base leading-8 text-slate-700">
-                  {item.text}
-                </p>
+                <p className="mt-3 text-base text-slate-700">{item.text}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-20 lg:grid-cols-[0.95fr_1.05fr]">
+      <section className="bg-white">
+        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-20 lg:grid-cols-2">
           <div>
-            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
-              Основные направления
-            </div>
-
-            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
-              На чём сфокусирован GOSZAKON
+            <h2 className="text-4xl font-bold text-[#081a4b]">
+              Основные направления работы
             </h2>
 
-            <p className="mt-5 text-lg leading-9 text-slate-700">
-              Портал ориентирован на прикладные вопросы, с которыми поставщики
-              сталкиваются в закупках по 223-ФЗ: нарушения документации,
-              ограничение конкуренции, товарные знаки, неоплата и правовая
-              защита при обращении в ФАС.
-            </p>
+            <ul className="mt-6 space-y-3 text-lg text-slate-700">
+              {directions.map((item) => (
+                <li key={item}>• {item}</li>
+              ))}
+            </ul>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            {focus.map((item) => (
-              <div
-                key={item}
-                className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm"
+          <div className="rounded-3xl bg-[#081a4b] p-8 text-white">
+            <h3 className="text-3xl font-bold">{SITE_CONTACTS.phoneDisplay}</h3>
+
+            <p className="mt-4 text-lg text-white/90">
+              Правовая помощь в закупках. Напишите нам в Telegram, на электронную
+              почту или просто позвоните.
+            </p>
+
+            <div className="mt-4 text-base text-white/80">
+              {SITE_CONTACTS.email}
+            </div>
+
+            <div className="mt-6 flex flex-col gap-4">
+              <a
+                href={SITE_CONTACTS.phoneHref}
+                className="rounded-2xl bg-white px-6 py-4 text-center font-semibold text-[#081a4b]"
               >
-                <div className="text-lg font-semibold leading-8 text-[#081a4b]">
-                  {item}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+                Позвонить
+              </a>
 
-      <section className="border-b border-slate-200 bg-slate-50">
-        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-20 lg:grid-cols-2">
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
-              Для кого полезен сайт
+              <a
+                href={SITE_CONTACTS.emailHref}
+                className="rounded-2xl border border-white/20 px-6 py-4 text-center font-semibold text-white transition hover:bg-white/10"
+              >
+                Написать на почту
+              </a>
+
+              <Link
+                href="/cases"
+                className="rounded-2xl border border-white/20 px-6 py-4 text-center font-semibold text-white transition hover:bg-white/10"
+              >
+                Смотреть практику ФАС
+              </Link>
             </div>
-
-            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b]">
-              Для поставщиков, которым нужна не теория, а результат
-            </h2>
-
-            <p className="mt-5 text-lg leading-9 text-slate-700">
-              GOSZAKON полезен тем, кто хочет проверить закупку до подачи
-              жалобы, понять перспективу обращения, разобраться в практике ФАС и
-              получить сопровождение по спорной ситуации.
-            </p>
-          </div>
-
-          <div className="rounded-3xl bg-[#081a4b] p-8 text-white shadow-sm">
-            <div className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm text-white/80">
-              Главный смысл проекта
-            </div>
-
-            <h2 className="mt-5 text-4xl font-bold tracking-tight">
-              Превратить практику в доверие и обращения
-            </h2>
-
-            <p className="mt-5 text-lg leading-9 text-white/90">
-              Мы развиваем сайт как экспертный портал, который помогает
-              поставщику увидеть реальную практику, понять качество нашей работы
-              и обратиться за юридическим сопровождением по своему делу.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-[#081a4b] text-white">
-        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-20 md:grid-cols-2">
-          <div>
-            <div className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm text-white/80">
-              Следующий шаг
-            </div>
-
-            <h2 className="mt-5 text-4xl font-bold tracking-tight">
-              Если у вас есть сомнение по закупке — направьте её на проверку
-            </h2>
-
-            <p className="mt-5 max-w-2xl text-lg leading-9 text-slate-200">
-              Мы оценим закупочную документацию, посмотрим перспективу жалобы и
-              определим, есть ли практический смысл в обращении в ФАС.
-            </p>
-          </div>
-
-          <div className="flex flex-col justify-center gap-4 rounded-3xl bg-white p-8 text-slate-900 shadow-2xl">
-            <a
-              href="tel:84956680706"
-              className="inline-flex items-center justify-center rounded-2xl bg-[#081a4b] px-6 py-4 text-base font-semibold text-white transition hover:bg-[#0d2568]"
-            >
-              Позвонить: 8 (495) 668-07-06
-            </a>
-
-            <a
-              href="mailto:info@goszakon.ru"
-              className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-4 text-base font-semibold text-[#081a4b] transition hover:bg-slate-50"
-            >
-              info@goszakon.ru
-            </a>
-
-            <Link
-              href="/#request"
-              className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-4 text-base font-semibold text-[#081a4b] transition hover:bg-slate-50"
-            >
-              Отправить закупку на проверку
-            </Link>
           </div>
         </div>
       </section>

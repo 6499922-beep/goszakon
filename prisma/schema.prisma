@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  cases       Case[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Case {
+  id                Int       @id @default(autoincrement())
+  slug              String    @unique
+  title             String
+  summary           String?
+  procurementNumber String?
+  region            String?
+  subject           String?
+  violation         String?
+  applicantPosition String?
+  decision          String?
+  result            String?
+  pdfUrl            String?
+  customerName      String?
+  customerInn       String?
+  customerKpp       String?
+  decisionDate      DateTime?
+  isFeatured        Boolean   @default(false)
+  published         Boolean   @default(true)
+  categoryId        Int?
+  category          Category? @relation(fields: [categoryId], references: [id])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([region])
+  @@index([violation])
+  @@index([result])
+  @@index([published])
+  @@index([isFeatured])
+  @@index([customerName])
+  @@index([customerInn])
+  @@index([customerKpp])
+  @@index([decisionDate])
+}
+
+model Service {
+  id               Int      @id @default(autoincrement())
+  title            String
+  slug             String   @unique
+  shortDescription String?
+  content          String?
+  published        Boolean  @default(true)
+  seoTitle         String?
+  seoDescription   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Page {
+  id             Int      @id @default(autoincrement())
+  title          String
+  slug           String   @unique
+  content        String?
+  published      Boolean  @default(true)
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Lead {
+  id              Int      @id @default(autoincrement())
+  procurementLink String?
+  problem         String?
+  phone           String?
+  email           String?
+  status          String   @default("new")
+  comment         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Admin {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum MaterialType {
+  ANALYTICS
+  FAS_PRACTICE
+  VIOLATIONS
+  CONTROVERSIAL
+  NONPAYMENT
+  RNP
+  CUSTOMERS
+  COMPLAINT
+  COURT
+}
+
+model Material {
+  id             Int          @id @default(autoincrement())
+  title          String
+  slug           String       @unique
+  type           MaterialType @default(ANALYTICS)
+  topic          String?
+  authority      String?
+  outcome        String?
+  caseNumber     String?
+  decisionDate   DateTime?
+  excerpt        String?
+  body           String       @db.Text
+  seoTitle       String?
+  seoDescription String?
+  pdfUrl         String?
+  sourceName     String?
+  isPublished    Boolean      @default(false)
+  isFeatured     Boolean      @default(false)
+  sortOrder      Int          @default(0)
+  publishedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([type])
+  @@index([topic])
+  @@index([authority])
+  @@index([outcome])
+  @@index([isPublished])
+  @@index([isFeatured])
+  @@index([decisionDate])
+  @@index([publishedAt])
+  @@index([updatedAt])
+  @@index([createdAt])
+}

@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16
+    container_name: goszakon-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: goszakon
+      POSTGRES_USER: goszakon
+      POSTGRES_PASSWORD: goszakon_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: goszakon-app
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "3001:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://goszakon:goszakon_password@db:5432/goszakon?schema=public
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: change_me
+      SESSION_SECRET: change_me_to_a_long_random_string
+      ADMIN_SESSION_SECRET: super-secret-change-this-very-long-string-123456789
+    volumes:
+      - pdf_data:/app/public/docs
+
+volumes:
+  postgres_data:
+  pdf_data:

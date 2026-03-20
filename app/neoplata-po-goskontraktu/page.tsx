@@ -33,13 +33,6 @@ export default function NonPaymentPage() {
               {SITE_CONTACTS.email}
             </a>
 
-            <a
-              href={SITE_CONTACTS.telegramUrl}
-              target="_blank"
-              className="rounded-2xl border border-slate-300 px-6 py-4 font-semibold text-[#081a4b]"
-            >
-              Telegram
-            </a>
           </div>
         </div>
       </section>
@@ -153,12 +146,6 @@ export default function NonPaymentPage() {
               Написать
             </a>
 
-            <a
-              href={SITE_CONTACTS.telegramUrl}
-              className="rounded-2xl border border-white/20 px-6 py-4 font-semibold text-white"
-            >
-              Telegram
-            </a>
           </div>
         </div>
       </section>

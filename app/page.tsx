@@ -108,14 +108,6 @@ export default async function HomePage() {
                   {SITE_CONTACTS.email}
                 </a>
 
-                <a
-                  href={SITE_CONTACTS.telegramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-base font-medium transition hover:text-[#081a4b]"
-                >
-                  Telegram
-                </a>
               </div>
             </div>
 

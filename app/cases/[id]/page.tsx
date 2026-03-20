@@ -436,15 +436,6 @@ export default async function CasePage({ params }: PageProps) {
 
                   <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                     <a
-                      href={SITE_CONTACTS.telegramUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center rounded-2xl bg-white px-6 py-4 text-base font-semibold text-[#081a4b] transition hover:bg-slate-100"
-                    >
-                      Написать в Telegram
-                    </a>
-
-                    <a
                       href={SITE_CONTACTS.emailHref}
                       className="inline-flex items-center justify-center rounded-2xl border border-white/20 px-6 py-4 text-base font-semibold text-white transition hover:bg-white/10"
                     >

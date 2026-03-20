@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { revalidatePath } from "next/cache";
+import { SITE_URL } from "@/lib/site-config";
 import {
   normalizeOptionalString,
   parseCaseDecisionDate,
@@ -11,7 +12,7 @@ import {
 } from "@/lib/case-admin";
 
 function buildRedirect(request: Request, path: string, error?: string) {
-  const url = new URL(path, request.url);
+  const url = new URL(path, SITE_URL);
   if (error) {
     url.searchParams.set("error", error);
   }
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
     revalidatePath("/cases");
     revalidatePath(`/cases/${created.id}-${created.slug}`);
 
-    return NextResponse.redirect(new URL("/admin/cases?created=1", request.url), 303);
+    return NextResponse.redirect(new URL("/admin/cases?created=1", SITE_URL), 303);
   } catch (error) {
     console.error(error);
 

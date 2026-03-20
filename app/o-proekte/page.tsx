@@ -101,14 +101,6 @@ export default function AboutUsPage() {
                 {SITE_CONTACTS.email}
               </a>
 
-              <a
-                href={SITE_CONTACTS.telegramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-2xl border border-slate-300 px-6 py-4 font-semibold transition hover:bg-slate-50"
-              >
-                Telegram
-              </a>
             </div>
           </div>
 
@@ -197,8 +189,8 @@ export default function AboutUsPage() {
             <h3 className="text-3xl font-bold">{SITE_CONTACTS.phoneDisplay}</h3>
 
             <p className="mt-4 text-lg text-white/90">
-              Правовая помощь в закупках. Напишите нам в Telegram, на электронную
-              почту или просто позвоните.
+              Правовая помощь в закупках. Напишите нам на электронную почту или
+              просто позвоните.
             </p>
 
             <div className="mt-4 text-base text-white/80">

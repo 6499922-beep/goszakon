@@ -122,16 +122,6 @@ export default function RootLayout({
                       </a>
                     </div>
 
-                    <div className="mt-1 text-sm text-slate-500">
-                      <a
-                        href={SITE_CONTACTS.telegramUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="transition hover:text-[#081a4b]"
-                      >
-                        Telegram
-                      </a>
-                    </div>
                   </div>
 
                   <Link
@@ -183,15 +173,6 @@ export default function RootLayout({
                     className="text-sm font-medium text-slate-700"
                   >
                     {SITE_CONTACTS.email}
-                  </a>
-
-                  <a
-                    href={SITE_CONTACTS.telegramUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-medium text-slate-700"
-                  >
-                    Telegram
                   </a>
 
                   <Link
@@ -254,17 +235,8 @@ export default function RootLayout({
                       {SITE_CONTACTS.email}
                     </a>
 
-                    <a
-                      href={SITE_CONTACTS.telegramUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 inline-flex rounded-2xl bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                    >
-                      Telegram
-                    </a>
-
                     <div className="mt-3 text-sm text-slate-500">
-                      Для связи используйте телефон, электронную почту или Telegram.
+                      Для связи используйте телефон или электронную почту.
                     </div>
                   </div>
                 </div>
@@ -307,14 +279,6 @@ export default function RootLayout({
                         className="transition hover:text-[#081a4b]"
                       >
                         {SITE_CONTACTS.email}
-                      </a>
-                      <a
-                        href={SITE_CONTACTS.telegramUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="transition hover:text-[#081a4b]"
-                      >
-                        Telegram
                       </a>
                     </div>
                   </div>

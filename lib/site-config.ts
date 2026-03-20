@@ -6,6 +6,4 @@ export const SITE_CONTACTS = {
 
   email: "info@goszakon.ru",
   emailHref: "mailto:info@goszakon.ru",
-
-  telegramUrl: "https://t.me/goszakon",
 };

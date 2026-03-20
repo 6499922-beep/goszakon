@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SITE_CONTACTS } from "@/lib/site-config";
 
 const CONTACT_PHONE_DISPLAY = "+7 936 135-03-03";
 const CONTACT_PHONE_HREF = "tel:+79361350303";
@@ -75,14 +74,6 @@ export default function AmbiguousPenaltyPage() {
                   {CONTACT_EMAIL}
                 </a>
 
-                <a
-                  href={SITE_CONTACTS.telegramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-2xl border border-slate-300 px-6 py-4 font-semibold transition hover:bg-slate-50"
-                >
-                  Telegram
-                </a>
               </div>
             </div>
 
@@ -155,14 +146,6 @@ export default function AmbiguousPenaltyPage() {
                 <a href={CONTACT_EMAIL_HREF} className="transition hover:text-white">
                   {CONTACT_EMAIL}
                 </a>
-                <a
-                  href={SITE_CONTACTS.telegramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="transition hover:text-white"
-                >
-                  Telegram
-                </a>
               </div>
 
               <div className="mt-5 text-sm text-white/70">
@@ -192,14 +175,6 @@ export default function AmbiguousPenaltyPage() {
                 Написать на почту
               </a>
 
-              <a
-                href={SITE_CONTACTS.telegramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-2xl border border-white/20 px-6 py-4 text-center transition hover:bg-white/5"
-              >
-                Написать в Telegram
-              </a>
             </div>
           </div>
         </div>

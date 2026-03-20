@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CustomerInnSearch from "@/app/zakazchikam/_components/customer-inn-search";
 import { SITE_CONTACTS } from "@/lib/site-config";
 
 export default function CustomersPage() {
@@ -87,6 +88,8 @@ export default function CustomersPage() {
 
       <section className="border-b border-slate-200 bg-slate-50">
         <div className="mx-auto max-w-7xl px-6 py-16">
+          <CustomerInnSearch />
+
           <div className="mb-10 max-w-3xl">
             <h2 className="text-3xl font-bold tracking-tight text-[#081a4b] md:text-4xl">
               Чем помогаем заказчикам

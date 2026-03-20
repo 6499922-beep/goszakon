@@ -1,10 +1,10 @@
 import Link from "next/link";
+import { SITE_CONTACTS } from "@/lib/site-config";
 
 const CONTACT_PHONE_DISPLAY = "+7 936 135-03-03";
 const CONTACT_PHONE_HREF = "tel:+79361350303";
 const CONTACT_EMAIL = "info@goszakon.ru";
 const CONTACT_EMAIL_HREF = "mailto:info@goszakon.ru";
-const TELEGRAM_URL = "https://t.me/goszakon";
 
 export default function ArbitrationClausePage() {
   const risks = [
@@ -75,7 +75,7 @@ export default function ArbitrationClausePage() {
                 </a>
 
                 <a
-                  href={TELEGRAM_URL}
+                  href={SITE_CONTACTS.telegramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-2xl border border-slate-300 px-6 py-4 font-semibold transition hover:bg-slate-50"
@@ -156,7 +156,7 @@ export default function ArbitrationClausePage() {
                   {CONTACT_EMAIL}
                 </a>
                 <a
-                  href={TELEGRAM_URL}
+                  href={SITE_CONTACTS.telegramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="transition hover:text-white"
@@ -193,7 +193,7 @@ export default function ArbitrationClausePage() {
               </a>
 
               <a
-                href={TELEGRAM_URL}
+                href={SITE_CONTACTS.telegramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded-2xl border border-white/20 px-6 py-4 text-center transition hover:bg-white/5"

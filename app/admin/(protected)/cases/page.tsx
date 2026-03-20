@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +15,8 @@ type PageProps = {
     page?: string;
     created?: string;
     updated?: string;
+    deleted?: string;
+    published_changed?: string;
   }>;
 };
 
@@ -54,6 +58,60 @@ export default async function AdminCasesPage({ searchParams }: PageProps) {
   const page = Math.max(Number(params.page || "1") || 1, 1);
   const created = params.created === "1";
   const updated = params.updated === "1";
+  const deleted = params.deleted === "1";
+  const publishedChanged = params.published_changed === "1";
+
+  async function deleteCaseAction(formData: FormData) {
+    "use server";
+
+    const caseId = Number(formData.get("caseId"));
+
+    if (!Number.isInteger(caseId) || caseId <= 0) {
+      redirect("/admin/cases");
+    }
+
+    const prisma = getPrisma();
+    await prisma.case.delete({
+      where: { id: caseId },
+    });
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/cases");
+    revalidatePath("/cases");
+    redirect("/admin/cases?deleted=1");
+  }
+
+  async function togglePublishedAction(formData: FormData) {
+    "use server";
+
+    const caseId = Number(formData.get("caseId"));
+
+    if (!Number.isInteger(caseId) || caseId <= 0) {
+      redirect("/admin/cases");
+    }
+
+    const prisma = getPrisma();
+    const item = await prisma.case.findUnique({
+      where: { id: caseId },
+      select: { published: true },
+    });
+
+    if (!item) {
+      redirect("/admin/cases");
+    }
+
+    await prisma.case.update({
+      where: { id: caseId },
+      data: {
+        published: !item.published,
+      },
+    });
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/cases");
+    revalidatePath("/cases");
+    redirect("/admin/cases?published_changed=1");
+  }
 
   const where: Prisma.CaseWhereInput = {};
 
@@ -123,6 +181,18 @@ export default async function AdminCasesPage({ searchParams }: PageProps) {
       {updated ? (
         <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">
           Изменения в кейсе сохранены.
+        </div>
+      ) : null}
+
+      {deleted ? (
+        <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">
+          Кейс удален.
+        </div>
+      ) : null}
+
+      {publishedChanged ? (
+        <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">
+          Статус публикации обновлен.
         </div>
       ) : null}
 
@@ -336,6 +406,26 @@ export default async function AdminCasesPage({ searchParams }: PageProps) {
                     >
                       Открыть
                     </Link>
+
+                    <form action={togglePublishedAction}>
+                      <input type="hidden" name="caseId" value={item.id} />
+                      <button
+                        type="submit"
+                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                      >
+                        {item.published ? "Снять с публикации" : "Опубликовать"}
+                      </button>
+                    </form>
+
+                    <form action={deleteCaseAction}>
+                      <input type="hidden" name="caseId" value={item.id} />
+                      <button
+                        type="submit"
+                        className="w-full rounded-xl border border-red-200 px-3 py-2 text-center text-sm font-medium text-red-700 transition hover:bg-red-50"
+                      >
+                        Удалить
+                      </button>
+                    </form>
                   </div>
                 </td>
               </tr>

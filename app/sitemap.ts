@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const prisma = getPrisma();
 
-  const [cases, analytics] = await Promise.all([
+  const [cases, analytics, customerInns] = await Promise.all([
     prisma.case.findMany({
       where: { published: true },
       select: {
@@ -22,6 +22,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       where: { isPublished: true },
       select: {
         slug: true,
+        updatedAt: true,
+      },
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.case.findMany({
+      where: {
+        published: true,
+        customerInn: { not: null },
+      },
+      distinct: ["customerInn"],
+      select: {
+        customerInn: true,
         updatedAt: true,
       },
       orderBy: { updatedAt: "desc" },
@@ -203,5 +215,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticPages, ...casePages, ...analyticPages];
+  const customerPages: MetadataRoute.Sitemap = customerInns.reduce<
+    MetadataRoute.Sitemap
+  >((acc, item) => {
+    const inn = item.customerInn?.trim();
+    if (!inn) return acc;
+
+    acc.push({
+      url: `${SITE_URL}/zakazchik/${inn}`,
+      lastModified: item.updatedAt,
+      changeFrequency: "weekly",
+      priority: 0.7,
+    });
+
+    return acc;
+  }, []);
+
+  return [...staticPages, ...casePages, ...analyticPages, ...customerPages];
 }

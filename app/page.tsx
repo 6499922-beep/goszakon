@@ -1,4 +1,5 @@
 import Link from "next/link";
+import RequestForm from "@/app/_components/request-form";
 import { getPrisma } from "@/lib/prisma";
 import { materialTypeLabels } from "@/lib/materials";
 import { SITE_CONTACTS } from "@/lib/site-config";
@@ -278,6 +279,15 @@ export default async function HomePage() {
               </span>
             </Link>
           </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-slate-50">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <RequestForm
+            title="Нужна правовая оценка ситуации по закупке?"
+            subtitle="Оставьте контакты, ссылку на закупку и краткое описание проблемы. Заявка сразу попадет в админку, и по ней можно будет быстро связаться с вами."
+          />
         </div>
       </section>
 

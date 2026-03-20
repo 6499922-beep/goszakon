@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import RequestForm from "@/app/_components/request-form";
+import { SITE_CONTACTS } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "РНП по 223-ФЗ — защита от включения в реестр | goszakon.ru",
@@ -387,14 +389,14 @@ export default function RnpPage() {
 
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
-                  href="/contact"
+                  href="#request"
                   className="rounded-2xl bg-[#081a4b] px-6 py-3 text-white transition hover:bg-[#0d2568]"
                 >
                   Отправить документы
                 </Link>
 
                 <a
-                  href="tel:+79999999999"
+                  href={SITE_CONTACTS.phoneHref}
                   className="rounded-2xl border border-slate-300 px-6 py-3 transition hover:bg-white"
                 >
                   Позвонить
@@ -402,6 +404,15 @@ export default function RnpPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="border-t border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <RequestForm
+            title="Есть риск включения в РНП?"
+            subtitle="Отправьте документы, ссылку на закупку и кратко опишите ситуацию. Мы посмотрим основания для включения, оценим риск и подскажем, как лучше защищаться."
+          />
         </div>
       </section>
     </main>

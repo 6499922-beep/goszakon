@@ -1,4 +1,5 @@
 import Link from "next/link";
+import RequestForm from "@/app/_components/request-form";
 import { SITE_CONTACTS } from "@/lib/site-config";
 
 export default function ServicesPage() {
@@ -154,6 +155,15 @@ export default function ServicesPage() {
               </a>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="bg-slate-50">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <RequestForm
+            title="Нужно быстро оценить закупку или жалобу?"
+            subtitle="Оставьте контакты и кратко опишите спор. Это удобнее, чем просто переходить по ссылкам: заявка сразу появится в админке."
+          />
         </div>
       </section>
     </main>

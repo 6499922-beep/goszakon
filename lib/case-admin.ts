@@ -2,6 +2,10 @@ function normalizeDashes(value: string) {
   return value.replace(/[—–−]/g, "-");
 }
 
+function normalizeWhitespace(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
 export function slugifyCase(value: string) {
   return normalizeDashes(value)
     .toLowerCase()
@@ -36,8 +40,28 @@ export function parseCaseDecisionDate(value: string) {
 }
 
 export function normalizeOptionalString(value: FormDataEntryValue | null) {
-  const normalized = String(value || "").trim();
+  const normalized = normalizeWhitespace(String(value || ""));
   return normalized || null;
+}
+
+export function normalizeCustomerName(value: FormDataEntryValue | null) {
+  const normalized = normalizeOptionalString(value);
+  return normalized || null;
+}
+
+export function normalizeDigits(value: FormDataEntryValue | null) {
+  const normalized = String(value || "").replace(/\D/g, "").trim();
+  return normalized || null;
+}
+
+export function isValidCustomerInn(value: string | null) {
+  if (!value) return true;
+  return value.length === 10 || value.length === 12;
+}
+
+export function isValidCustomerKpp(value: string | null) {
+  if (!value) return true;
+  return value.length === 9;
 }
 
 export function parseOptionalCategoryId(value: FormDataEntryValue | null) {

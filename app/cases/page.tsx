@@ -366,10 +366,9 @@ export default async function CasesPage({ searchParams }: PageProps) {
             </div>
           ) : (
             cases.map((item) => (
-              <Link
+              <article
                 key={item.id}
-                href={getCasePath(item)}
-                className="block rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-md"
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-md"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
@@ -392,7 +391,9 @@ export default async function CasesPage({ searchParams }: PageProps) {
                     </div>
 
                     <h2 className="text-2xl font-semibold leading-9 text-[#081a4b]">
-                      {item.title}
+                      <Link href={getCasePath(item)} className="transition hover:opacity-80">
+                        {item.title}
+                      </Link>
                     </h2>
 
                     {item.summary ? (
@@ -408,7 +409,16 @@ export default async function CasesPage({ searchParams }: PageProps) {
                     <span className="font-semibold text-slate-800">
                       Заказчик:
                     </span>{" "}
-                    {item.customerName || "Не указан"}
+                    {item.customerInn ? (
+                      <Link
+                        href={`/zakazchik/${item.customerInn}`}
+                        className="font-medium text-[#081a4b] underline-offset-4 transition hover:underline"
+                      >
+                        {item.customerName || "Открыть карточку заказчика"}
+                      </Link>
+                    ) : (
+                      item.customerName || "Не указан"
+                    )}
                   </div>
 
                   <div>
@@ -439,7 +449,25 @@ export default async function CasesPage({ searchParams }: PageProps) {
                     {item.result}
                   </div>
                 ) : null}
-              </Link>
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Link
+                    href={getCasePath(item)}
+                    className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-[#081a4b] transition hover:bg-slate-50"
+                  >
+                    Открыть кейс
+                  </Link>
+
+                  {item.customerInn ? (
+                    <Link
+                      href={`/zakazchik/${item.customerInn}`}
+                      className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      Все кейсы по заказчику
+                    </Link>
+                  ) : null}
+                </div>
+              </article>
             ))
           )}
         </div>

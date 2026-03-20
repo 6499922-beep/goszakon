@@ -6,12 +6,20 @@ export const dynamic = "force-dynamic";
 export default async function AdminDashboardPage() {
   const prisma = getPrisma();
 
-  const [casesCount, publishedCasesCount, analyticsCount, leadsCount] =
+  const [casesCount, publishedCasesCount, draftCasesCount, analyticsCount, customersInBase] =
     await Promise.all([
       prisma.case.count(),
       prisma.case.count({ where: { published: true } }),
+      prisma.case.count({ where: { published: false } }),
       prisma.material.count(),
-      prisma.lead.count(),
+      prisma.case.findMany({
+        where: {
+          published: true,
+          customerInn: { not: null },
+        },
+        distinct: ["customerInn"],
+        select: { customerInn: true },
+      }),
     ]);
 
   const recentCases = await prisma.case.findMany({
@@ -34,7 +42,7 @@ export default async function AdminDashboardPage() {
           Обзор проекта
         </h1>
         <p className="mt-2 text-base text-slate-600">
-          Быстрый доступ к практике ФАС, аналитике и заявкам.
+          Быстрый доступ к базе жалоб ФАС, аналитике и карточкам заказчиков.
         </p>
       </div>
 
@@ -59,19 +67,28 @@ export default async function AdminDashboardPage() {
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="text-sm uppercase tracking-[0.12em] text-slate-400">
-            Публикации аналитики
+            Черновики кейсов
           </div>
           <div className="mt-3 text-4xl font-bold tracking-tight text-[#081a4b]">
-            {analyticsCount}
+            {draftCasesCount}
           </div>
         </div>
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="text-sm uppercase tracking-[0.12em] text-slate-400">
-            Заявки
+            Заказчики в базе
           </div>
           <div className="mt-3 text-4xl font-bold tracking-tight text-[#081a4b]">
-            {leadsCount}
+            {customersInBase.length}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:col-span-2 xl:col-span-1">
+          <div className="text-sm uppercase tracking-[0.12em] text-slate-400">
+            Публикации аналитики
+          </div>
+          <div className="mt-3 text-4xl font-bold tracking-tight text-[#081a4b]">
+            {analyticsCount}
           </div>
         </div>
       </div>
@@ -214,10 +231,10 @@ export default async function AdminDashboardPage() {
           </Link>
 
           <Link
-            href="/admin/leads"
+            href="/admin/cases"
             className="block rounded-2xl border border-slate-300 bg-white px-5 py-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
-            Посмотреть заявки
+            Открыть базу кейсов
           </Link>
         </div>
       </div>

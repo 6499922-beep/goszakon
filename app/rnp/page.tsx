@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import RequestForm from "@/app/_components/request-form";
 import { SITE_CONTACTS } from "@/lib/site-config";
 
 export const metadata: Metadata = {
@@ -409,10 +408,50 @@ export default function RnpPage() {
 
       <section className="border-t border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-6 py-20">
-          <RequestForm
-            title="Есть риск включения в РНП?"
-            subtitle="Отправьте документы, ссылку на закупку и кратко опишите ситуацию. Мы посмотрим основания для включения, оценим риск и подскажем, как лучше защищаться."
-          />
+          <div className="grid gap-8 rounded-[2rem] border border-slate-200 bg-slate-50 p-8 lg:grid-cols-[1fr_0.9fr] lg:p-12">
+            <div>
+              <h2 className="text-4xl font-bold tracking-tight text-[#081a4b]">
+                Есть риск включения в РНП?
+              </h2>
+              <p className="mt-5 text-lg leading-9 text-slate-700">
+                Если вопрос уже срочный, лучше сразу связываться напрямую. Так
+                можно быстрее обсудить материалы, документы и реальные основания
+                для включения в реестр.
+              </p>
+            </div>
+
+            <div className="rounded-3xl bg-white p-6 ring-1 ring-slate-200">
+              <div className="text-2xl font-bold text-[#081a4b]">
+                Для первичного разговора пригодятся
+              </div>
+              <div className="mt-5 grid gap-3">
+                <div className="rounded-2xl bg-slate-50 px-5 py-4 text-base text-slate-700">
+                  уведомление заказчика или материалы в ФАС
+                </div>
+                <div className="rounded-2xl bg-slate-50 px-5 py-4 text-base text-slate-700">
+                  договор, переписка и документы по исполнению
+                </div>
+                <div className="rounded-2xl bg-slate-50 px-5 py-4 text-base text-slate-700">
+                  краткое описание, что именно произошло
+                </div>
+              </div>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a
+                  href={SITE_CONTACTS.phoneHref}
+                  className="rounded-2xl bg-[#081a4b] px-6 py-3 text-white transition hover:bg-[#0d2568]"
+                >
+                  Позвонить
+                </a>
+                <a
+                  href={SITE_CONTACTS.emailHref}
+                  className="rounded-2xl border border-slate-300 px-6 py-3 transition hover:bg-slate-50"
+                >
+                  Написать на почту
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </main>

@@ -5,6 +5,10 @@ import { requireAdmin } from "@/lib/require-admin";
 import { revalidatePath } from "next/cache";
 import { SITE_URL } from "@/lib/site-config";
 import {
+  isValidCustomerInn,
+  isValidCustomerKpp,
+  normalizeCustomerName,
+  normalizeDigits,
   normalizeOptionalString,
   parseCaseDecisionDate,
   parseOptionalCategoryId,
@@ -33,6 +37,9 @@ export async function POST(request: Request) {
     const slugInput = String(formData.get("slug") || "").trim();
     const slug = slugInput || slugifyCase(title);
     const decisionDateRaw = String(formData.get("decisionDate") || "").trim();
+    const customerName = normalizeCustomerName(formData.get("customerName"));
+    const customerInn = normalizeDigits(formData.get("customerInn"));
+    const customerKpp = normalizeDigits(formData.get("customerKpp"));
     const decisionDate = decisionDateRaw
       ? parseCaseDecisionDate(decisionDateRaw)
       : null;
@@ -47,6 +54,14 @@ export async function POST(request: Request) {
 
     if (decisionDateRaw && !decisionDate) {
       return buildRedirect(request, "/admin/cases/new", "decision_date");
+    }
+
+    if (!isValidCustomerInn(customerInn)) {
+      return buildRedirect(request, "/admin/cases/new", "customer_inn");
+    }
+
+    if (!isValidCustomerKpp(customerKpp)) {
+      return buildRedirect(request, "/admin/cases/new", "customer_kpp");
     }
 
     const slugExists = await prisma.case.findUnique({
@@ -71,9 +86,9 @@ export async function POST(request: Request) {
         decision: normalizeOptionalString(formData.get("decision")),
         result: normalizeOptionalString(formData.get("result")),
         pdfUrl: normalizeOptionalString(formData.get("pdfUrl")),
-        customerName: normalizeOptionalString(formData.get("customerName")),
-        customerInn: normalizeOptionalString(formData.get("customerInn")),
-        customerKpp: normalizeOptionalString(formData.get("customerKpp")),
+        customerName,
+        customerInn,
+        customerKpp,
         decisionDate,
         isFeatured: formData.get("isFeatured") === "on",
         published: formData.get("published") === "on",
@@ -89,6 +104,10 @@ export async function POST(request: Request) {
     revalidatePath("/admin/cases");
     revalidatePath("/cases");
     revalidatePath(`/cases/${created.id}-${created.slug}`);
+    revalidatePath("/zakazchikam");
+    if (customerInn) {
+      revalidatePath(`/zakazchik/${customerInn}`);
+    }
 
     return NextResponse.redirect(new URL("/admin/cases?created=1", SITE_URL), 303);
   } catch (error) {

@@ -9,6 +9,10 @@ import {
   caseViolationOptions,
 } from "@/lib/case-options";
 import {
+  isValidCustomerInn,
+  isValidCustomerKpp,
+  normalizeCustomerName,
+  normalizeDigits,
   normalizeOptionalString,
   parseCaseDecisionDate,
   parseOptionalCategoryId,
@@ -19,7 +23,7 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; duplicated?: string }>;
 };
 
 function formatDateInput(date?: Date | null) {
@@ -34,6 +38,8 @@ function errorText(error?: string) {
   if (error === "title") return "Укажите заголовок кейса.";
   if (error === "slug") return "Не удалось сформировать slug.";
   if (error === "slug_exists") return "Кейс с таким slug уже существует.";
+  if (error === "customer_inn") return "ИНН заказчика должен содержать 10 или 12 цифр.";
+  if (error === "customer_kpp") return "КПП заказчика должен содержать 9 цифр.";
   if (error === "decision_date") {
     return "Некорректная дата. Используйте формат 31.03.2026 или 2026-03-31.";
   }
@@ -69,7 +75,9 @@ export default async function AdminEditCasePage({
     notFound();
   }
 
+  const originalCustomerInn = item.customerInn || null;
   const error = errorText(resolvedSearchParams.error);
+  const duplicated = resolvedSearchParams.duplicated === "1";
 
   async function updateCaseAction(formData: FormData) {
     "use server";
@@ -92,6 +100,9 @@ export default async function AdminEditCasePage({
     const decisionDateRaw = String(formData.get("decisionDate") || "").trim();
     const isFeatured = formData.get("isFeatured") === "on";
     const published = formData.get("published") === "on";
+    const customerName = normalizeCustomerName(formData.get("customerName"));
+    const customerInn = normalizeDigits(formData.get("customerInn"));
+    const customerKpp = normalizeDigits(formData.get("customerKpp"));
 
     if (!title) {
       redirect(`/admin/cases/${caseId}/edit?error=title`);
@@ -122,6 +133,14 @@ export default async function AdminEditCasePage({
       redirect(`/admin/cases/${caseId}/edit?error=decision_date`);
     }
 
+    if (!isValidCustomerInn(customerInn)) {
+      redirect(`/admin/cases/${caseId}/edit?error=customer_inn`);
+    }
+
+    if (!isValidCustomerKpp(customerKpp)) {
+      redirect(`/admin/cases/${caseId}/edit?error=customer_kpp`);
+    }
+
     const updated = await prisma.case.update({
       where: { id: caseId },
       data: {
@@ -136,9 +155,9 @@ export default async function AdminEditCasePage({
         decision: normalizeOptionalString(formData.get("decision")),
         result: normalizeOptionalString(formData.get("result")),
         pdfUrl: normalizeOptionalString(formData.get("pdfUrl")),
-        customerName: normalizeOptionalString(formData.get("customerName")),
-        customerInn: normalizeOptionalString(formData.get("customerInn")),
-        customerKpp: normalizeOptionalString(formData.get("customerKpp")),
+        customerName,
+        customerInn,
+        customerKpp,
         decisionDate,
         isFeatured,
         published,
@@ -154,12 +173,25 @@ export default async function AdminEditCasePage({
     revalidatePath("/admin/cases");
     revalidatePath("/cases");
     revalidatePath(`/cases/${updated.id}-${updated.slug}`);
+    revalidatePath("/zakazchikam");
+    if (originalCustomerInn) {
+      revalidatePath(`/zakazchik/${originalCustomerInn}`);
+    }
+    if (customerInn) {
+      revalidatePath(`/zakazchik/${customerInn}`);
+    }
 
     redirect("/admin/cases?updated=1");
   }
 
   return (
     <main>
+      {duplicated ? (
+        <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">
+          Создана копия кейса. Проверьте заголовок, slug и статус публикации перед сохранением.
+        </div>
+      ) : null}
+
       {error ? (
         <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
           {error}
@@ -271,6 +303,9 @@ export default async function AdminEditCasePage({
               defaultValue={item.customerName || ""}
               className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-500"
             />
+            <p className="mt-2 text-sm text-slate-500">
+              Старайтесь держать единое написание заказчика, чтобы база не распадалась на дубли.
+            </p>
           </div>
 
           <div>
@@ -283,6 +318,7 @@ export default async function AdminEditCasePage({
               defaultValue={item.customerInn || ""}
               className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-500"
             />
+            <p className="mt-2 text-sm text-slate-500">Только 10 или 12 цифр.</p>
           </div>
 
           <div>
@@ -295,6 +331,7 @@ export default async function AdminEditCasePage({
               defaultValue={item.customerKpp || ""}
               className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-500"
             />
+            <p className="mt-2 text-sm text-slate-500">Если указываете КПП, он должен содержать 9 цифр.</p>
           </div>
 
           <div>

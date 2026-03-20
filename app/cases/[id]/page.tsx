@@ -64,6 +64,34 @@ async function getRelatedCases(item: {
   });
 }
 
+async function getCustomerCases(item: {
+  id: number;
+  customerInn?: string | null;
+}) {
+  if (!item.customerInn) {
+    return [];
+  }
+
+  const prisma = getPrisma();
+
+  return prisma.case.findMany({
+    where: {
+      published: true,
+      id: { not: item.id },
+      customerInn: item.customerInn,
+    },
+    orderBy: [{ decisionDate: "desc" }, { updatedAt: "desc" }],
+    take: 4,
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      summary: true,
+      decisionDate: true,
+    },
+  });
+}
+
 function formatDate(value?: Date | null) {
   if (!value) return "Не указана";
   return new Intl.DateTimeFormat("ru-RU").format(value);
@@ -241,8 +269,9 @@ export default async function CasePage({ params }: PageProps) {
     redirect(canonicalPath);
   }
 
-  const [relatedCases] = await Promise.all([
+  const [relatedCases, customerCases] = await Promise.all([
     getRelatedCases(item),
+    getCustomerCases(item),
   ]);
 
   const relatedLinks = getRelatedLinks(item.category?.name);
@@ -336,6 +365,28 @@ export default async function CasePage({ params }: PageProps) {
               </div>
             </div>
           </div>
+
+          {item.customerInn ? (
+            <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
+                    Карточка заказчика
+                  </div>
+                  <div className="mt-2 text-lg font-semibold text-[#081a4b]">
+                    {item.customerName || "Заказчик"} · ИНН {item.customerInn}
+                  </div>
+                </div>
+
+                <Link
+                  href={`/zakazchik/${item.customerInn}`}
+                  className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-[#081a4b] transition hover:bg-slate-100"
+                >
+                  Вся практика по заказчику
+                </Link>
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             {item.pdfUrl ? (
@@ -462,7 +513,18 @@ export default async function CasePage({ params }: PageProps) {
                 <dl className="mt-5 space-y-4 text-sm leading-7 text-slate-700">
                   <div>
                     <dt className="font-semibold text-slate-900">Заказчик</dt>
-                    <dd>{item.customerName || "Не указан"}</dd>
+                    <dd>
+                      {item.customerInn ? (
+                        <Link
+                          href={`/zakazchik/${item.customerInn}`}
+                          className="text-[#081a4b] underline-offset-4 transition hover:underline"
+                        >
+                          {item.customerName || "Открыть карточку заказчика"}
+                        </Link>
+                      ) : (
+                        item.customerName || "Не указан"
+                      )}
+                    </dd>
                   </div>
 
                   <div>
@@ -509,6 +571,36 @@ export default async function CasePage({ params }: PageProps) {
                   ))}
                 </div>
               </section>
+
+              {customerCases.length ? (
+                <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <h2 className="text-xl font-semibold text-[#081a4b]">
+                    Еще кейсы по этому заказчику
+                  </h2>
+
+                  <div className="mt-5 space-y-4">
+                    {customerCases.map((relatedCase) => (
+                      <Link
+                        key={relatedCase.id}
+                        href={getCasePath(relatedCase)}
+                        className="block rounded-2xl border border-slate-200 p-4 transition hover:bg-slate-50"
+                      >
+                        <div className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                          {formatDate(relatedCase.decisionDate)}
+                        </div>
+                        <div className="mt-2 font-semibold text-slate-900">
+                          {relatedCase.title}
+                        </div>
+                        {relatedCase.summary ? (
+                          <div className="mt-2 text-sm leading-7 text-slate-600">
+                            {relatedCase.summary}
+                          </div>
+                        ) : null}
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
             </aside>
           </div>
         </div>

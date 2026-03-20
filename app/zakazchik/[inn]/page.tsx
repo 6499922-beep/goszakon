@@ -91,6 +91,15 @@ function buildTopRegions(items: Array<{ region?: string | null }>) {
     .map(([title, count]) => ({ title, count }));
 }
 
+function buildSuccessRate(params: {
+  totalCases: number;
+  justified: number;
+  partial: number;
+}) {
+  if (!params.totalCases) return 0;
+  return Math.round(((params.justified + params.partial) / params.totalCases) * 100);
+}
+
 function buildConclusion(params: {
   totalCases: number;
   justified: number;
@@ -143,6 +152,81 @@ async function getCustomerCases(inn: string) {
       updatedAt: true,
     },
   });
+}
+
+async function getSimilarCustomers(params: {
+  inn: string;
+  topViolations: Array<{ title: string; count: number }>;
+  topRegions: Array<{ title: string; count: number }>;
+}) {
+  const prisma = getPrisma();
+  const violationTitles = params.topViolations.map((item) => item.title);
+  const regionTitles = params.topRegions.map((item) => item.title);
+
+  if (!violationTitles.length && !regionTitles.length) {
+    return [];
+  }
+
+  const items = await prisma.case.findMany({
+    where: {
+      published: true,
+      customerInn: { not: null },
+      customerName: { not: null },
+      NOT: { customerInn: params.inn },
+      OR: [
+        ...(violationTitles.length
+          ? [{
+              violation: {
+                in: violationTitles,
+                mode: Prisma.QueryMode.insensitive,
+              },
+            } satisfies Prisma.CaseWhereInput]
+          : []),
+        ...(regionTitles.length
+          ? [{
+              region: {
+                in: regionTitles,
+                mode: Prisma.QueryMode.insensitive,
+              },
+            } satisfies Prisma.CaseWhereInput]
+          : []),
+      ],
+    },
+    select: {
+      customerInn: true,
+      customerName: true,
+      violation: true,
+      region: true,
+    },
+    take: 200,
+  });
+
+  const grouped = new Map<
+    string,
+    { customerInn: string; customerName: string; count: number }
+  >();
+
+  for (const item of items) {
+    const customerInn = item.customerInn?.trim();
+    const customerName = item.customerName?.trim();
+    if (!customerInn || !customerName) continue;
+
+    const existing = grouped.get(customerInn);
+    if (existing) {
+      existing.count += 1;
+      continue;
+    }
+
+    grouped.set(customerInn, {
+      customerInn,
+      customerName,
+      count: 1,
+    });
+  }
+
+  return [...grouped.values()]
+    .sort((a, b) => b.count - a.count || a.customerName.localeCompare(b.customerName))
+    .slice(0, 6);
 }
 
 export async function generateMetadata({
@@ -209,11 +293,21 @@ export default async function CustomerInnPage({ params }: PageProps) {
   const stats = buildResultSummary(items);
   const topViolations = buildTopViolations(items);
   const topRegions = buildTopRegions(items);
+  const successRate = buildSuccessRate({
+    totalCases,
+    justified: stats.justified,
+    partial: stats.partial,
+  });
   const conclusion = buildConclusion({
     totalCases,
     justified: stats.justified,
     partial: stats.partial,
     topViolations,
+  });
+  const similarCustomers = await getSimilarCustomers({
+    inn,
+    topViolations,
+    topRegions,
   });
 
   const pageJsonLd = {
@@ -301,6 +395,15 @@ export default async function CustomerInnPage({ params }: PageProps) {
                 {stats.rejected}
               </div>
             </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:col-span-2 xl:col-span-4">
+              <div className="text-sm uppercase tracking-[0.12em] text-slate-400">
+                Доля результативных жалоб
+              </div>
+              <div className="mt-3 text-4xl font-bold tracking-tight text-[#081a4b]">
+                {successRate}%
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -381,6 +484,28 @@ export default async function CustomerInnPage({ params }: PageProps) {
                 )}
               </div>
             </section>
+
+            {similarCustomers.length ? (
+              <section className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                <h2 className="text-xl font-semibold text-[#081a4b]">
+                  Похожие заказчики
+                </h2>
+
+                <div className="mt-5 space-y-3">
+                  {similarCustomers.map((item) => (
+                    <Link
+                      key={item.customerInn}
+                      href={`/zakazchik/${item.customerInn}`}
+                      className="block rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <div className="font-semibold text-slate-900">{item.customerName}</div>
+                      <div className="mt-1">ИНН {item.customerInn}</div>
+                      <div className="mt-1 text-slate-500">Совпадений по практике: {item.count}</div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </aside>
         </div>
       </section>

@@ -16,6 +16,8 @@ function errorText(error?: string) {
   if (error === "title") return "Укажите заголовок кейса.";
   if (error === "slug") return "Не удалось сформировать slug.";
   if (error === "slug_exists") return "Кейс с таким slug уже существует.";
+  if (error === "customer_inn") return "ИНН заказчика должен содержать 10 или 12 цифр.";
+  if (error === "customer_kpp") return "КПП заказчика должен содержать 9 цифр.";
   if (error === "decision_date") {
     return "Некорректная дата. Используйте формат 31.03.2026 или 2026-03-31.";
   }
@@ -138,6 +140,9 @@ export default async function AdminNewCasePage({ searchParams }: PageProps) {
               name="customerName"
               className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-500"
             />
+            <p className="mt-2 text-sm text-slate-500">
+              Лучше указывать единое официальное название без лишних вариантов написания.
+            </p>
           </div>
 
           <div>
@@ -149,6 +154,7 @@ export default async function AdminNewCasePage({ searchParams }: PageProps) {
               name="customerInn"
               className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-500"
             />
+            <p className="mt-2 text-sm text-slate-500">Только 10 или 12 цифр.</p>
           </div>
 
           <div>
@@ -160,6 +166,7 @@ export default async function AdminNewCasePage({ searchParams }: PageProps) {
               name="customerKpp"
               className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-500"
             />
+            <p className="mt-2 text-sm text-slate-500">Если указываете КПП, он должен содержать 9 цифр.</p>
           </div>
 
           <div>

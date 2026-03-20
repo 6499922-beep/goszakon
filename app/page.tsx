@@ -1,5 +1,4 @@
 import Link from "next/link";
-import RequestForm from "@/app/_components/request-form";
 import { getPrisma } from "@/lib/prisma";
 import { materialTypeLabels } from "@/lib/materials";
 import { SITE_CONTACTS } from "@/lib/site-config";
@@ -276,10 +275,53 @@ export default async function HomePage() {
 
       <section className="border-b border-slate-200 bg-slate-50">
         <div className="mx-auto max-w-7xl px-6 py-20">
-          <RequestForm
-            title="Нужна правовая оценка ситуации по закупке?"
-            subtitle="Оставьте контакты, ссылку на закупку и краткое описание проблемы. Заявка сразу попадет в админку, и по ней можно будет быстро связаться с вами."
-          />
+          <div className="grid gap-8 rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm lg:grid-cols-[1fr_0.9fr] lg:p-12">
+            <div>
+              <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+                Связаться с нами
+              </div>
+              <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b]">
+                Нужна правовая оценка ситуации по закупке?
+              </h2>
+              <p className="mt-5 text-lg leading-9 text-slate-700">
+                Мы не собираем потоковые заявки с сайта. Если вопрос действительно
+                требует разбора, лучше сразу связаться с нами напрямую и обсудить
+                ситуацию по существу.
+              </p>
+            </div>
+
+            <div className="rounded-3xl bg-slate-50 p-6 ring-1 ring-slate-200">
+              <div className="text-2xl font-bold text-[#081a4b]">
+                Что подготовить перед обращением
+              </div>
+              <div className="mt-5 grid gap-3">
+                <div className="rounded-2xl bg-white px-5 py-4 text-base text-slate-700 ring-1 ring-slate-200">
+                  номер закупки или ссылка на спор
+                </div>
+                <div className="rounded-2xl bg-white px-5 py-4 text-base text-slate-700 ring-1 ring-slate-200">
+                  краткое описание проблемы и текущей стадии
+                </div>
+                <div className="rounded-2xl bg-white px-5 py-4 text-base text-slate-700 ring-1 ring-slate-200">
+                  документы, переписку и спорные условия
+                </div>
+              </div>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a
+                  href={SITE_CONTACTS.phoneHref}
+                  className="rounded-2xl bg-[#081a4b] px-6 py-3 text-white transition hover:bg-[#0d2568]"
+                >
+                  Позвонить
+                </a>
+                <a
+                  href={SITE_CONTACTS.emailHref}
+                  className="rounded-2xl border border-slate-300 px-6 py-3 transition hover:bg-white"
+                >
+                  Написать на почту
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

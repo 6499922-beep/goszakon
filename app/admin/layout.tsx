@@ -12,7 +12,6 @@ export default function AdminLayout({
     { title: "Новый кейс", href: "/admin/cases/new" },
     { title: "Аналитика", href: "/admin/materials" },
     { title: "Новая публикация", href: "/admin/materials/new" },
-    { title: "Заявки", href: "/admin/leads" },
   ];
 
   return (

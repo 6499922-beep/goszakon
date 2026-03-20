@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
+import { slugifyCase } from "@/lib/case-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,14 @@ function formatDate(value?: Date | null) {
 }
 
 function buildOrderBy(sort: string): Prisma.CaseOrderByWithRelationInput[] {
+  if (sort === "customerName") {
+    return [
+      { customerName: "asc" },
+      { decisionDate: "desc" },
+      { updatedAt: "desc" },
+    ];
+  }
+
   if (sort === "procurementNumber") {
     return [
       { procurementNumber: "asc" },
@@ -71,6 +80,11 @@ export default async function AdminCasesPage({ searchParams }: PageProps) {
     }
 
     const prisma = getPrisma();
+    const item = await prisma.case.findUnique({
+      where: { id: caseId },
+      select: { customerInn: true },
+    });
+
     await prisma.case.delete({
       where: { id: caseId },
     });
@@ -78,6 +92,10 @@ export default async function AdminCasesPage({ searchParams }: PageProps) {
     revalidatePath("/admin");
     revalidatePath("/admin/cases");
     revalidatePath("/cases");
+    revalidatePath("/zakazchikam");
+    if (item?.customerInn) {
+      revalidatePath(`/zakazchik/${item.customerInn}`);
+    }
     redirect("/admin/cases?deleted=1");
   }
 
@@ -93,7 +111,7 @@ export default async function AdminCasesPage({ searchParams }: PageProps) {
     const prisma = getPrisma();
     const item = await prisma.case.findUnique({
       where: { id: caseId },
-      select: { published: true },
+      select: { published: true, customerInn: true },
     });
 
     if (!item) {
@@ -110,7 +128,52 @@ export default async function AdminCasesPage({ searchParams }: PageProps) {
     revalidatePath("/admin");
     revalidatePath("/admin/cases");
     revalidatePath("/cases");
+    revalidatePath("/zakazchikam");
+    if (item.customerInn) {
+      revalidatePath(`/zakazchik/${item.customerInn}`);
+    }
     redirect("/admin/cases?published_changed=1");
+  }
+
+  async function duplicateCaseAction(formData: FormData) {
+    "use server";
+
+    const caseId = Number(formData.get("caseId"));
+
+    if (!Number.isInteger(caseId) || caseId <= 0) {
+      redirect("/admin/cases");
+    }
+
+    const prisma = getPrisma();
+    const source = await prisma.case.findUnique({
+      where: { id: caseId },
+    });
+
+    if (!source) {
+      redirect("/admin/cases");
+    }
+
+    const baseSlug = source.slug || slugifyCase(source.title) || `case-${source.id}`;
+    const duplicateSuffix = Date.now().toString().slice(-6);
+
+    const duplicated = await prisma.case.create({
+      data: {
+        ...source,
+        id: undefined,
+        slug: `${baseSlug}-copy-${duplicateSuffix}`,
+        title: `${source.title} (копия)`,
+        published: false,
+        isFeatured: false,
+        createdAt: undefined,
+        updatedAt: undefined,
+      },
+      select: { id: true },
+    });
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/cases");
+
+    redirect(`/admin/cases/${duplicated.id}/edit?duplicated=1`);
   }
 
   const where: Prisma.CaseWhereInput = {};
@@ -146,6 +209,8 @@ export default async function AdminCasesPage({ searchParams }: PageProps) {
           title: true,
           slug: true,
           procurementNumber: true,
+          customerName: true,
+          customerInn: true,
           decisionDate: true,
           updatedAt: true,
           published: true,
@@ -307,6 +372,7 @@ export default async function AdminCasesPage({ searchParams }: PageProps) {
               className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-500"
             >
               <option value="decisionDate">По дате решения</option>
+              <option value="customerName">По заказчику</option>
               <option value="procurementNumber">По номеру закупки</option>
               <option value="updatedAt">По дате обновления</option>
             </select>
@@ -340,6 +406,9 @@ export default async function AdminCasesPage({ searchParams }: PageProps) {
                 Номер закупки
               </th>
               <th className="px-5 py-4 text-sm font-semibold text-slate-600">
+                Заказчик
+              </th>
+              <th className="px-5 py-4 text-sm font-semibold text-slate-600">
                 Дата решения
               </th>
               <th className="px-5 py-4 text-sm font-semibold text-slate-600">Статус</th>
@@ -365,6 +434,15 @@ export default async function AdminCasesPage({ searchParams }: PageProps) {
 
                 <td className="min-w-[180px] px-5 py-4 text-sm text-slate-700">
                   {item.procurementNumber || "—"}
+                </td>
+
+                <td className="min-w-[260px] px-5 py-4 text-sm text-slate-700">
+                  <div className="font-medium text-slate-900">
+                    {item.customerName || "Не указан"}
+                  </div>
+                  <div className="mt-1 text-slate-500">
+                    {item.customerInn || "ИНН не указан"}
+                  </div>
                 </td>
 
                 <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-700">
@@ -407,6 +485,25 @@ export default async function AdminCasesPage({ searchParams }: PageProps) {
                       Открыть
                     </Link>
 
+                    {item.customerInn ? (
+                      <Link
+                        href={`/zakazchik/${item.customerInn}`}
+                        className="rounded-xl border border-slate-300 px-3 py-2 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                      >
+                        Заказчик
+                      </Link>
+                    ) : null}
+
+                    <form action={duplicateCaseAction}>
+                      <input type="hidden" name="caseId" value={item.id} />
+                      <button
+                        type="submit"
+                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                      >
+                        Дублировать
+                      </button>
+                    </form>
+
                     <form action={togglePublishedAction}>
                       <input type="hidden" name="caseId" value={item.id} />
                       <button
@@ -433,7 +530,7 @@ export default async function AdminCasesPage({ searchParams }: PageProps) {
 
             {cases.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-5 py-10 text-center text-slate-500">
+                <td colSpan={7} className="px-5 py-10 text-center text-slate-500">
                   Кейсы не найдены.
                 </td>
               </tr>

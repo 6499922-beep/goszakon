@@ -1,5 +1,4 @@
 import Link from "next/link";
-import RequestForm from "@/app/_components/request-form";
 import { SITE_CONTACTS } from "@/lib/site-config";
 
 export default function ServicesPage() {
@@ -160,10 +159,38 @@ export default function ServicesPage() {
 
       <section className="bg-slate-50">
         <div className="mx-auto max-w-7xl px-6 py-16">
-          <RequestForm
-            title="Нужно быстро оценить закупку или жалобу?"
-            subtitle="Оставьте контакты и кратко опишите спор. Это удобнее, чем просто переходить по ссылкам: заявка сразу появится в админке."
-          />
+          <div className="grid gap-8 rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm lg:grid-cols-[1fr_0.9fr]">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight text-[#081a4b]">
+                Нужно быстро оценить закупку или жалобу?
+              </h2>
+              <p className="mt-4 text-lg leading-8 text-slate-700">
+                Для таких вопросов лучше не оставлять формальную заявку, а сразу
+                связываться напрямую. Так мы быстрее поймем, есть ли практический
+                смысл в жалобе и какие документы нужно смотреть в первую очередь.
+              </p>
+            </div>
+
+            <div className="rounded-3xl bg-slate-50 p-6 ring-1 ring-slate-200">
+              <div className="text-lg font-semibold text-[#081a4b]">
+                Быстрый контакт
+              </div>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <a
+                  href={SITE_CONTACTS.phoneHref}
+                  className="rounded-2xl bg-[#081a4b] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
+                >
+                  Позвонить
+                </a>
+                <a
+                  href={SITE_CONTACTS.emailHref}
+                  className="rounded-2xl border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white"
+                >
+                  Написать на почту
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </main>

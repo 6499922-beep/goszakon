@@ -1,8 +1,91 @@
 import Link from "next/link";
+import { Prisma } from "@prisma/client";
 import CustomerInnSearch from "@/app/zakazchikam/_components/customer-inn-search";
+import { getPrisma } from "@/lib/prisma";
 import { SITE_CONTACTS } from "@/lib/site-config";
 
-export default function CustomersPage() {
+type PageProps = {
+  searchParams: Promise<{ q?: string }>;
+};
+
+type CustomerSearchItem = {
+  customerName: string;
+  customerInn: string;
+  count: number;
+};
+
+async function searchCustomers(query: string): Promise<CustomerSearchItem[]> {
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) return [];
+
+  const prisma = getPrisma();
+  const digitsOnly = normalizedQuery.replace(/\D/g, "");
+
+  const where: Prisma.CaseWhereInput = {
+    published: true,
+    customerInn: { not: null },
+    customerName: { not: null },
+    OR: [
+      {
+        customerName: {
+          contains: normalizedQuery,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      },
+      ...(digitsOnly
+        ? [
+            {
+              customerInn: {
+                contains: digitsOnly,
+                mode: Prisma.QueryMode.insensitive,
+              },
+            } satisfies Prisma.CaseWhereInput,
+          ]
+        : []),
+    ],
+  };
+
+  const items = await prisma.case.findMany({
+    where,
+    select: {
+      customerName: true,
+      customerInn: true,
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 200,
+  });
+
+  const grouped = new Map<string, CustomerSearchItem>();
+
+  for (const item of items) {
+    const inn = item.customerInn?.trim();
+    const name = item.customerName?.trim();
+
+    if (!inn || !name) continue;
+
+    const existing = grouped.get(inn);
+    if (existing) {
+      existing.count += 1;
+      continue;
+    }
+
+    grouped.set(inn, {
+      customerInn: inn,
+      customerName: name,
+      count: 1,
+    });
+  }
+
+  return [...grouped.values()]
+    .sort((a, b) => b.count - a.count || a.customerName.localeCompare(b.customerName))
+    .slice(0, 12);
+}
+
+export default async function CustomersPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const query = (params.q || "").trim();
+  const searchResults = query ? await searchCustomers(query) : [];
+
   const directions = [
     {
       title: "Аудит документации до публикации",
@@ -89,6 +172,57 @@ export default function CustomersPage() {
       <section className="border-b border-slate-200 bg-slate-50">
         <div className="mx-auto max-w-7xl px-6 py-16">
           <CustomerInnSearch />
+
+          {query ? (
+            <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
+                    Результаты поиска
+                  </div>
+                  <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
+                    По запросу: {query}
+                  </h2>
+                </div>
+
+                <Link
+                  href="/zakazchikam"
+                  className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  Сбросить поиск
+                </Link>
+              </div>
+
+              {searchResults.length === 0 ? (
+                <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-500">
+                  По этому запросу заказчики в базе пока не найдены.
+                </div>
+              ) : (
+                <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {searchResults.map((item) => (
+                    <Link
+                      key={item.customerInn}
+                      href={`/zakazchik/${item.customerInn}`}
+                      className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm"
+                    >
+                      <div className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                        ИНН {item.customerInn}
+                      </div>
+                      <div className="mt-3 text-lg font-semibold leading-8 text-[#081a4b]">
+                        {item.customerName}
+                      </div>
+                      <div className="mt-3 text-sm text-slate-600">
+                        Кейсов в базе: {item.count}
+                      </div>
+                      <div className="mt-4 text-sm font-semibold text-[#081a4b]">
+                        Открыть карточку →
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
 
           <div className="mb-10 max-w-3xl">
             <h2 className="text-3xl font-bold tracking-tight text-[#081a4b] md:text-4xl">

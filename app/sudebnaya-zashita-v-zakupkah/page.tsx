@@ -1,81 +1,96 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { SITE_CONTACTS } from "@/lib/site-config";
 
+export const metadata: Metadata = {
+  title: "Оспаривание решения ФАС в арбитражном суде | GOSZAKON",
+  description:
+    "Оспариваем решения ФАС в арбитражном суде, если жалоба отклонена формально, материалы дела не исследованы или позиция комиссии противоречит сложившейся практике.",
+};
+
+const situations = [
+  "ФАС отказал по сильной жалобе, хотя позиция подтверждается документами.",
+  "Комиссия не исследовала материалы дела и ограничилась формальной отпиской.",
+  "Решение антимонопольного органа идет против сложившейся практики.",
+  "Заказчика не привлекли к ответственности за неоплату в срок по надуманным основаниям.",
+];
+
+const disputeTypes = [
+  {
+    title: "Отказ ФАС по обоснованной жалобе",
+    text: "Если жалоба сильная, но комиссия не приняла нашу сторону, проигнорировала документы или ушла от нормальной правовой оценки, мы продолжаем спор в арбитражном суде.",
+  },
+  {
+    title: "Споры по НДС и НМЦК",
+    text: "Даже по вопросам, где подход уже должен быть очевидным, ФАС иногда продолжает выносить спорные решения. Если комиссия сохраняет ошибочную позицию вопреки сложившейся практике, такое решение нужно ломать в суде.",
+  },
+  {
+    title: "Неоплата и неустойка",
+    text: "Мы оспариваем отказы ФАС в привлечении заказчика к ответственности за неоплату и ведем судебные споры о снижении неустойки поставщику, когда заказчик удерживает из оплаты чрезмерные санкции.",
+  },
+];
+
+const proofPoints = [
+  "ФАС не исследовал материалы дела полно и объективно.",
+  "Комиссия проигнорировала ключевые доказательства.",
+  "Выводы решения не соответствуют фактическим обстоятельствам.",
+  "Мотивировка носит формальный характер и не отвечает на доводы жалобы.",
+  "Антимонопольный орган пошел против сложившейся практики.",
+  "Вместо рассмотрения спора по существу была подготовлена отказная отписка.",
+];
+
+const advantages = [
+  "Мы не подаем безнадежные жалобы и заранее оцениваем перспективу спора.",
+  "Понимаем, когда отказ ФАС означает слабую жалобу, а когда слабое решение самой комиссии.",
+  "Сочетаем опыт административной защиты и арбитражного процесса.",
+  "Ориентируемся не на формальную победу, а на практический результат для доверителя.",
+];
+
+const stages = [
+  {
+    title: "Разбираем решение ФАС",
+    text: "Смотрим, как именно комиссия пришла к отказу, что исследовала, что проигнорировала и где решение не выдерживает правовой проверки.",
+  },
+  {
+    title: "Оцениваем, можно ли ломать решение в суде",
+    text: "Сопоставляем материалы дела, закон и уже сложившуюся практику. На этом этапе видно, есть ли у спора реальная судебная перспектива.",
+  },
+  {
+    title: "Готовим позицию для арбитражного суда",
+    text: "Определяем ключевые точки атаки: формальный подход, неполное исследование обстоятельств, игнорирование доказательств и противоречие практике.",
+  },
+  {
+    title: "Сопровождаем спор до результата",
+    text: "Готовим процессуальные документы, представляем интересы доверителя в суде и добиваемся отмены незаконного решения ФАС.",
+  },
+];
+
 export default function CourtProtectionPage() {
-  const situations = [
-    "Решение ФАС нарушает интересы компании, и его необходимо оспорить в арбитражном суде.",
-    "Жалоба в ФАС не закончила спор, и защита интересов должна продолжаться уже в судебной плоскости.",
-    "Необходимо отменить решение или предписание ФАС, которое влияет на закупку, договор или положение клиента.",
-    "Спор в сфере закупок требует полноценной процессуальной стратегии, а не только административной защиты.",
-  ];
-
-  const directions = [
-    {
-      title: "Оспаривание решений ФАС",
-      text: "Подготавливаем правовую позицию и сопровождаем дела по отмене решений и предписаний антимонопольного органа в арбитражном суде.",
-    },
-    {
-      title: "Судебная защита после жалобы",
-      text: "Если спор не закончился на стадии ФАС, продолжаем защиту интересов клиента в суде с учётом материалов административного дела.",
-    },
-    {
-      title: "Анализ перспективы спора",
-      text: "Оцениваем, есть ли реальные основания для обращения в суд, насколько сильна позиция и какой результат можно считать достижимым.",
-    },
-    {
-      title: "Полное сопровождение дела",
-      text: "Готовим заявления, отзывы, ходатайства, правовую позицию и сопровождаем клиента на всех стадиях судебного процесса.",
-    },
-  ];
-
-  const advantages = [
-    "Опыт сопровождения закупочных споров не только в ФАС, но и в арбитражных судах.",
-    "Понимание связи между административной стадией и последующей судебной защитой.",
-    "Оценка не формальной, а практической перспективы судебного обжалования.",
-    "Фокус на защите интересов клиента и на экономическом смысле судебного спора.",
-  ];
-
-  const stages = [
-    {
-      title: "Изучаем материалы дела",
-      text: "Анализируем решение ФАС, предписание, доводы сторон, документы закупки и фактические обстоятельства спора.",
-    },
-    {
-      title: "Оцениваем судебную перспективу",
-      text: "Смотрим, насколько обоснованны выводы ФАС, есть ли ошибки в правоприменении и доказательства для суда.",
-    },
-    {
-      title: "Формируем правовую позицию",
-      text: "Определяем стратегию: какие требования заявлять, на какие нарушения ссылаться и как выстраивать аргументацию.",
-    },
-    {
-      title: "Сопровождаем спор в суде",
-      text: "Ведём дело в арбитражном суде, готовим процессуальные документы и представляем интересы клиента.",
-    },
-  ];
-
   return (
     <main className="min-h-screen bg-white text-slate-900">
       <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
+        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[1.08fr_0.92fr] lg:py-24">
           <div>
             <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
-              Отдельное направление GOSZAKON
+              Судебная защита GOSZAKON
             </div>
 
             <h1 className="mt-6 max-w-5xl text-5xl font-bold leading-[1.02] tracking-tight text-[#081a4b] md:text-7xl">
-              Судебная защита в закупочных спорах
+              Оспаривание решения ФАС в арбитражном суде
             </h1>
 
             <p className="mt-6 max-w-3xl text-xl leading-9 text-slate-700">
-              Мы сопровождаем клиентов не только на стадии жалобы в ФАС, но и в
-              арбитражном суде, когда требуется оспорить решение антимонопольного
-              органа или продолжить защиту интересов по закупочному спору.
+              Если ФАС не исследовал материалы дела, формально отказал в жалобе
+              или занял позицию против сложившейся практики, спор не
+              заканчивается на административной стадии. Мы оспариваем такие
+              решения в арбитражном суде и добиваемся их отмены.
             </p>
 
             <p className="mt-4 max-w-3xl text-lg leading-9 text-slate-700">
-              Основная практика связана с закупочными спорами и вопросами, вытекающими
-              из решений ФАС, включая дела, связанные с закупками по 223-ФЗ.
+              Мы не ведем безнадежные дела. До обращения в суд заранее
+              оцениваем перспективу, понимаем силу позиции и честно смотрим на
+              шансы. Если решение ФАС юридически слабое, его можно и нужно
+              ломать.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -83,14 +98,14 @@ export default function CourtProtectionPage() {
                 href={SITE_CONTACTS.phoneHref}
                 className="rounded-2xl bg-[#081a4b] px-7 py-4 text-center text-base font-semibold text-white transition hover:bg-[#0d2568]"
               >
-                Позвонить: {SITE_CONTACTS.phoneDisplay}
+                Оценить перспективу спора
               </a>
 
               <a
                 href={SITE_CONTACTS.emailHref}
                 className="rounded-2xl border border-slate-300 bg-white px-7 py-4 text-center text-base font-semibold text-[#081a4b] transition hover:bg-slate-50"
               >
-                Написать: {SITE_CONTACTS.email}
+                Направить решение ФАС
               </a>
             </div>
           </div>
@@ -98,7 +113,7 @@ export default function CourtProtectionPage() {
           <div className="grid gap-5">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm">
               <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
-                Когда это особенно актуально
+                Когда мы идем в суд
               </div>
 
               <div className="mt-5 space-y-4">
@@ -115,12 +130,13 @@ export default function CourtProtectionPage() {
 
             <div className="rounded-3xl bg-[#081a4b] p-7 text-white shadow-sm">
               <div className="text-sm uppercase tracking-[0.14em] text-white/60">
-                Практический смысл
+                Практический результат
               </div>
+              <div className="mt-4 text-4xl font-bold">80%+</div>
               <p className="mt-4 text-lg leading-9 text-white/90">
-                Судебная защита нужна там, где административной стадии уже недостаточно.
-                Важна не просто подача документов, а сильная процессуальная позиция
-                с учётом реальной практики закупочных споров.
+                Наш выигрыш по делам об оспаривании решений ФАС. Мы не идем в
+                поток формальных споров, а берем в работу только те дела, где
+                видим реальный шанс изменить итог.
               </p>
             </div>
           </div>
@@ -131,21 +147,22 @@ export default function CourtProtectionPage() {
         <div className="mx-auto max-w-7xl px-6 py-20">
           <div className="max-w-3xl">
             <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
-              Основные направления
+              Типовые споры
             </div>
 
             <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
-              Что входит в судебную защиту
+              Какие решения ФАС мы чаще всего оспариваем
             </h2>
 
             <p className="mt-5 text-lg leading-9 text-slate-700">
-              Работа строится вокруг конкретного спора, решения ФАС, закупки и
-              процессуальной перспективы. Мы сопровождаем как поставщиков, так и заказчиков.
+              Мы идем в суд не потому, что нам не понравился результат. Мы
+              идем в суд тогда, когда отказ ФАС не выдерживает нормальной
+              правовой проверки.
             </p>
           </div>
 
-          <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {directions.map((item) => (
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {disputeTypes.map((item) => (
               <div
                 key={item.title}
                 className="flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-7 shadow-sm"
@@ -154,37 +171,123 @@ export default function CourtProtectionPage() {
                   <div className="h-3 w-3 rounded-full bg-[#081a4b]" />
                 </div>
 
-                <h3 className="text-xl font-semibold leading-8 text-[#081a4b]">
+                <h3 className="text-2xl font-semibold leading-8 text-[#081a4b]">
                   {item.title}
                 </h3>
-                <p className="mt-3 text-base leading-8 text-slate-700">
+
+                <p className="mt-4 text-base leading-8 text-slate-700">
                   {item.text}
                 </p>
               </div>
             ))}
           </div>
+
+          <div className="mt-8">
+            <Link
+              href="/sudebnaya-zashita-v-zakupkah/snizhenie-neustojki-postavshiku"
+              className="inline-flex rounded-2xl border border-slate-300 bg-white px-6 py-4 text-base font-semibold text-[#081a4b] transition hover:bg-slate-100"
+            >
+              Отдельно: снижение неустойки поставщику
+            </Link>
+          </div>
         </div>
       </section>
 
       <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-20 lg:grid-cols-2">
+        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-20 lg:grid-cols-[1fr_0.95fr]">
           <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 shadow-sm">
             <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
-              Почему это важно
+              Почему ФАС приходится оспаривать
+            </div>
+
+            <h2 className="mt-6 text-3xl font-bold tracking-tight text-[#081a4b]">
+              Отказ ФАС не всегда означает слабую жалобу
+            </h2>
+
+            <p className="mt-5 text-lg leading-9 text-slate-700">
+              Институт жалоб в закупках до сих пор не работает так ровно, как
+              должен был бы работать. Поставщики часто боятся спорить с
+              заказчиком открыто, зависят от него и не всегда готовы доводить
+              конфликт до конца. Из-за этого многие спорные вопросы слишком
+              долго живут без нормального судебного продолжения, а по похожим
+              ситуациям появляются разные и даже полярные решения.
+            </p>
+
+            <p className="mt-4 text-lg leading-9 text-slate-700">
+              Один из показательных примеров связан со спорами по НДС и НМЦК.
+              Даже после того, как подход по этому вопросу уже должен был стать
+              очевидным, в практике продолжали появляться разные решения. Если
+              ФАС сохраняет спорную позицию по вопросу, который уже должен
+              решаться иначе, мы оспариваем такое решение в арбитражном суде.
+            </p>
+          </div>
+
+          <div className="rounded-3xl bg-[#081a4b] p-8 text-white shadow-sm">
+            <div className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm text-white/80">
+              Что мы доказываем в суде
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {proofPoints.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-white/10 bg-white/5 p-5"
+                >
+                  <p className="text-base leading-8 text-white/90">{item}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-slate-50">
+        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-20 lg:grid-cols-[0.95fr_1fr]">
+          <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+              Наша позиция
+            </div>
+
+            <h2 className="mt-6 text-3xl font-bold tracking-tight text-[#081a4b]">
+              Мы не идем в суд ради самой подачи
+            </h2>
+
+            <p className="mt-5 text-lg leading-9 text-slate-700">
+              До обращения в арбитражный суд мы оцениваем, насколько грубые
+              ошибки допущены в решении ФАС, подтверждается ли позиция
+              документами, есть ли практика по аналогичным вопросам и даст ли
+              отмена решения реальный результат для доверителя.
+            </p>
+
+            <p className="mt-4 text-lg leading-9 text-slate-700">
+              Если дело слабое, мы говорим это сразу. Если видим, что ФАС сделал
+              формальную отписку, не исследовал материалы дела или прикрыл
+              заказчика от ответственности, мы идем в суд и добиваемся отмены
+              такого решения.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+              Почему обращаются к нам
             </div>
 
             <div className="mt-6 space-y-4">
               {advantages.map((item) => (
                 <div
                   key={item}
-                  className="rounded-2xl border border-slate-200 bg-white p-5"
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
                 >
                   <p className="text-base leading-8 text-slate-700">{item}</p>
                 </div>
               ))}
             </div>
           </div>
+        </div>
+      </section>
 
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-20 lg:grid-cols-2">
           <div className="rounded-3xl bg-[#081a4b] p-8 text-white shadow-sm">
             <div className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm text-white/80">
               Как строится работа
@@ -204,6 +307,31 @@ export default function CourtProtectionPage() {
               ))}
             </div>
           </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 shadow-sm">
+            <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+              Практический итог
+            </div>
+
+            <h2 className="mt-6 text-3xl font-bold tracking-tight text-[#081a4b]">
+              Для нас важна не отмена бумаги, а результат для доверителя
+            </h2>
+
+            <p className="mt-5 text-lg leading-9 text-slate-700">
+              Если суд отменяет необоснованное решение ФАС, мы рассматриваем
+              спор дальше не как формальную победу, а как реальный шаг к
+              восстановлению позиции доверителя. В зависимости от ситуации это
+              может означать отмену незаконного отказа, привлечение заказчика к
+              ответственности, продолжение защиты по закупке или дальнейшее
+              взыскание денежных средств.
+            </p>
+
+            <p className="mt-4 text-lg leading-9 text-slate-700">
+              Если действия заказчика уже привели к потерям и для этого есть
+              основания, после выигрыша мы ставим вопрос и о деньгах. Для
+              доверителя важен не сам судебный акт, а практический итог спора.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -215,12 +343,13 @@ export default function CourtProtectionPage() {
             </div>
 
             <h2 className="mt-5 text-4xl font-bold tracking-tight">
-              Если спор требует продолжения в суде — направьте материалы на первичную оценку
+              Если ФАС отказал по сильной жалобе, это еще не конец спора
             </h2>
 
             <p className="mt-5 max-w-2xl text-lg leading-9 text-slate-200">
-              Мы посмотрим решение ФАС, документы закупки, перспективу спора и предложим
-              правовой формат дальнейшей судебной защиты.
+              Направьте нам решение ФАС и материалы дела. Мы оценим, есть ли
+              основания для судебного оспаривания, и честно скажем, можно ли
+              изменить итог спора через арбитражный суд.
             </p>
           </div>
 
@@ -236,7 +365,7 @@ export default function CourtProtectionPage() {
               href={SITE_CONTACTS.emailHref}
               className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-4 text-base font-semibold text-[#081a4b] transition hover:bg-slate-50"
             >
-              {SITE_CONTACTS.email}
+              Направить материалы на почту
             </a>
 
             <Link

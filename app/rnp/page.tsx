@@ -338,6 +338,45 @@ export default function RnpPage() {
               </div>
             </div>
           </div>
+
+          <div className="mt-10 grid gap-4 lg:grid-cols-4">
+            <Link
+              href="/cases?violation=%D0%A0%D0%9D%D0%9F"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
+            >
+              <div className="font-semibold text-[#081a4b]">Вся практика по РНП</div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Открыть подборку решений по включению и отказу во включении в реестр.
+              </p>
+            </Link>
+            <Link
+              href="/uslugi/risk-rnp"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
+            >
+              <div className="font-semibold text-[#081a4b]">Оценка риска РНП</div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Если нужно быстро понять перспективу до заседания комиссии ФАС.
+              </p>
+            </Link>
+            <Link
+              href="/sudebnaya-zashita-v-zakupkah"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
+            >
+              <div className="font-semibold text-[#081a4b]">Судебная защита</div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Когда спор по РНП не заканчивается в ФАС и требует продолжения в суде.
+              </p>
+            </Link>
+            <Link
+              href="/uslugi/zhaloba-v-fas"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
+            >
+              <div className="font-semibold text-[#081a4b]">Связанные споры в ФАС</div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Жалобы, подготовка позиции и сопровождение поставщика по закупочным спорам.
+              </p>
+            </Link>
+          </div>
         </div>
       </section>
 

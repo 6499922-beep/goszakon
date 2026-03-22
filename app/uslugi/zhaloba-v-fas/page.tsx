@@ -78,6 +78,44 @@ export default function ComplaintToFasPage() {
               </p>
             </div>
           </div>
+
+          <div className="mt-8 grid gap-4 lg:grid-cols-3">
+            <Link
+              href="/narusheniya"
+              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className="text-lg font-semibold text-[#081a4b]">
+                Типовые нарушения
+              </div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Посмотрите, какие нарушения чаще всего становятся основанием для жалобы в ФАС.
+              </p>
+            </Link>
+
+            <Link
+              href="/cases"
+              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className="text-lg font-semibold text-[#081a4b]">
+                Практика ФАС
+              </div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Смотрите реальные кейсы по товарному знаку, конкуренции, документации и результатам жалоб.
+              </p>
+            </Link>
+
+            <Link
+              href="/uslugi/proverka-zakupki"
+              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className="text-lg font-semibold text-[#081a4b]">
+                Проверка закупки
+              </div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Если нужно понять, есть ли смысл жаловаться, лучше сначала оценить перспективу спора.
+              </p>
+            </Link>
+          </div>
         </div>
       </section>
     </main>

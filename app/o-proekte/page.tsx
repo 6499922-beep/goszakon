@@ -100,7 +100,27 @@ export default function AboutUsPage() {
               >
                 {SITE_CONTACTS.email}
               </a>
+            </div>
 
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              <Link
+                href="/cases"
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:bg-white hover:shadow-sm"
+              >
+                <div className="font-semibold text-[#081a4b]">Практика ФАС</div>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
+                  База решений по жалобам, РНП, неоплате, неустойке и другим закупочным спорам.
+                </p>
+              </Link>
+              <Link
+                href="/spornye-praktiki"
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:bg-white hover:shadow-sm"
+              >
+                <div className="font-semibold text-[#081a4b]">Спорные практики</div>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
+                  Разбираем перекосы, которые заказчики пытаются сделать обычной практикой.
+                </p>
+              </Link>
             </div>
           </div>
 
@@ -219,6 +239,29 @@ export default function AboutUsPage() {
                 Смотреть практику ФАС
               </Link>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-slate-200 bg-slate-50">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="grid gap-4 lg:grid-cols-4">
+            <Link href="/neoplata-po-goskontraktu" className="rounded-3xl border border-slate-200 bg-white p-6 transition hover:shadow-sm">
+              <div className="font-semibold text-[#081a4b]">Неоплата по контракту</div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">Когда заказчик не платит, затягивает приемку или привязывает оплату к своим документам.</p>
+            </Link>
+            <Link href="/rnp" className="rounded-3xl border border-slate-200 bg-white p-6 transition hover:shadow-sm">
+              <div className="font-semibold text-[#081a4b]">РНП</div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">Как защищать компанию от включения в реестр и на чем строится сильная позиция поставщика.</p>
+            </Link>
+            <Link href="/sudebnaya-zashita-v-zakupkah" className="rounded-3xl border border-slate-200 bg-white p-6 transition hover:shadow-sm">
+              <div className="font-semibold text-[#081a4b]">Судебная защита</div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">Когда решение ФАС нужно оспаривать дальше и как ломать слабую позицию заказчика через суд.</p>
+            </Link>
+            <Link href="/uslugi" className="rounded-3xl border border-slate-200 bg-white p-6 transition hover:shadow-sm">
+              <div className="font-semibold text-[#081a4b]">Услуги</div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">Все основные направления помощи поставщикам: жалобы, неоплата, РНП и проверка закупки.</p>
+            </Link>
           </div>
         </div>
       </section>

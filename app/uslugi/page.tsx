@@ -6,6 +6,7 @@ export default function ServicesPage() {
     {
       title: "Подготовка жалобы в ФАС",
       text: "Анализ закупочной документации, выявление нарушений, подготовка жалобы и сопровождение поставщика на стадии рассмотрения.",
+      href: "/uslugi/zhaloba-v-fas",
     },
     {
       title: "Проверка закупки",
@@ -15,10 +16,12 @@ export default function ServicesPage() {
     {
       title: "Защита интересов поставщика",
       text: "Формирование правовой позиции, участие в заседаниях и юридическое сопровождение по ключевым вопросам закупки по 223-ФЗ.",
+      href: "/uslugi/proverka-zakupki",
     },
     {
       title: "Споры по неоплате",
       text: "Работа с вопросами сроков оплаты, исполнения договора, взыскания задолженности и дальнейшего сопровождения поставщика.",
+      href: "/uslugi/spory-po-neoplate",
     },
     {
       title: "Защита без раскрытия инициатора",
@@ -28,6 +31,7 @@ export default function ServicesPage() {
     {
       title: "Судебное продолжение спора",
       text: "При необходимости сопровождаем спор после ФАС: готовим позицию, защищаем интересы клиента и ведём дело дальше.",
+      href: "/sudebnaya-zashita-v-zakupkah",
     },
   ];
 
@@ -153,6 +157,42 @@ export default function ServicesPage() {
                 Написать: {SITE_CONTACTS.email}
               </a>
             </div>
+          </div>
+
+          <div className="mt-10 grid gap-4 lg:grid-cols-3">
+            <Link
+              href="/cases"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
+            >
+              <div className="text-lg font-semibold text-[#081a4b]">
+                Практика ФАС
+              </div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Смотреть реальные кейсы по жалобам, РНП, неоплате и спорным условиям договоров.
+              </p>
+            </Link>
+            <Link
+              href="/spornye-praktiki"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
+            >
+              <div className="text-lg font-semibold text-[#081a4b]">
+                Спорные практики
+              </div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Что заказчики пытаются сделать нормой и какие условия мы считаем недопустимыми.
+              </p>
+            </Link>
+            <Link
+              href="/sudebnaya-zashita-v-zakupkah"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
+            >
+              <div className="text-lg font-semibold text-[#081a4b]">
+                Судебная защита
+              </div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Когда административной жалобы недостаточно и спор нужно продолжать в арбитражном суде.
+              </p>
+            </Link>
           </div>
         </div>
       </section>

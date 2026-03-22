@@ -14,8 +14,38 @@ type PageProps = {
     violation?: string;
     category?: string;
     page?: string;
+    sort?: string;
   }>;
 };
+
+const quickCollections = [
+  {
+    title: "Неоплата по контракту",
+    description: "Кейсы, где заказчик задерживал оплату, удерживал деньги или создавал искусственные препятствия.",
+    href: "/cases?q=%D0%9D%D0%B5%D0%BE%D0%BF%D0%BB%D0%B0%D1%82%D0%B0",
+  },
+  {
+    title: "РНП и защита поставщика",
+    description: "Подборка решений по включению в реестр, добросовестности поставщика и защите в ФАС.",
+    href: "/cases?violation=%D0%A0%D0%9D%D0%9F",
+  },
+  {
+    title: "Неустойка и удержания",
+    description: "Практика по завышенным санкциям, штрафам, удержаниям и спорным условиям контракта.",
+    href: "/cases?q=%D0%BD%D0%B5%D1%83%D1%81%D1%82%D0%BE%D0%B9%D0%BA%D0%B0",
+  },
+  {
+    title: "Товарный знак и ограничение конкуренции",
+    description: "Решения по документации закупки, эквивалентам, ограничению конкуренции и спорным требованиям.",
+    href: "/cases?violation=%D0%A2%D0%BE%D0%B2%D0%B0%D1%80%D0%BD%D1%8B%D0%B9%20%D0%B7%D0%BD%D0%B0%D0%BA",
+  },
+];
+
+const sortOptions = [
+  { value: "recent", label: "Сначала свежие решения" },
+  { value: "featured", label: "Сначала важные кейсы" },
+  { value: "updated", label: "Сначала недавно обновленные" },
+];
 
 function formatDate(value?: Date | null) {
   if (!value) return "Дата не указана";
@@ -36,6 +66,7 @@ function buildPageHref(params: {
   violation?: string;
   category?: string;
   page?: number;
+  sort?: string;
 }) {
   const search = new URLSearchParams();
 
@@ -43,6 +74,7 @@ function buildPageHref(params: {
   if (params.region) search.set("region", params.region);
   if (params.violation) search.set("violation", params.violation);
   if (params.category) search.set("category", params.category);
+  if (params.sort && params.sort !== "recent") search.set("sort", params.sort);
   if (params.page && params.page > 1) search.set("page", String(params.page));
 
   const query = search.toString();
@@ -57,7 +89,10 @@ export default async function CasesPage({ searchParams }: PageProps) {
   const region = (params.region || "").trim();
   const violation = (params.violation || "").trim();
   const category = (params.category || "").trim();
+  const sort = (params.sort || "recent").trim();
   const page = parsePage(params.page);
+
+  const safeSort = sortOptions.some((item) => item.value === sort) ? sort : "recent";
 
   const where: Prisma.CaseWhereInput = {
     published: true,
@@ -155,11 +190,12 @@ export default async function CasesPage({ searchParams }: PageProps) {
     await Promise.all([
       prisma.case.findMany({
         where,
-        orderBy: [
-          { decisionDate: "desc" },
-          { isFeatured: "desc" },
-          { updatedAt: "desc" },
-        ],
+        orderBy:
+          safeSort === "featured"
+            ? [{ isFeatured: "desc" }, { decisionDate: "desc" }, { updatedAt: "desc" }]
+            : safeSort === "updated"
+              ? [{ updatedAt: "desc" }, { decisionDate: "desc" }, { isFeatured: "desc" }]
+              : [{ decisionDate: "desc" }, { isFeatured: "desc" }, { updatedAt: "desc" }],
         skip,
         take: PAGE_SIZE,
         include: {
@@ -215,6 +251,7 @@ export default async function CasesPage({ searchParams }: PageProps) {
           region,
           violation,
           category,
+          sort: safeSort,
           page: safePage - 1,
         })
       : null;
@@ -226,6 +263,7 @@ export default async function CasesPage({ searchParams }: PageProps) {
           region,
           violation,
           category,
+          sort: safeSort,
           page: safePage + 1,
         })
       : null;
@@ -239,13 +277,30 @@ export default async function CasesPage({ searchParams }: PageProps) {
           </div>
 
           <h1 className="mt-5 text-5xl font-bold tracking-tight text-[#081a4b]">
-            Кейсы ФАС
+            База практики ФАС
           </h1>
 
           <p className="mt-4 text-lg leading-8 text-slate-600">
-            Найдите решения по своей ситуации: по номеру закупки, ИНН, заказчику,
-            региону, нарушению или категории.
+            Не просто архив решений, а рабочая база по закупочным спорам. Ищите
+            практику по номеру закупки, ИНН заказчика, нарушению, категории,
+            региону или типу результата.
           </p>
+        </div>
+
+        <div className="mt-8 grid gap-4 xl:grid-cols-4">
+          {quickCollections.map((item) => (
+            <Link
+              key={item.title}
+              href={item.href}
+              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className="text-lg font-semibold text-[#081a4b]">{item.title}</div>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{item.description}</p>
+              <span className="mt-4 inline-flex text-sm font-semibold text-[#081a4b]">
+                Открыть подборку →
+              </span>
+            </Link>
+          ))}
         </div>
 
         <form className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
@@ -321,6 +376,23 @@ export default async function CasesPage({ searchParams }: PageProps) {
               </select>
             </div>
 
+            <div className="lg:col-span-4 xl:col-span-2">
+              <label className="block text-sm font-medium text-slate-700">
+                Сортировка
+              </label>
+              <select
+                name="sort"
+                defaultValue={safeSort}
+                className="mt-2 h-14 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-[#081a4b]"
+              >
+                {sortOptions.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="lg:col-span-12 xl:col-span-1">
               <label className="block text-sm font-medium text-transparent">
                 Действие
@@ -356,6 +428,40 @@ export default async function CasesPage({ searchParams }: PageProps) {
               Показаны результаты по выбранным фильтрам
             </span>
           ) : null}
+
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+            {sortOptions.find((item) => item.value === safeSort)?.label}
+          </span>
+        </div>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <div className="rounded-3xl border border-slate-200 bg-white p-5">
+            <div className="text-base font-semibold text-[#081a4b]">
+              Как пользоваться базой
+            </div>
+            <p className="mt-2 text-sm leading-7 text-slate-600">
+              Ищите не только по заказчику или номеру закупки. Сильнее всего
+              работают фильтры по нарушению, категории и результату спора.
+            </p>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5">
+            <div className="text-base font-semibold text-[#081a4b]">
+              Что смотреть в карточке
+            </div>
+            <p className="mt-2 text-sm leading-7 text-slate-600">
+              Важнее всего: предмет спора, нарушение, результат, заказчик и
+              связанная аналитика. Это помогает быстро понять перспективу.
+            </p>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5">
+            <div className="text-base font-semibold text-[#081a4b]">
+              Нужна оценка вашей ситуации
+            </div>
+            <p className="mt-2 text-sm leading-7 text-slate-600">
+              Если нашли похожую практику, следующий шаг — оценить документы,
+              а не просто читать решения. Мы можем быстро посмотреть перспективу.
+            </p>
+          </div>
         </div>
 
         <div className="mt-10 space-y-6">
@@ -404,6 +510,27 @@ export default async function CasesPage({ searchParams }: PageProps) {
                   </div>
                 </div>
 
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {item.subject ? (
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                      Суть спора: {item.subject}
+                    </span>
+                  ) : null}
+                  {item.violation ? (
+                    <Link
+                      href={buildPageHref({ q, region, category, violation: item.violation, sort: safeSort })}
+                      className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50"
+                    >
+                      Нарушение: {item.violation}
+                    </Link>
+                  ) : null}
+                  {item.result ? (
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                      Итог: {item.result}
+                    </span>
+                  ) : null}
+                </div>
+
                 <div className="mt-5 grid gap-3 text-sm text-slate-600 md:grid-cols-2 xl:grid-cols-4">
                   <div>
                     <span className="font-semibold text-slate-800">
@@ -444,7 +571,7 @@ export default async function CasesPage({ searchParams }: PageProps) {
                 {item.result ? (
                   <div className="mt-4 text-sm leading-7 text-slate-700">
                     <span className="font-semibold text-slate-800">
-                      Результат:
+                      Практический результат:
                     </span>{" "}
                     {item.result}
                   </div>
@@ -466,6 +593,13 @@ export default async function CasesPage({ searchParams }: PageProps) {
                       Все кейсы по заказчику
                     </Link>
                   ) : null}
+
+                  <Link
+                    href="/uslugi/proverka-zakupki"
+                    className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Оценить мою ситуацию
+                  </Link>
                 </div>
               </article>
             ))

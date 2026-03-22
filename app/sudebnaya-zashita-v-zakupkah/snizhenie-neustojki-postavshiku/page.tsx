@@ -325,6 +325,61 @@ export default function SupplierPenaltyReductionPage() {
         </div>
       </section>
 
+      <section className="border-b border-slate-200 bg-slate-50">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="max-w-3xl">
+            <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+              Связанные материалы
+            </div>
+
+            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
+              Что еще посмотреть по теме неустойки
+            </h2>
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <Link
+              href="/spornye-praktiki/neravnoznachnaya-neustoyka"
+              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Неравная неустойка
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Разбор перекоса договорной ответственности, который заказчики потом
+                используют против поставщика.
+              </p>
+            </Link>
+
+            <Link
+              href="/cases?q=%D0%BD%D0%B5%D1%83%D1%81%D1%82%D0%BE%D0%B9%D0%BA%D0%B0"
+              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Практика по неустойке
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Подборка кейсов и решений, где спор шел о расчете санкций,
+                удержаниях и договорной ответственности сторон.
+              </p>
+            </Link>
+
+            <Link
+              href="/uslugi/proverka-zakupki"
+              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Получить консультацию
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Если заказчик уже удержал деньги или насчитал санкции, можно
+                быстро оценить силу его позиции и перспективу суда.
+              </p>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section className="bg-[#081a4b] text-white">
         <div className="mx-auto grid max-w-7xl gap-8 px-6 py-20 md:grid-cols-2">
           <div>

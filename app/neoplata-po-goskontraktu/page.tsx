@@ -297,6 +297,61 @@ export default function NonPaymentPage() {
         </div>
       </section>
 
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="max-w-3xl">
+            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+              Связанные материалы
+            </div>
+
+            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
+              Куда перейти дальше по спорам об оплате
+            </h2>
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <Link
+              href="/spornye-praktiki/vnutrennie-sistemy-oplaty"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Спорная практика: внутренние документы
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Когда оплату незаконно ставят в зависимость от акта, внутренней
+                программы, платежного дня или других процедур заказчика.
+              </p>
+            </Link>
+
+            <Link
+              href="/cases?q=%D0%9D%D0%B5%D0%BE%D0%BF%D0%BB%D0%B0%D1%82%D0%B0"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Практика по неоплате
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Кейсы и решения, где заказчик затягивал оплату, ссылался на
+                формальные причины и создавал препятствия для расчета.
+              </p>
+            </Link>
+
+            <Link
+              href="/uslugi/spory-po-neoplate"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Разобрать ситуацию с юристом
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Если заказчик уже не платит или удержал деньги, можно сразу
+                перейти к правовой оценке и стратегии взыскания.
+              </p>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section className="bg-[#081a4b] text-white">
         <div className="mx-auto grid max-w-7xl gap-8 px-6 py-20 md:grid-cols-2">
           <div>

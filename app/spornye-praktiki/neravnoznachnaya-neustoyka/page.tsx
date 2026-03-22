@@ -250,6 +250,61 @@ export default function UnequalPenaltyPage() {
         </div>
       </section>
 
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="max-w-3xl">
+            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+              Связанные материалы
+            </div>
+
+            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
+              Куда перейти дальше по теме неустойки
+            </h2>
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <Link
+              href="/sudebnaya-zashita-v-zakupkah/snizhenie-neustojki-postavshiku"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Снижение неустойки поставщику
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Судебная стратегия, когда заказчик уже насчитал или удержал
+                чрезмерную неустойку по контракту.
+              </p>
+            </Link>
+
+            <Link
+              href="/cases?q=%D0%BD%D0%B5%D1%83%D1%81%D1%82%D0%BE%D0%B9%D0%BA%D0%B0"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Практика по неустойке
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Связанные кейсы и решения, где спор шел о расчете санкций,
+                договорных условиях и удержаниях заказчика.
+              </p>
+            </Link>
+
+            <Link
+              href="/uslugi/proverka-zakupki"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Получить консультацию
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Можно быстро проверить договор и понять, где именно заказчик
+                заложил перекос ответственности и как это использовать в споре.
+              </p>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section className="bg-[#081a4b] text-white">
         <div className="mx-auto max-w-7xl px-6 py-20">
           <div className="grid gap-10 lg:grid-cols-[1fr_auto] lg:items-center">

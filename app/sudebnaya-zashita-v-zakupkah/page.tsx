@@ -335,6 +335,67 @@ export default function CourtProtectionPage() {
         </div>
       </section>
 
+      <section className="border-b border-slate-200 bg-slate-50">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="max-w-3xl">
+            <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+              Связанные материалы
+            </div>
+
+            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
+              Куда перейти дальше по этой теме
+            </h2>
+
+            <p className="mt-5 text-lg leading-9 text-slate-700">
+              Если спор связан не только с отказом ФАС, но и с деньгами,
+              неустойкой или исполнением контракта, полезно сразу смотреть
+              соседние материалы и практику.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <Link
+              href="/sudebnaya-zashita-v-zakupkah/snizhenie-neustojki-postavshiku"
+              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Снижение неустойки поставщику
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Если заказчик удержал санкции из оплаты или насчитал чрезмерную
+                сумму, спор часто продолжается уже в судебной плоскости.
+              </p>
+            </Link>
+
+            <Link
+              href="/cases"
+              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Практика ФАС
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Посмотрите реальные кейсы по жалобам, отказам комиссии и
+                ситуациям, где административная стадия стала только началом спора.
+              </p>
+            </Link>
+
+            <Link
+              href="/uslugi/proverka-zakupki"
+              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Получить правовую оценку
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Если у вас уже есть решение ФАС на руках, можно быстро оценить,
+                есть ли смысл идти дальше в арбитражный суд.
+              </p>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section className="bg-[#081a4b] text-white">
         <div className="mx-auto grid max-w-7xl gap-8 px-6 py-20 md:grid-cols-2">
           <div>

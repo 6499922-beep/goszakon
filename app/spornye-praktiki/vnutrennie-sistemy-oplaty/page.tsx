@@ -261,6 +261,61 @@ export default function InternalPaymentSystemsPage() {
         </div>
       </section>
 
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="max-w-3xl">
+            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+              Связанные материалы
+            </div>
+
+            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
+              Что смотреть рядом с этой проблемой
+            </h2>
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <Link
+              href="/neoplata-po-goskontraktu"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Неоплата по госконтракту
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Большой материал о взыскании оплаты, приемке, формальных
+                замечаниях и искусственных препятствиях со стороны заказчика.
+              </p>
+            </Link>
+
+            <Link
+              href="/cases?q=%D0%9D%D0%B5%D0%BE%D0%BF%D0%BB%D0%B0%D1%82%D0%B0"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Кейсы по неоплате
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Практика и решения, где заказчик затягивал срок оплаты или
+                незаконно переносил момент расчета.
+              </p>
+            </Link>
+
+            <Link
+              href="/uslugi/spory-po-neoplate"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Получить консультацию
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Если заказчик уже привязал оплату к своему акту или внутренней
+                системе, можно сразу разобрать договор и документы.
+              </p>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section className="bg-[#081a4b] text-white">
         <div className="mx-auto max-w-7xl px-6 py-20">
           <div className="grid gap-10 lg:grid-cols-[1fr_auto] lg:items-center">

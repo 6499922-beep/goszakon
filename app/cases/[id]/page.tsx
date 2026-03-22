@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { SITE_CONTACTS, SITE_URL } from "@/lib/site-config";
 import { getCasePath, parseCaseParam } from "@/lib/cases";
+import { getCaseSupportLinks } from "@/lib/related-content";
 
 export const revalidate = 3600;
 
@@ -135,73 +136,6 @@ function buildCaseDescription(item: {
   return raw.length > 170 ? `${raw.slice(0, 167)}...` : raw;
 }
 
-function getRelatedLinks(categoryName?: string | null) {
-  const category = (categoryName || "").toLowerCase();
-
-  if (category.includes("рнп")) {
-    return [
-      {
-        title: "Раздел РНП",
-        text: "Материалы о включении в реестр, рисках для поставщика и защите позиции в ФАС.",
-        href: "/rnp",
-      },
-      {
-        title: "Услуга: риск РНП",
-        text: "Если есть риск включения в реестр, важно заранее собрать позицию и документы.",
-        href: "/uslugi/risk-rnp",
-      },
-      {
-        title: "Судебная защита",
-        text: "Если спор выходит за пределы административной стадии, может потребоваться дальнейшая защита в суде.",
-        href: "/sudebnaya-zashita-v-zakupkah",
-      },
-    ];
-  }
-
-  if (
-    category.includes("товар") ||
-    category.includes("знак") ||
-    category.includes("националь") ||
-    category.includes("конкуренц")
-  ) {
-    return [
-      {
-        title: "Категории нарушений",
-        text: "Посмотрите связанные категории нарушений и основания для жалобы в ФАС.",
-        href: "/narusheniya",
-      },
-      {
-        title: "Услуга: жалоба в ФАС",
-        text: "Если по закупке есть спорные условия документации, следующим шагом обычно становится подготовка жалобы.",
-        href: "/uslugi/zhaloba-v-fas",
-      },
-      {
-        title: "Услуга: проверка закупки",
-        text: "Если нужно сначала оценить перспективу спора и силу позиции, начните с проверки закупки.",
-        href: "/uslugi/proverka-zakupki",
-      },
-    ];
-  }
-
-  return [
-    {
-      title: "Практика ФАС",
-      text: "Посмотрите другие материалы из практики по жалобам, закупочным спорам и решениям комиссии.",
-      href: "/cases",
-    },
-    {
-      title: "Услуги поставщикам",
-      text: "Если у вас похожая ситуация, можно перейти к страницам услуг и выбрать подходящий формат защиты.",
-      href: "/uslugi",
-    },
-    {
-      title: "Судебная защита",
-      text: "Если спор требует продолжения после ФАС, посмотрите раздел о судебной защите в закупочных конфликтах.",
-      href: "/sudebnaya-zashita-v-zakupkah",
-    },
-  ];
-}
-
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -274,7 +208,11 @@ export default async function CasePage({ params }: PageProps) {
     getCustomerCases(item),
   ]);
 
-  const relatedLinks = getRelatedLinks(item.category?.name);
+  const relatedLinks = getCaseSupportLinks({
+    categoryName: item.category?.name,
+    violation: item.violation,
+    result: item.result,
+  });
   const canonicalUrl = `${SITE_URL}${canonicalPath}`;
 
   const articleJsonLd = {
@@ -459,7 +397,7 @@ export default async function CasePage({ params }: PageProps) {
                   </section>
                 ) : null}
 
-                <section className="rounded-3xl bg-[#081a4b] p-8 text-white shadow-sm">
+              <section className="rounded-3xl bg-[#081a4b] p-8 text-white shadow-sm">
                   <div className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm text-white/80">
                     Оценка ситуации
                   </div>
@@ -486,6 +424,13 @@ export default async function CasePage({ params }: PageProps) {
                   </div>
 
                   <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                    <Link
+                      href="/uslugi/proverka-zakupki"
+                      className="inline-flex items-center justify-center rounded-2xl bg-white px-6 py-4 text-base font-semibold text-[#081a4b] transition hover:bg-slate-100"
+                    >
+                      Получить правовую оценку
+                    </Link>
+
                     <a
                       href={SITE_CONTACTS.emailHref}
                       className="inline-flex items-center justify-center rounded-2xl border border-white/20 px-6 py-4 text-base font-semibold text-white transition hover:bg-white/10"
@@ -551,7 +496,7 @@ export default async function CasePage({ params }: PageProps) {
 
               <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-xl font-semibold text-[#081a4b]">
-                  Полезные разделы
+                  Связанные материалы и помощь
                 </h2>
 
                 <div className="mt-5 space-y-4">

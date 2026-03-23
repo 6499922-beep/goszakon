@@ -324,7 +324,7 @@ export default function NonPaymentPage() {
             </Link>
 
             <Link
-              href="/cases?q=%D0%9D%D0%B5%D0%BE%D0%BF%D0%BB%D0%B0%D1%82%D0%B0"
+              href="/cases/neoplata"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
             >
               <h3 className="text-2xl font-semibold text-[#081a4b]">

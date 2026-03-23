@@ -22,7 +22,7 @@ const quickCollections = [
   {
     title: "Неоплата по контракту",
     description: "Кейсы, где заказчик задерживал оплату, удерживал деньги или создавал искусственные препятствия.",
-    href: "/cases?q=%D0%9D%D0%B5%D0%BE%D0%BF%D0%BB%D0%B0%D1%82%D0%B0",
+    href: "/cases/neoplata",
   },
   {
     title: "РНП и защита поставщика",

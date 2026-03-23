@@ -33,6 +33,13 @@ const nextSteps = [
   },
 ];
 
+const pageSignals = [
+  "Неоплата чаще всего держится на искусственном сдвиге срока оплаты и формальных придирках к документам.",
+  "По РНП решает не сам конфликт, а то, как выглядит поведение поставщика до и во время спора.",
+  "В неустойке и удержаниях спор почти всегда выигрывается на расчете, договоре и ошибках заказчика в процедуре.",
+  "В документации важен не текст сам по себе, а то, как он реально сужает круг участников и закрывает эквиваленты.",
+];
+
 export default function PracticeThemesPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
@@ -173,6 +180,114 @@ export default function PracticeThemesPage() {
                 <p className="mt-3 text-base leading-8 text-slate-700">
                   {item.description}
                 </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-slate-50">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="max-w-3xl">
+            <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+              Что мы видим в практике
+            </div>
+
+            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
+              По каждой теме есть свой повторяющийся узор спора
+            </h2>
+
+            <p className="mt-5 text-lg leading-9 text-slate-700">
+              Польза обзора в том, что он помогает сразу увидеть логику
+              конфликта: где заказчик уходит в формальности, где поставщик
+              теряет позицию, а где спор можно разворачивать в свою пользу
+              за счет документов и правильной квалификации обстоятельств.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {pageSignals.map((item) => (
+              <div
+                key={item}
+                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+              >
+                <p className="text-base leading-8 text-slate-700">{item}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="max-w-3xl">
+            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+              Короткая аналитика по темам
+            </div>
+
+            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
+              Не просто подборки, а рабочие выводы по каждому типу спора
+            </h2>
+
+            <p className="mt-5 text-lg leading-9 text-slate-700">
+              Ниже собраны короткие ориентиры, с которыми удобно заходить в
+              тему: что обычно ломает позицию, какие доводы чаще работают и
+              на чем стоит концентрироваться в первую очередь.
+            </p>
+          </div>
+
+          <div className="mt-10 space-y-6">
+            {PRACTICE_HUBS.map((item) => (
+              <div
+                key={item.href}
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm"
+              >
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="max-w-3xl">
+                    <div className="text-2xl font-semibold leading-8 text-[#081a4b]">
+                      {item.title}
+                    </div>
+                    <p className="mt-3 text-base leading-8 text-slate-700">
+                      {item.description}
+                    </p>
+                  </div>
+
+                  <Link
+                    href={item.href}
+                    className="inline-flex rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-[#081a4b] transition hover:bg-slate-100"
+                  >
+                    Перейти в подборку
+                  </Link>
+                </div>
+
+                <div className="mt-6 grid gap-4 lg:grid-cols-3">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                    <div className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                      Что чаще ломает позицию
+                    </div>
+                    <p className="mt-3 text-sm leading-7 text-slate-700">
+                      {item.whatBreaks}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                    <div className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                      Что обычно работает
+                    </div>
+                    <p className="mt-3 text-sm leading-7 text-slate-700">
+                      {item.whatWorks}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                    <div className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                      На чем сфокусироваться
+                    </div>
+                    <p className="mt-3 text-sm leading-7 text-slate-700">
+                      {item.practicalFocus}
+                    </p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>

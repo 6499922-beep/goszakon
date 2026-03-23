@@ -27,7 +27,7 @@ const quickCollections = [
   {
     title: "РНП и защита поставщика",
     description: "Подборка решений по включению в реестр, добросовестности поставщика и защите в ФАС.",
-    href: "/cases?violation=%D0%A0%D0%9D%D0%9F",
+    href: "/cases/rnp",
   },
   {
     title: "Неустойка и удержания",

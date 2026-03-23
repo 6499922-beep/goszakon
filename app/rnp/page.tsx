@@ -341,7 +341,7 @@ export default function RnpPage() {
 
           <div className="mt-10 grid gap-4 lg:grid-cols-4">
             <Link
-              href="/cases?violation=%D0%A0%D0%9D%D0%9F"
+              href="/cases/rnp"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
             >
               <div className="font-semibold text-[#081a4b]">Вся практика по РНП</div>

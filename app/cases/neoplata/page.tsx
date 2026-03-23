@@ -26,6 +26,24 @@ const practiceConclusions = [
   "Если заказчик сам создавал препятствия для приемки или оплаты, это нужно превращать в активную доказательственную позицию, а не в оправдания поставщика.",
 ];
 
+const practiceWins = [
+  "Подписанные УПД, акты и переписка, из которых видно, что обязанность по оплате уже наступила.",
+  "Фиксация затянутой приемки, повторных требований к документам и других искусственных препятствий со стороны заказчика.",
+  "Позиция, где поставщик не оправдывается, а показывает: срок оплаты сорвался из-за поведения самого заказчика.",
+];
+
+const practiceLosses = [
+  "Поставщик не фиксирует дату реальной приемки и остается без четкой точки отсчета для срока оплаты.",
+  "Переписка по замечаниям к документам идет хаотично, без подтверждения, что замечания формальны и не мешают оплате.",
+  "Спор строится на эмоциях, а не на конкретных датах, документах и действиях заказчика после исполнения контракта.",
+];
+
+const firstChecks = [
+  "От какой даты по документам реально должен идти срок оплаты.",
+  "Какие документы уже подписаны и есть ли у заказчика законное основание не платить.",
+  "Создавал ли заказчик собственными действиями препятствия для приемки или расчета.",
+];
+
 function formatDate(value?: Date | null) {
   if (!value) return "Дата не указана";
   return new Intl.DateTimeFormat("ru-RU").format(value);
@@ -202,6 +220,55 @@ export default async function NonPaymentPracticeHubPage() {
                 <p className="text-base leading-8 text-slate-700">{item}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="max-w-3xl">
+            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+              Что обычно усиливает или ослабляет спор
+            </div>
+
+            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
+              По неоплате выигрывают детали, а не общие жалобы на заказчика
+            </h2>
+
+            <p className="mt-5 text-lg leading-9 text-slate-700">
+              Самая сильная позиция по неоплате строится на хронологии:
+              подписанные документы, дата приемки, переписка после исполнения и
+              конкретные препятствия, которые создавал заказчик.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-6 lg:grid-cols-3">
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+              <div className="text-xl font-semibold text-[#081a4b]">Что обычно выигрывает</div>
+              <div className="mt-4 space-y-3">
+                {practiceWins.map((item) => (
+                  <p key={item} className="text-base leading-8 text-slate-700">{item}</p>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+              <div className="text-xl font-semibold text-[#081a4b]">Что обычно ослабляет позицию</div>
+              <div className="mt-4 space-y-3">
+                {practiceLosses.map((item) => (
+                  <p key={item} className="text-base leading-8 text-slate-700">{item}</p>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+              <div className="text-xl font-semibold text-[#081a4b]">Что смотреть первым</div>
+              <div className="mt-4 space-y-3">
+                {firstChecks.map((item) => (
+                  <p key={item} className="text-base leading-8 text-slate-700">{item}</p>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>

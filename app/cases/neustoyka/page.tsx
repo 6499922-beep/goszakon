@@ -26,6 +26,24 @@ const practiceConclusions = [
   "Практика полезна тогда, когда помогает быстро понять: спор идет о реальном нарушении или о слабом и перекошенном применении договора заказчиком.",
 ];
 
+const practiceWins = [
+  "Проверка базы расчета, периода просрочки и того, на какую часть обязательства заказчик вообще имел право начислять санкцию.",
+  "Поиск процессуальных ошибок: претензия, порядок уведомления, удержание без прямого договорного основания.",
+  "Фиксация собственных нарушений заказчика, которые делают его позицию по санкциям слабее.",
+];
+
+const practiceLosses = [
+  "Защита сводится только к просьбе снизить сумму без разбора расчета и поведения заказчика.",
+  "Поставщик не проверяет, имел ли заказчик право удерживать деньги и соблюдал ли он договорный порядок.",
+  "Спор ведется вокруг цифры, а не вокруг того, насколько вообще обосновано само начисление.",
+];
+
+const firstChecks = [
+  "На какую базу начислена неустойка и соответствует ли она реальному объему нарушения.",
+  "Соблюдал ли заказчик претензионный порядок и условия договора по удержанию.",
+  "Есть ли у заказчика собственные нарушения, которые ослабляют его требования.",
+];
+
 function formatDate(value?: Date | null) {
   if (!value) return "Дата не указана";
   return new Intl.DateTimeFormat("ru-RU").format(value);
@@ -200,6 +218,55 @@ export default async function PenaltyPracticeHubPage() {
                 <p className="text-base leading-8 text-slate-700">{item}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="max-w-3xl">
+            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+              Что обычно усиливает или ослабляет спор
+            </div>
+
+            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
+              По неустойке спор редко держится только на сумме
+            </h2>
+
+            <p className="mt-5 text-lg leading-9 text-slate-700">
+              Самые сильные дела по санкциям строятся не на просьбе о
+              снисхождении, а на деталях договора и расчета: что взято за базу,
+              как оформлена претензия и насколько сам заказчик соблюдал контракт.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-6 lg:grid-cols-3">
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+              <div className="text-xl font-semibold text-[#081a4b]">Что обычно выигрывает</div>
+              <div className="mt-4 space-y-3">
+                {practiceWins.map((item) => (
+                  <p key={item} className="text-base leading-8 text-slate-700">{item}</p>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+              <div className="text-xl font-semibold text-[#081a4b]">Что обычно ослабляет позицию</div>
+              <div className="mt-4 space-y-3">
+                {practiceLosses.map((item) => (
+                  <p key={item} className="text-base leading-8 text-slate-700">{item}</p>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+              <div className="text-xl font-semibold text-[#081a4b]">Что смотреть первым</div>
+              <div className="mt-4 space-y-3">
+                {firstChecks.map((item) => (
+                  <p key={item} className="text-base leading-8 text-slate-700">{item}</p>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>

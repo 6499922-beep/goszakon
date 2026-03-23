@@ -25,6 +25,24 @@ const practiceConclusions = [
   "Практика по РНП особенно полезна, когда нужно быстро понять, как ФАС смотрит на добросовестность поставщика в похожих обстоятельствах.",
 ];
 
+const practiceWins = [
+  "Подтверждение того, что поставщик пытался исполнить договор и заранее сообщал о проблеме, а не исчезал из обязательства.",
+  "Хронология переписки, из которой видно отсутствие умысла на уклонение и разумное поведение до конфликта.",
+  "Материалы, которые показывают, что формальное нарушение не равно недобросовестности.",
+];
+
+const practiceLosses = [
+  "Поставщик выходит в комиссию без собранной переписки и без четкой версии того, почему конфликт возник.",
+  "Защита строится только на объяснениях о сложности ситуации, без документов и следов добросовестных действий.",
+  "Игнорируется вопрос вины: спор сводят к факту расторжения, а не к анализу поведения поставщика.",
+];
+
+const firstChecks = [
+  "Что именно заказчик вменяет поставщику и где в материалах есть признаки или отсутствие недобросовестности.",
+  "Какие письма, уведомления и попытки исполнения можно показать комиссии.",
+  "Есть ли в деле факты, которые отделяют реальный срыв обязательства от умышленного уклонения.",
+];
+
 function formatDate(value?: Date | null) {
   if (!value) return "Дата не указана";
   return new Intl.DateTimeFormat("ru-RU").format(value);
@@ -165,6 +183,55 @@ export default async function RnpPracticeHubPage() {
                 <p className="text-base leading-8 text-slate-700">{item}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="max-w-3xl">
+            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+              Что обычно усиливает или ослабляет спор
+            </div>
+
+            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
+              По РНП спор выигрывается на поведении поставщика до заседания
+            </h2>
+
+            <p className="mt-5 text-lg leading-9 text-slate-700">
+              Комиссия смотрит не только на то, что произошло, но и на то, как
+              поставщик действовал до конфликта: предупреждал ли о проблеме,
+              пытался ли исполнить договор и собирал ли доказательства своей добросовестности.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-6 lg:grid-cols-3">
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+              <div className="text-xl font-semibold text-[#081a4b]">Что обычно выигрывает</div>
+              <div className="mt-4 space-y-3">
+                {practiceWins.map((item) => (
+                  <p key={item} className="text-base leading-8 text-slate-700">{item}</p>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+              <div className="text-xl font-semibold text-[#081a4b]">Что обычно ослабляет позицию</div>
+              <div className="mt-4 space-y-3">
+                {practiceLosses.map((item) => (
+                  <p key={item} className="text-base leading-8 text-slate-700">{item}</p>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+              <div className="text-xl font-semibold text-[#081a4b]">Что смотреть первым</div>
+              <div className="mt-4 space-y-3">
+                {firstChecks.map((item) => (
+                  <p key={item} className="text-base leading-8 text-slate-700">{item}</p>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>

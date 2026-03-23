@@ -352,7 +352,7 @@ export default function SupplierPenaltyReductionPage() {
             </Link>
 
             <Link
-              href="/cases?q=%D0%BD%D0%B5%D1%83%D1%81%D1%82%D0%BE%D0%B9%D0%BA%D0%B0"
+              href="/cases/neustoyka"
               className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
             >
               <h3 className="text-2xl font-semibold text-[#081a4b]">

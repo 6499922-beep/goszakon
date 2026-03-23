@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { getCasePath } from "@/lib/cases";
 import { SITE_CONTACTS } from "@/lib/site-config";
+import { PRACTICE_HUBS } from "@/lib/practice-hubs";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,7 @@ function getNonPaymentWhere(): Prisma.CaseWhereInput {
 export default async function NonPaymentPracticeHubPage() {
   const prisma = getPrisma();
   const where = getNonPaymentWhere();
+  const otherHubs = PRACTICE_HUBS.filter((item) => item.href !== "/cases/neoplata").slice(0, 2);
 
   const [totalCount, cases] = await Promise.all([
     prisma.case.count({ where }),
@@ -444,17 +446,32 @@ export default async function NonPaymentPracticeHubPage() {
               </Link>
 
               <Link
-                href="/cases"
+                href="/cases/praktika-fas"
                 className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white"
               >
                 <div className="text-lg font-semibold text-[#081a4b]">
-                  Вся база практики ФАС
+                  Практика ФАС по темам
                 </div>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Если хотите сравнить неоплату с другими типами споров, вернитесь
-                  в общую базу и используйте фильтры по нарушению, региону и заказчику.
+                  Если хотите сравнить неоплату с другими типами споров, начните
+                  с обзорного навигатора по основным темам базы практики.
                 </p>
               </Link>
+
+              {otherHubs.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white"
+                >
+                  <div className="text-lg font-semibold text-[#081a4b]">
+                    {item.title}
+                  </div>
+                  <p className="mt-3 text-sm leading-7 text-slate-600">
+                    {item.description}
+                  </p>
+                </Link>
+              ))}
             </div>
           </div>
         </div>

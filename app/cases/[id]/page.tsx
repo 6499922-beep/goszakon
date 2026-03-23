@@ -569,6 +569,13 @@ export default async function CasePage({ params }: PageProps) {
             >
               Смотреть все кейсы
             </Link>
+
+            <Link
+              href="/cases/praktika-fas"
+              className="hidden rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-[#081a4b] transition hover:bg-slate-50 md:inline-flex"
+            >
+              Обзоры по темам
+            </Link>
           </div>
 
           <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">

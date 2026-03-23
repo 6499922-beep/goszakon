@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { getCasePath } from "@/lib/cases";
+import { PRACTICE_HUBS } from "@/lib/practice-hubs";
 
 export const dynamic = "force-dynamic";
 
@@ -17,29 +18,6 @@ type PageProps = {
     sort?: string;
   }>;
 };
-
-const quickCollections = [
-  {
-    title: "Неоплата по контракту",
-    description: "Кейсы, где заказчик задерживал оплату, удерживал деньги или создавал искусственные препятствия.",
-    href: "/cases/neoplata",
-  },
-  {
-    title: "РНП и защита поставщика",
-    description: "Подборка решений по включению в реестр, добросовестности поставщика и защите в ФАС.",
-    href: "/cases/rnp",
-  },
-  {
-    title: "Неустойка и удержания",
-    description: "Практика по завышенным санкциям, штрафам, удержаниям и спорным условиям контракта.",
-    href: "/cases/neustoyka",
-  },
-  {
-    title: "Товарный знак и ограничение конкуренции",
-    description: "Решения по документации закупки, эквивалентам, ограничению конкуренции и спорным требованиям.",
-    href: "/cases/dokumentaciya-i-konkurenciya",
-  },
-];
 
 const sortOptions = [
   { value: "recent", label: "Сначала свежие решения" },
@@ -285,10 +263,26 @@ export default async function CasesPage({ searchParams }: PageProps) {
             практику по номеру закупки, ИНН заказчика, нарушению, категории,
             региону или типу результата.
           </p>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/cases/praktika-fas"
+              className="rounded-2xl bg-[#081a4b] px-6 py-4 text-center text-sm font-semibold text-white transition hover:bg-[#0d2568]"
+            >
+              Открыть обзор по темам
+            </Link>
+
+            <Link
+              href="/cases"
+              className="rounded-2xl border border-slate-300 bg-white px-6 py-4 text-center text-sm font-semibold text-[#081a4b] transition hover:bg-slate-50"
+            >
+              Перейти сразу к фильтрам
+            </Link>
+          </div>
         </div>
 
         <div className="mt-8 grid gap-4 xl:grid-cols-4">
-          {quickCollections.map((item) => (
+          {PRACTICE_HUBS.map((item) => (
             <Link
               key={item.title}
               href={item.href}
@@ -297,10 +291,31 @@ export default async function CasesPage({ searchParams }: PageProps) {
               <div className="text-lg font-semibold text-[#081a4b]">{item.title}</div>
               <p className="mt-3 text-sm leading-7 text-slate-600">{item.description}</p>
               <span className="mt-4 inline-flex text-sm font-semibold text-[#081a4b]">
-                Открыть подборку →
+                {item.cta} →
               </span>
             </Link>
           ))}
+        </div>
+
+        <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-3xl">
+              <div className="text-base font-semibold text-[#081a4b]">
+                Нужен не просто список решений, а обзор по смыслу
+              </div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Если не хотите начинать с общего архива, переходите в обзор
+                практики по темам: неоплата, РНП, неустойка и документация закупки.
+              </p>
+            </div>
+
+            <Link
+              href="/cases/praktika-fas"
+              className="inline-flex rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-[#081a4b] transition hover:bg-slate-100"
+            >
+              Перейти к обзору тем
+            </Link>
+          </div>
         </div>
 
         <form className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">

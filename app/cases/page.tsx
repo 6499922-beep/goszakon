@@ -37,7 +37,7 @@ const quickCollections = [
   {
     title: "Товарный знак и ограничение конкуренции",
     description: "Решения по документации закупки, эквивалентам, ограничению конкуренции и спорным требованиям.",
-    href: "/cases?violation=%D0%A2%D0%BE%D0%B2%D0%B0%D1%80%D0%BD%D1%8B%D0%B9%20%D0%B7%D0%BD%D0%B0%D0%BA",
+    href: "/cases/dokumentaciya-i-konkurenciya",
   },
 ];
 

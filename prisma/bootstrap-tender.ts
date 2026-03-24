@@ -24,13 +24,13 @@ async function main() {
     where: { email },
     update: {
       passwordHash,
-      role: "admin",
+      role: "ADMIN",
       name: "Тендерный администратор",
     },
     create: {
       email,
       passwordHash,
-      role: "admin",
+      role: "ADMIN",
       name: "Тендерный администратор",
     },
   });

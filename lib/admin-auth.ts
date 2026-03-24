@@ -1,4 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
+import { cookies } from "next/headers";
+import { getPrisma } from "@/lib/prisma";
 
 export const ADMIN_COOKIE_NAME = "admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
@@ -57,4 +59,32 @@ export async function verifyAdminSession(sessionValue?: string | null) {
   }
 
   return { adminId, expiresAt };
+}
+
+export async function getCurrentTenderUser() {
+  const cookieStore = await cookies();
+  const session = await verifyAdminSession(
+    cookieStore.get(ADMIN_COOKIE_NAME)?.value
+  );
+
+  if (!session) {
+    return null;
+  }
+
+  const prisma = getPrisma();
+  const admin = await prisma.admin.findUnique({
+    where: { id: session.adminId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+    },
+  });
+
+  if (!admin) {
+    return null;
+  }
+
+  return admin;
 }

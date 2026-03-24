@@ -12,6 +12,7 @@ import {
   markTenderSubmittedAction,
   prepareTenderSourceDocumentsForFillingAction,
   saveTenderProcurementDocumentAction,
+  saveTenderStageCommentAction,
   saveTenderSourceDocumentAction,
   saveTenderTechnicalItemAction,
   saveTenderDecisionAction,
@@ -30,6 +31,7 @@ import {
   tenderStatusLabels,
   tenderStatusTone,
 } from "@/lib/tender-format";
+import { tenderUserRoleLabels } from "@/lib/tender-users";
 import {
   getDecisionLabel,
   getTenderProcessingStages,
@@ -224,6 +226,12 @@ export default async function TenderProcurementDetailsPage({
       sourceDocuments: {
         orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       },
+      stageComments: {
+        include: {
+          author: true,
+        },
+        orderBy: [{ createdAt: "desc" }],
+      },
       ruleMatches: {
         include: {
           rule: true,
@@ -250,6 +258,12 @@ export default async function TenderProcurementDetailsPage({
   });
 
   const processingStages = getTenderProcessingStages(procurement);
+  const stageCommentsByKey = new Map(
+    processingStages.map((stage) => [
+      stage.key,
+      procurement.stageComments.filter((comment) => comment.stageKey === stage.key),
+    ])
+  );
   const technicalItemStats = {
     total: procurement.technicalItems.length,
     explicit: procurement.technicalItems.filter((item) => item.status === "EXPLICIT")
@@ -566,6 +580,7 @@ export default async function TenderProcurementDetailsPage({
             <div className="mt-6 grid gap-4">
               {processingStages.map((stage) => {
                 const tone = stageToneClasses[stage.tone];
+                const stageComments = stageCommentsByKey.get(stage.key) ?? [];
 
                 return (
                   <div
@@ -623,6 +638,80 @@ export default async function TenderProcurementDetailsPage({
                         </div>
                       </div>
                     ) : null}
+
+                    <div className="mt-5 border-t border-white/70 pt-5">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                          Комментарии по этапу
+                        </div>
+                        <div className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600">
+                          {stageComments.length > 0
+                            ? `${stageComments.length} комм.`
+                            : "Пока без комментариев"}
+                        </div>
+                      </div>
+
+                      <form
+                        action={saveTenderStageCommentAction}
+                        className="mt-3 space-y-3"
+                      >
+                        <input
+                          type="hidden"
+                          name="procurementId"
+                          value={procurement.id}
+                        />
+                        <input type="hidden" name="stageKey" value={stage.key} />
+                        <input type="hidden" name="stageTitle" value={stage.title} />
+                        <textarea
+                          name="body"
+                          rows={3}
+                          className="w-full rounded-2xl border border-white/80 bg-white/90 px-4 py-3 text-sm leading-6 text-slate-700 outline-none focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                          placeholder="Оставь комментарий по этому этапу: что проверить, что решили вручную, где есть риск."
+                        />
+                        <button
+                          type="submit"
+                          className="rounded-2xl border border-white/80 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          Сохранить комментарий
+                        </button>
+                      </form>
+
+                      {stageComments.length > 0 ? (
+                        <div className="mt-4 space-y-3">
+                          {stageComments.map((comment) => (
+                            <div
+                              key={comment.id}
+                              className="rounded-2xl border border-white/80 bg-white/80 px-4 py-4"
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="text-sm font-semibold text-[#081a4b]">
+                                  {comment.authorName ??
+                                    comment.author?.name ??
+                                    comment.author?.email ??
+                                    "Сотрудник"}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                  {comment.authorRole ? (
+                                    <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-600">
+                                      {tenderUserRoleLabels[comment.authorRole]}
+                                    </span>
+                                  ) : null}
+                                  <span>
+                                    {new Intl.DateTimeFormat("ru-RU", {
+                                      dateStyle: "short",
+                                      timeStyle: "short",
+                                    }).format(comment.createdAt)}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="mt-2 text-sm leading-7 text-slate-700">
+                                {comment.body}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 );
               })}

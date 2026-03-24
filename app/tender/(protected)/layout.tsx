@@ -2,8 +2,14 @@ import Link from "next/link";
 import { ReactNode } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ADMIN_COOKIE_NAME, verifyAdminSession } from "@/lib/admin-auth";
+import {
+  ADMIN_COOKIE_NAME,
+  getCurrentTenderUser,
+  verifyAdminSession,
+} from "@/lib/admin-auth";
 import { isTenderHost } from "@/lib/tender-host";
+import { TenderUserRole } from "@prisma/client";
+import { tenderUserRoleLabels } from "@/lib/tender-users";
 
 export const dynamic = "force-dynamic";
 
@@ -27,11 +33,16 @@ export default async function TenderProtectedLayout({
     redirect("/signin");
   }
 
+  const currentUser = await getCurrentTenderUser();
+
   const links = [
     { title: "Обзор", href: "/" },
     { title: "Закупки", href: "/procurements" },
     { title: "Компании", href: "/companies" },
     { title: "Стоп-факторы", href: "/rules" },
+    ...(currentUser?.role === TenderUserRole.ADMIN
+      ? [{ title: "Пользователи", href: "/users" }]
+      : []),
   ];
 
   return (
@@ -49,7 +60,9 @@ export default async function TenderProtectedLayout({
 
           <div className="flex items-center gap-3">
             <div className="hidden rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 md:block">
-              MVP: анализ, предпросчет и сборка пакета
+              {currentUser
+                ? `${currentUser.name ?? currentUser.email} • ${tenderUserRoleLabels[currentUser.role]}`
+                : "MVP: анализ, предпросчет и сборка пакета"}
             </div>
 
             <form action="/logout" method="POST">

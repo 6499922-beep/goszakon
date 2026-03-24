@@ -23,13 +23,13 @@ async function main() {
     update: {
       name: "Главный администратор",
       passwordHash: adminPasswordHash,
-      role: "admin",
+      role: "ADMIN",
     },
     create: {
       email: "admin@goszakon.ru",
       name: "Главный администратор",
       passwordHash: adminPasswordHash,
-      role: "admin",
+      role: "ADMIN",
     },
   });
 

@@ -10,10 +10,12 @@ import {
   TenderSourceDocumentFormType,
   TenderSourceDocumentStatus,
   TenderProcurementStatus,
+  TenderUserRole,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
+import { getCurrentTenderUser } from "@/lib/admin-auth";
 import {
   evaluateTenderStopRules,
   runTenderAiAnalysis,
@@ -53,6 +55,16 @@ function splitLines(value: FormDataEntryValue | null) {
     .split("\n")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+async function getTenderActorContext() {
+  const user = await getCurrentTenderUser();
+
+  return {
+    authorId: user?.id ?? null,
+    authorRole: user?.role ?? null,
+    actorName: user?.name?.trim() || user?.email?.trim() || "Сотрудник",
+  };
 }
 
 const tenderTechnicalItemStatuses = [
@@ -2036,4 +2048,104 @@ export async function importTenderTechnicalItemsAction(formData: FormData) {
   });
 
   revalidatePath(`/procurements/${procurementId}`);
+}
+
+export async function saveTenderStageCommentAction(formData: FormData) {
+  const prisma = getPrisma();
+  const procurementId = Number(formData.get("procurementId"));
+  const stageKey = String(formData.get("stageKey") ?? "").trim();
+  const stageTitle = normalizeString(formData.get("stageTitle"));
+  const body = String(formData.get("body") ?? "").trim();
+
+  if (!Number.isInteger(procurementId) || procurementId <= 0) {
+    throw new Error("Procurement is required");
+  }
+
+  if (!stageKey) {
+    throw new Error("Stage key is required");
+  }
+
+  if (!body) {
+    throw new Error("Comment is required");
+  }
+
+  const actor = await getTenderActorContext();
+
+  await prisma.tenderStageComment.create({
+    data: {
+      procurementId,
+      stageKey,
+      stageTitle,
+      body,
+      authorId: actor.authorId,
+      authorName: actor.actorName,
+      authorRole: actor.authorRole,
+    },
+  });
+
+  await logTenderEvent({
+    procurementId,
+    actionType: TenderActionType.NOTE_ADDED,
+    title: `Добавлен комментарий к этапу «${stageTitle ?? stageKey}»`,
+    description: body,
+    actorName: actor.actorName,
+    metadata: {
+      stageKey,
+      authorRole: actor.authorRole,
+    },
+  });
+
+  revalidatePath(`/procurements/${procurementId}`);
+}
+
+export async function saveTenderUserAction(formData: FormData) {
+  const prisma = getPrisma();
+  const currentUser = await getCurrentTenderUser();
+
+  if (!currentUser || currentUser.role !== TenderUserRole.ADMIN) {
+    throw new Error("Только администратор может управлять пользователями");
+  }
+
+  const userId = normalizeNumber(formData.get("userId"));
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const name = normalizeString(formData.get("name"));
+  const password = String(formData.get("password") ?? "").trim();
+  const roleRaw = String(formData.get("role") ?? "").trim().toUpperCase();
+  const role = Object.values(TenderUserRole).includes(roleRaw as TenderUserRole)
+    ? (roleRaw as TenderUserRole)
+    : TenderUserRole.OPERATOR;
+
+  if (!email) {
+    throw new Error("Email is required");
+  }
+
+  if (!userId && !password) {
+    throw new Error("Для нового пользователя нужен пароль");
+  }
+
+  const bcrypt = await import("bcryptjs");
+  const passwordHash = password ? await bcrypt.hash(password, 10) : null;
+
+  if (userId) {
+    await prisma.admin.update({
+      where: { id: userId },
+      data: {
+        email,
+        name,
+        role,
+        ...(passwordHash ? { passwordHash } : {}),
+      },
+    });
+  } else {
+    await prisma.admin.create({
+      data: {
+        email,
+        name,
+        role,
+        passwordHash: passwordHash!,
+      },
+    });
+  }
+
+  revalidatePath("/users");
 }

@@ -93,9 +93,18 @@ model Admin {
   email        String   @unique
   name         String?
   passwordHash String
-  role         String   @default("admin")
+  role         TenderUserRole @default(ADMIN)
+  comments     TenderStageComment[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+enum TenderUserRole {
+  ADMIN
+  OPERATOR
+  ANALYST
+  MANAGER
+  SUBMITTER
 }
 
 enum MaterialType {
@@ -363,6 +372,7 @@ model TenderProcurement {
   decisions                TenderDecisionRecord[]
   procurementDocuments     TenderProcurementDocument[]
   sourceDocuments          TenderSourceDocument[]
+  stageComments            TenderStageComment[]
   events                   TenderProcurementEvent[]
   ruleMatches              TenderProcurementRuleMatch[]
   createdAt                DateTime                     @default(now())
@@ -372,6 +382,25 @@ model TenderProcurement {
   @@index([deadline])
   @@index([customerInn])
   @@index([companyProfileId])
+}
+
+model TenderStageComment {
+  id            Int               @id @default(autoincrement())
+  procurementId Int
+  stageKey      String
+  stageTitle    String?
+  body          String            @db.Text
+  authorId      Int?
+  authorName    String?
+  authorRole    TenderUserRole?
+  procurement   TenderProcurement @relation(fields: [procurementId], references: [id], onDelete: Cascade)
+  author        Admin?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([procurementId, stageKey])
+  @@index([authorId])
+  @@index([createdAt])
 }
 
 model TenderTechnicalItem {

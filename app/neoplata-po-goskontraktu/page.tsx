@@ -311,6 +311,19 @@ export default function NonPaymentPage() {
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             <Link
+              href="/zatyagivanie-priemki-po-goskontraktu"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Заказчик затягивает приемку
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Когда документы держат неделями, подписывают новой датой и
+                используют приемку как способ не платить вовремя.
+              </p>
+            </Link>
+
+            <Link
               href="/spornye-praktiki/vnutrennie-sistemy-oplaty"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
             >
@@ -333,6 +346,19 @@ export default function NonPaymentPage() {
               <p className="mt-4 text-slate-700">
                 Кейсы и решения, где заказчик затягивал оплату, ссылался на
                 формальные причины и создавал препятствия для расчета.
+              </p>
+            </Link>
+
+            <Link
+              href="/zatyagivanie-priemki-po-goskontraktu"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Заказчик затягивает приемку
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Отдельная страница о том, как заказчик использует приемку для
+                задержки оплаты и последующих санкций.
               </p>
             </Link>
 

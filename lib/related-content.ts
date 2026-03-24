@@ -55,6 +55,11 @@ export function getCaseSupportLinks(input: {
         href: "/cases?q=%D0%9D%D0%B5%D0%BE%D0%BF%D0%BB%D0%B0%D1%82%D0%B0",
       },
       {
+        title: "Заказчик затягивает приемку",
+        text: "Отдельная страница о том, как приемку используют для сдвига оплаты, удержаний и последующих санкций.",
+        href: "/zatyagivanie-priemki-po-goskontraktu",
+      },
+      {
         title: "Спорная практика: внутренние документы заказчика",
         text: "Когда оплату незаконно ставят в зависимость от акта, системы или других внутренних процедур.",
         href: "/spornye-praktiki/vnutrennie-sistemy-oplaty",

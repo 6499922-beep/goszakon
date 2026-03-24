@@ -60,6 +60,11 @@ export function getCaseSupportLinks(input: {
         href: "/zatyagivanie-priemki-po-goskontraktu",
       },
       {
+        title: "Заказчик не подписывает УПД",
+        text: "Материал о том, как через формальные замечания к УПД и документооборот заказчик блокирует оплату.",
+        href: "/zakazchik-ne-podpisyvaet-upd",
+      },
+      {
         title: "Спорная практика: внутренние документы заказчика",
         text: "Когда оплату незаконно ставят в зависимость от акта, системы или других внутренних процедур.",
         href: "/spornye-praktiki/vnutrennie-sistemy-oplaty",

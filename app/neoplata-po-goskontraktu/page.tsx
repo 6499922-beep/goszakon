@@ -311,6 +311,19 @@ export default function NonPaymentPage() {
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             <Link
+              href="/zakazchik-ne-podpisyvaet-upd"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Заказчик не подписывает УПД
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Когда документ гоняют по кругу, возвращают по формальным
+                основаниям и используют это как предлог не платить.
+              </p>
+            </Link>
+
+            <Link
               href="/zatyagivanie-priemki-po-goskontraktu"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
             >
@@ -359,6 +372,19 @@ export default function NonPaymentPage() {
               <p className="mt-4 text-slate-700">
                 Отдельная страница о том, как заказчик использует приемку для
                 задержки оплаты и последующих санкций.
+              </p>
+            </Link>
+
+            <Link
+              href="/zakazchik-ne-podpisyvaet-upd"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Заказчик не подписывает УПД
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Отдельная страница про неподписанный УПД, формальные замечания и
+                сдвиг срока оплаты через документооборот.
               </p>
             </Link>
 

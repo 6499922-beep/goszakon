@@ -513,6 +513,19 @@ export default async function NonPaymentPracticeHubPage() {
               </Link>
 
               <Link
+                href="/zakazchik-ne-podpisyvaet-upd"
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white"
+              >
+                <div className="text-lg font-semibold text-[#081a4b]">
+                  Заказчик не подписывает УПД
+                </div>
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  Разбор ситуации, когда документооборот используют как предлог
+                  не платить и тянуть срок расчета.
+                </p>
+              </Link>
+
+              <Link
                 href="/spornye-praktiki/vnutrennie-sistemy-oplaty"
                 className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white"
               >

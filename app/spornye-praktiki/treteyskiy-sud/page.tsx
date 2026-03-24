@@ -122,6 +122,29 @@ export default function ArbitrationClausePage() {
               </div>
             ))}
           </div>
+
+          <div className="mt-12 rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+            <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
+              Показательный материал
+            </div>
+            <h2 className="mt-4 text-3xl font-bold text-[#081a4b]">
+              Когда третейская оговорка уже сработала против поставщика
+            </h2>
+            <p className="mt-4 max-w-3xl text-lg leading-9 text-slate-700">
+              Мы добавили в аналитику отдельный материал по решению МКАС, где с
+              поставщика взыскали неустойку и арбитражные сборы. Это не кейс про
+              победу, а хороший пример того, почему третейскую оговорку нельзя
+              оставлять без отдельной проверки.
+            </p>
+            <div className="mt-6">
+              <Link
+                href="/analitika/mkas-neustoyka-po-treteyskoy-ogovorke-b-92-2025"
+                className="inline-flex rounded-2xl bg-[#081a4b] px-6 py-4 font-semibold text-white transition hover:bg-[#0d2568]"
+              >
+                Посмотреть материал
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 

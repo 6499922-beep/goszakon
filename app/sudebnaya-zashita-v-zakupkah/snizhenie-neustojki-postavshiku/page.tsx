@@ -337,7 +337,33 @@ export default function SupplierPenaltyReductionPage() {
             </h2>
           </div>
 
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
+          <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            <Link
+              href="/analitika/rossseti-snizhenie-neustoyki-a04-9273-2025"
+              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Россети: снижение более чем в 15 раз
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Суд отказал в иске поставщика к заказчику, но почти полностью
+                сломал встречную неустойку и оставил только 10 748,72 руб.
+              </p>
+            </Link>
+
+            <Link
+              href="/analitika/neustoyka-ne-na-vsyu-summu-dogovora-a51-11790-2025"
+              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Неустойка не на весь контракт
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Суд отдельно указал, что нельзя считать санкцию на всю цену
+                договора, если товар уже был частично поставлен и принят.
+              </p>
+            </Link>
+
             <Link
               href="/spornye-praktiki/neravnoznachnaya-neustoyka"
               className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
@@ -364,18 +390,6 @@ export default function SupplierPenaltyReductionPage() {
               </p>
             </Link>
 
-            <Link
-              href="/uslugi/proverka-zakupki"
-              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
-            >
-              <h3 className="text-2xl font-semibold text-[#081a4b]">
-                Получить консультацию
-              </h3>
-              <p className="mt-4 text-slate-700">
-                Если заказчик уже удержал деньги или насчитал санкции, можно
-                быстро оценить силу его позиции и перспективу суда.
-              </p>
-            </Link>
           </div>
         </div>
       </section>

@@ -344,6 +344,41 @@ export default async function PenaltyPracticeHubPage() {
 
       <section className="border-b border-slate-200 bg-slate-50">
         <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="mb-10 grid gap-6 md:grid-cols-2">
+            <Link
+              href="/analitika/rossseti-snizhenie-neustoyki-a04-9273-2025"
+              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
+                Судебная защита
+              </div>
+              <h2 className="mt-4 text-2xl font-semibold text-[#081a4b]">
+                Россети: встречную неустойку снизили более чем в 15 раз
+              </h2>
+              <p className="mt-4 text-base leading-8 text-slate-700">
+                Показательный акт о том, как спор по неустойке можно переломить
+                не только на статье 333, но и на логике договора и слабости
+                расчета заказчика.
+              </p>
+            </Link>
+
+            <Link
+              href="/analitika/neustoyka-ne-na-vsyu-summu-dogovora-a51-11790-2025"
+              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
+                Судебная защита
+              </div>
+              <h2 className="mt-4 text-2xl font-semibold text-[#081a4b]">
+                Неустойка не на всю сумму договора
+              </h2>
+              <p className="mt-4 text-base leading-8 text-slate-700">
+                Суд прямо указал, что заказчик не вправе считать санкцию от всей
+                цены контракта, если часть обязательства уже исполнена и принята.
+              </p>
+            </Link>
+          </div>
+
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div className="max-w-3xl">
               <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">

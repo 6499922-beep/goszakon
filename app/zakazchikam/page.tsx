@@ -118,6 +118,11 @@ export default async function CustomersPage({ searchParams }: PageProps) {
       href: "/zakazchikam/nacionalnyj-rezhim",
     },
     {
+      title: "Нацрежим под предмет закупки и документацию",
+      text: "Помогаем связать режим допуска, подтверждающие документы, предмет закупки и проект договора в одну устойчивую закупочную конструкцию.",
+      href: "/zakazchikam/nacionalnyj-rezhim-pod-predmet-zakupki",
+    },
+    {
       title: "Положение о закупке без нарушений",
       text: "Готовим или перерабатываем положение о закупке так, чтобы оно выдерживало актуальное законодательство и реальную закупочную практику.",
       href: "/zakazchikam/polozhenie-o-zakupke",

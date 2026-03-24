@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SITE_CONTACTS } from "@/lib/site-config";
 
 export const metadata: Metadata = {
@@ -12,6 +13,24 @@ const painPoints = [
   "Документация не дает прозрачного понимания, какие подтверждающие документы ждут от участника.",
   "Национальный режим формально включен, но логика закупки и предмет договора не состыкованы.",
   "Из-за ошибки в режиме страдает вся закупка: жалоба, отмена процедуры, риск штрафа для заказчика.",
+];
+
+const related = [
+  {
+    title: "Нацрежим под предмет закупки и документацию",
+    text: "Если нужно собрать режим допуска в логике конкретной закупки, а не оставить его отдельным формальным блоком.",
+    href: "/zakazchikam/nacionalnyj-rezhim-pod-predmet-zakupki",
+  },
+  {
+    title: "Подготовка закупочной документации",
+    text: "Если проблема шире, чем один только нацрежим, и нужно усиливать всю документацию до публикации.",
+    href: "/zakazchikam/podgotovka-zakupochnoj-dokumentacii",
+  },
+  {
+    title: "Защита интересов заказчика в ФАС",
+    text: "Если спор по режиму уже перешел в жалобу и закупку нужно защищать на административной стадии.",
+    href: "/zakazchikam/zashita-v-fas",
+  },
 ];
 
 export default function CustomerNationalModePage() {
@@ -52,6 +71,31 @@ export default function CustomerNationalModePage() {
               <p className="text-base leading-8 text-slate-700">{item}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="max-w-3xl">
+            <h2 className="text-4xl font-bold tracking-tight text-[#081a4b]">
+              Что смотреть рядом
+            </h2>
+          </div>
+
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {related.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-7 transition hover:bg-white hover:shadow-md"
+              >
+                <h3 className="text-2xl font-semibold text-[#081a4b]">
+                  {item.title}
+                </h3>
+                <p className="mt-3 text-slate-700">{item.text}</p>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
     </main>

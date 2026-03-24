@@ -8,6 +8,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "next lint",
+    "import:fas:batch": "node scripts/import-fas-decisions-2025.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "seed": "node prisma/seed.ts",

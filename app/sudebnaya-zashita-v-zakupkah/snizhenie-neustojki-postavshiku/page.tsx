@@ -365,6 +365,19 @@ export default function SupplierPenaltyReductionPage() {
             </Link>
 
             <Link
+              href="/neustoyka-na-vsyu-summu-kontrakta"
+              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Неустойка на всю сумму контракта
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Отдельная страница о том, как ломать завышенную базу расчета,
+                если заказчик игнорирует частичное исполнение договора.
+              </p>
+            </Link>
+
+            <Link
               href="/spornye-praktiki/neravnoznachnaya-neustoyka"
               className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
             >

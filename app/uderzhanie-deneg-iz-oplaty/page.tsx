@@ -278,6 +278,19 @@ export default function WithheldPaymentPage() {
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             <Link
+              href="/neustoyka-na-vsyu-summu-kontrakta"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Неустойка на всю сумму контракта
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Когда завышенный расчет сам по себе становится основанием для
+                удержания и резко увеличивает спорную сумму.
+              </p>
+            </Link>
+
+            <Link
               href="/sudebnaya-zashita-v-zakupkah/snizhenie-neustojki-postavshiku"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
             >
@@ -313,6 +326,19 @@ export default function WithheldPaymentPage() {
               <p className="mt-4 text-slate-700">
                 Когда удержание денег маскируют под акты, внутренние системы,
                 предварительную оплату неустойки и другие спорные условия.
+              </p>
+            </Link>
+
+            <Link
+              href="/shtraf-za-formalnye-nedostatki-dokumentov"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Штраф за формальные недостатки документов
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Когда спорную санкцию строят на бумажной формальности, а потом
+                превращают ее в удержание из оплаты.
               </p>
             </Link>
           </div>

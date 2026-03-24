@@ -88,6 +88,41 @@ export function getCaseSupportLinks(input: {
   }
 
   if (
+    source.includes("неустой") ||
+    source.includes("штраф") ||
+    source.includes("санкц") ||
+    source.includes("удержан")
+  ) {
+    return [
+      {
+        title: "Практика по неустойке и удержаниям",
+        text: "Подборка кейсов и материалов, где спор идет о расчете санкций, удержании из оплаты и перекосе ответственности.",
+        href: "/cases/neustoyka",
+      },
+      {
+        title: "Снижение неустойки поставщику",
+        text: "Если заказчик уже насчитал крупную сумму, важно быстро проверить расчет, базу начисления и процессуальные ошибки.",
+        href: "/sudebnaya-zashita-v-zakupkah/snizhenie-neustojki-postavshiku",
+      },
+      {
+        title: "Неустойка на всю сумму контракта",
+        text: "Отдельная страница о ситуации, когда заказчик считает санкцию на всю цену договора вместо реально проблемной части.",
+        href: "/neustoyka-na-vsyu-summu-kontrakta",
+      },
+      {
+        title: "Штраф за формальные недостатки документов",
+        text: "Когда ошибку в УПД, накладной или акте превращают в денежную санкцию и спор по оплате.",
+        href: "/shtraf-za-formalnye-nedostatki-dokumentov",
+      },
+      {
+        title: "Заказчик удержал деньги из оплаты",
+        text: "Если завышенный расчет уже превратился в удержание, спор нужно вести сразу и по сумме, и по праву заказчика на удержание.",
+        href: "/uderzhanie-deneg-iz-oplaty",
+      },
+    ] satisfies RelatedContentLink[];
+  }
+
+  if (
     source.includes("товар") ||
     source.includes("знак") ||
     source.includes("националь") ||

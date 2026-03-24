@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run prisma:generate",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "seed": "node prisma/seed.ts"
+    "seed": "node prisma/seed.ts",
+    "verify:release": "./scripts/verify-release.sh"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1004.0",

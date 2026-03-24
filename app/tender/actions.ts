@@ -72,6 +72,128 @@ function normalizeTenderTechnicalItemStatus(
     : "REVIEW";
 }
 
+function looksLikeExplicitModel(value: string) {
+  const normalized = value.toUpperCase();
+
+  return [
+    /\bWAGO\b/,
+    /\bIEK\b/,
+    /\bLD\b/,
+    /\bREXANT\b/,
+    /\bKZ-\d+/,
+    /\bTA\s?\d+-\d+-[\d,]+/,
+    /\bTML?\s?\d+-\d+-[\d,]+/,
+    /\bTAM-\d+-\d+-[\d,]+/,
+    /\bНШВИ/,
+    /\bНКИ/,
+    /\bСШР\d+/,
+    /\bPG\s?\d+/,
+    /\bCV-\d+/,
+    /\bЗНИ-\d+/,
+    /\b4СБ\b/,
+    /\b2НБ\b/,
+  ].some((pattern) => pattern.test(normalized));
+}
+
+function buildTechnicalItemDraft(requestedName: string, lineNumber?: number) {
+  const explicit = looksLikeExplicitModel(requestedName);
+
+  return {
+    lineNumber: typeof lineNumber === "number" && Number.isFinite(lineNumber) ? lineNumber : null,
+    requestedName,
+    status: explicit ? "EXPLICIT" : ("REVIEW" as TenderTechnicalItemStatusValue),
+    identifiedProduct: explicit ? requestedName.replace(/\s+или\s+эквивалент/gi, "") : null,
+    identifiedBrand: /\bWAGO\b/i.test(requestedName)
+      ? "WAGO"
+      : /\bIEK\b/i.test(requestedName)
+        ? "IEK"
+        : /\bLD\b/i.test(requestedName)
+          ? "LD"
+          : /\bREXANT\b/i.test(requestedName)
+            ? "REXANT"
+            : null,
+    identifiedModel: explicit ? requestedName.match(/[A-ZА-Я0-9.-]+(?:\s?[A-ZА-Я0-9./-]+)*/i)?.[0] ?? null : null,
+    identificationBasis: explicit
+      ? "В названии позиции есть явная модель, артикул или бренд, поэтому её можно сразу передавать в просчёт."
+      : "В позиции нет достаточно явной модели. Сначала нужно определить товар по характеристикам.",
+    confidence: explicit ? 90 : 45,
+    reviewQuestion: explicit
+      ? null
+      : "Нужно проверить характеристики позиции и понять, что именно заложил заказчик.",
+    pricingReady: explicit,
+  };
+}
+
+function extractTechnicalItemsFromText(sourceText: string) {
+  const lines = sourceText
+    .split("\n")
+    .map((line) => line.replace(/\t+/g, " ").trim())
+    .filter(Boolean);
+
+  const result: Array<{
+    lineNumber: number | null;
+    requestedName: string;
+    quantity?: string | null;
+    unit?: string | null;
+    rawCharacteristics?: string | null;
+    status: TenderTechnicalItemStatusValue;
+    identifiedProduct?: string | null;
+    identifiedBrand?: string | null;
+    identifiedModel?: string | null;
+    identificationBasis?: string | null;
+    confidence?: number | null;
+    reviewQuestion?: string | null;
+    pricingReady: boolean;
+  }> = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const directMatch = line.match(/^(\d{1,3})[.)]?\s+(.+)$/);
+    if (directMatch) {
+      const lineNumber = Number(directMatch[1]);
+      const requestedName = directMatch[2].trim();
+      if (requestedName.length > 2) {
+        result.push({
+          ...buildTechnicalItemDraft(requestedName, lineNumber),
+        });
+      }
+      continue;
+    }
+
+    if (/^\d{1,3}$/.test(line)) {
+      const lineNumber = Number(line);
+      const requestedName = lines[index + 1]?.trim();
+      const unitCandidate = lines[index + 2]?.trim();
+      const qtyCandidate = lines[index + 3]?.trim();
+
+      if (
+        requestedName &&
+        requestedName.length > 2 &&
+        !/^(№|Ед\.?\s?изм\.?|Кол-во|Количество)$/i.test(requestedName)
+      ) {
+        const draft = buildTechnicalItemDraft(requestedName, lineNumber);
+        result.push({
+          ...draft,
+          unit:
+            unitCandidate &&
+            /^(шт|штука|уп|упаковка|м|компл|комплект)$/i.test(unitCandidate)
+              ? unitCandidate
+              : null,
+          quantity: qtyCandidate && /^\d+[.,]?\d*$/.test(qtyCandidate) ? qtyCandidate : null,
+        });
+      }
+    }
+  }
+
+  const unique = new Map<string, (typeof result)[number]>();
+  for (const item of result) {
+    const key = `${item.lineNumber ?? "x"}::${item.requestedName.toLowerCase()}`;
+    if (!unique.has(key)) unique.set(key, item);
+  }
+
+  return [...unique.values()];
+}
+
 export async function createTenderProcurementAction(formData: FormData) {
   const prisma = getPrisma();
 
@@ -583,6 +705,93 @@ export async function saveTenderTechnicalItemAction(formData: FormData) {
       requestedName,
       status,
       confidence,
+    },
+  });
+
+  revalidatePath(`/procurements/${procurementId}`);
+}
+
+export async function importTenderTechnicalItemsAction(formData: FormData) {
+  const prisma = getPrisma();
+  const procurementId = Number(formData.get("procurementId"));
+  const actorName = normalizeString(formData.get("actorName")) ?? "Сотрудник";
+  const sourceText = String(formData.get("sourceText") ?? "").trim();
+
+  if (!Number.isInteger(procurementId) || procurementId <= 0) {
+    throw new Error("Procurement is required");
+  }
+
+  if (!sourceText) {
+    throw new Error("Source text is required");
+  }
+
+  const drafts = extractTechnicalItemsFromText(sourceText);
+
+  if (drafts.length === 0) {
+    await logTenderEvent({
+      procurementId,
+      actionType: TenderActionType.NOTE_ADDED,
+      title: "Автоимпорт позиций ТЗ не сработал",
+      description:
+        "В тексте не удалось автоматически выделить позиции. Возможно, нужен другой формат вставки или ручной разбор.",
+      actorName,
+    });
+    revalidatePath(`/procurements/${procurementId}`);
+    return;
+  }
+
+  const existing = await prisma.tenderTechnicalItem.findMany({
+    where: { procurementId },
+    select: {
+      lineNumber: true,
+      requestedName: true,
+    },
+  });
+
+  const existingKeys = new Set(
+    existing.map(
+      (item) => `${item.lineNumber ?? "x"}::${item.requestedName.toLowerCase()}`
+    )
+  );
+
+  const toCreate = drafts.filter((item) => {
+    const key = `${item.lineNumber ?? "x"}::${item.requestedName.toLowerCase()}`;
+    return !existingKeys.has(key);
+  });
+
+  if (toCreate.length > 0) {
+    await prisma.tenderTechnicalItem.createMany({
+      data: toCreate.map((item) => ({
+        procurementId,
+        lineNumber: item.lineNumber,
+        requestedName: item.requestedName,
+        quantity: item.quantity ?? null,
+        unit: item.unit ?? null,
+        rawCharacteristics: item.rawCharacteristics ?? null,
+        identifiedProduct: item.identifiedProduct ?? null,
+        identifiedBrand: item.identifiedBrand ?? null,
+        identifiedModel: item.identifiedModel ?? null,
+        identificationBasis: item.identificationBasis ?? null,
+        status: item.status,
+        confidence: item.confidence ?? null,
+        reviewQuestion: item.reviewQuestion ?? null,
+        pricingReady: item.pricingReady,
+      })),
+    });
+  }
+
+  await logTenderEvent({
+    procurementId,
+    actionType: TenderActionType.NOTE_ADDED,
+    title: "Выполнен автоимпорт позиций ТЗ",
+    description:
+      toCreate.length > 0
+        ? `Добавлено ${toCreate.length} позиций в черновой разбор ТЗ.`
+        : "Новых позиций не добавлено: все найденные строки уже были в карточке.",
+    actorName,
+    metadata: {
+      importedCount: toCreate.length,
+      totalDetected: drafts.length,
     },
   });
 

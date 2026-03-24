@@ -84,6 +84,11 @@ export function getCaseSupportLinks(input: {
         text: "Отдельная страница о том, как заказчики превращают ошибки в УПД, накладных и актах в денежные санкции.",
         href: "/shtraf-za-formalnye-nedostatki-dokumentov",
       },
+      {
+        title: "Штраф за ошибку в УПД или накладной",
+        text: "Узкий разбор ситуации, когда санкцию строят на формальной ошибке именно в УПД или товарной накладной.",
+        href: "/shtraf-za-oshibku-v-upd-ili-nakladnoy",
+      },
     ] satisfies RelatedContentLink[];
   }
 
@@ -113,6 +118,11 @@ export function getCaseSupportLinks(input: {
         title: "Штраф за формальные недостатки документов",
         text: "Когда ошибку в УПД, накладной или акте превращают в денежную санкцию и спор по оплате.",
         href: "/shtraf-za-formalnye-nedostatki-dokumentov",
+      },
+      {
+        title: "Штраф за ошибку в УПД или накладной",
+        text: "Отдельная страница под частый спор, когда заказчик пытается построить штраф именно на УПД или накладной.",
+        href: "/shtraf-za-oshibku-v-upd-ili-nakladnoy",
       },
       {
         title: "Заказчик удержал деньги из оплаты",

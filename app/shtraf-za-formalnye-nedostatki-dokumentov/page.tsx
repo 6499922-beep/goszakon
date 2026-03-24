@@ -280,6 +280,19 @@ export default function FormalDefectsPenaltyPage() {
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             <Link
+              href="/shtraf-za-oshibku-v-upd-ili-nakladnoy"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Штраф за ошибку в УПД или накладной
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Более узкий разбор под частый коммерческий спор, когда санкцию
+                строят именно на УПД или товарной накладной.
+              </p>
+            </Link>
+
+            <Link
               href="/zakazchik-ne-podpisyvaet-upd"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
             >

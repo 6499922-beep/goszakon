@@ -93,6 +93,11 @@ export default async function CustomersPage({ searchParams }: PageProps) {
       href: "/zakazchikam/audit-zakupki",
     },
     {
+      title: "Сопровождение закупки под задачу заказчика",
+      text: "Помогаем выстроить закупку под реальную потребность заказчика так, чтобы документация, режим, цена и условия работали как одна конструкция.",
+      href: "/zakazchikam/soprovozhdenie-zakupki",
+    },
+    {
       title: "Расчет НМЦК и обоснование закупки",
       text: "Помогаем собрать доказательственную базу по НМЦК, коммерческим предложениям, описанию объекта закупки и деловой логике закупки.",
       href: "/zakazchikam/raschet-nmck",

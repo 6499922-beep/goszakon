@@ -70,6 +70,11 @@ export function getCaseSupportLinks(input: {
         href: "/uderzhanie-deneg-iz-oplaty",
       },
       {
+        title: "Заказчик удержал штраф из оплаты без суда",
+        text: "Узкий материал о ситуации, когда заказчик сам списывает штраф из платежа еще до нормального разрешения спора.",
+        href: "/zakazchik-uderzhal-shtraf-iz-oplaty-bez-suda",
+      },
+      {
         title: "Спорная практика: внутренние документы заказчика",
         text: "Когда оплату незаконно ставят в зависимость от акта, системы или других внутренних процедур.",
         href: "/spornye-praktiki/vnutrennie-sistemy-oplaty",
@@ -138,6 +143,11 @@ export function getCaseSupportLinks(input: {
         title: "Заказчик удержал деньги из оплаты",
         text: "Если завышенный расчет уже превратился в удержание, спор нужно вести сразу и по сумме, и по праву заказчика на удержание.",
         href: "/uderzhanie-deneg-iz-oplaty",
+      },
+      {
+        title: "Заказчик удержал штраф из оплаты без суда",
+        text: "Отдельная страница о случаях, когда заказчик сам вычитает штраф из платежа и предлагает поставщику потом спорить с остатком.",
+        href: "/zakazchik-uderzhal-shtraf-iz-oplaty-bez-suda",
       },
     ] satisfies RelatedContentLink[];
   }

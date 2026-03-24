@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { TenderProcurementStatus } from "@prisma/client";
+import {
+  TenderFasReviewStatus,
+  TenderProcurementStatus,
+  TenderUserRole,
+} from "@prisma/client";
 import {
   analyzeTenderProcurementAction,
   analyzeTenderSourceDocumentAction,
@@ -16,6 +20,7 @@ import {
   saveTenderSourceDocumentAction,
   saveTenderTechnicalItemAction,
   saveTenderDecisionAction,
+  saveTenderFasReviewAction,
   saveTenderPricingReviewAction,
   updateTenderProcurementDocumentStatusAction,
   updateTenderSubmissionDeskAction,
@@ -23,6 +28,7 @@ import {
   updateTenderProcurementStatusAction,
 } from "@/app/tender/actions";
 import { getPrisma } from "@/lib/prisma";
+import { getCurrentTenderUser } from "@/lib/admin-auth";
 import {
   formatTenderCurrency,
   formatTenderDate,
@@ -226,6 +232,7 @@ export default async function TenderProcurementDetailsPage({
       sourceDocuments: {
         orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       },
+      fasReview: true,
       stageComments: {
         include: {
           author: true,
@@ -255,6 +262,10 @@ export default async function TenderProcurementDetailsPage({
       inn: true,
       isPrimary: true,
     },
+  });
+  const currentUser = await getCurrentTenderUser();
+  const promptConfig = await prisma.tenderPromptConfig.findUnique({
+    where: { key: "FAS_POTENTIAL_COMPLAINT" },
   });
 
   const processingStages = getTenderProcessingStages(procurement);
@@ -468,9 +479,28 @@ export default async function TenderProcurementDetailsPage({
     { href: "#source-docs", label: "Исходные файлы" },
     { href: "#technical-items", label: "ТЗ" },
     { href: "#pricing", label: "Предпросчёт" },
+    { href: "#fas-branch", label: "Жалоба в ФАС" },
     { href: "#documents-checklist", label: "Комплект" },
     { href: "#submission", label: "Подача" },
   ];
+  const fasStatusLabel = {
+    NOT_STARTED: "ФАС-ветка не запускалась",
+    NO_VIOLATION: "Нарушений для жалобы в ФАС не выявлено",
+    POTENTIAL_COMPLAINT: "Выявлено потенциальное нарушение",
+    MANUAL_REVIEW: "Нужна ручная проверка по жалобе",
+  } as const;
+  const fasStatusTone = {
+    NOT_STARTED: "bg-slate-100 text-slate-700",
+    NO_VIOLATION: "bg-emerald-50 text-emerald-700",
+    POTENTIAL_COMPLAINT: "bg-rose-50 text-rose-700",
+    MANUAL_REVIEW: "bg-amber-50 text-amber-700",
+  } as const;
+  const fasPromptEditors: TenderUserRole[] = [
+    TenderUserRole.ADMIN,
+    TenderUserRole.FAS_MANAGER,
+  ];
+  const canEditFasPrompt =
+    !!currentUser && fasPromptEditors.includes(currentUser.role);
 
   return (
     <main className="space-y-8">
@@ -1306,6 +1336,168 @@ export default async function TenderProcurementDetailsPage({
                 приложения, которые позже будут идти в разбор после решения о подаче.
               </div>
             )}
+          </div>
+
+          <div
+            id="fas-branch"
+            className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
+                  Параллельная ветка
+                </div>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
+                  Потенциальная жалоба в ФАС
+                </h2>
+              </div>
+              <span
+                className={`rounded-full px-4 py-2 text-xs font-semibold ${
+                  fasStatusTone[
+                    procurement.fasReview?.status ?? TenderFasReviewStatus.NOT_STARTED
+                  ]
+                }`}
+              >
+                {fasStatusLabel[
+                  procurement.fasReview?.status ?? TenderFasReviewStatus.NOT_STARTED
+                ]}
+              </span>
+            </div>
+
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              Эта ветка работает на той же документации, но по отдельному ФАС-промту.
+              Если явных нарушений с высокой вероятностью обоснования нет, система
+              должна прямо это сказать и не выдумывать основания. Если есть сомнения,
+              кейс уходит специалисту по жалобам ФАС.
+            </p>
+
+            <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_1.1fr]">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  ФАС-промт для этого анализа
+                </div>
+                <pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-7 text-slate-700">
+                  {promptConfig?.body ??
+                    "ФАС-промт ещё не настроен. Его может задать Руководитель ФАС или администратор."}
+                </pre>
+
+                {canEditFasPrompt ? (
+                  <a
+                    href="/fas"
+                    className="mt-4 inline-flex rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                  >
+                    Открыть настройки ФАС-ветки
+                  </a>
+                ) : null}
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 p-5">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  Результат по этой закупке
+                </div>
+
+                <form action={saveTenderFasReviewAction} className="mt-4 space-y-4">
+                  <input type="hidden" name="procurementId" value={procurement.id} />
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="block">
+                      <div className="mb-2 text-sm font-medium text-slate-700">
+                        Итог ФАС-проверки
+                      </div>
+                      <select
+                        name="status"
+                        defaultValue={
+                          procurement.fasReview?.status ??
+                          TenderFasReviewStatus.NOT_STARTED
+                        }
+                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                      >
+                        <option value="NOT_STARTED">Ещё не запускали</option>
+                        <option value="NO_VIOLATION">
+                          Нарушений для жалобы не выявлено
+                        </option>
+                        <option value="POTENTIAL_COMPLAINT">
+                          Есть потенциальная жалоба в ФАС
+                        </option>
+                        <option value="MANUAL_REVIEW">
+                          Нужна ручная проверка по жалобе
+                        </option>
+                      </select>
+                    </label>
+
+                    <label className="block">
+                      <div className="mb-2 text-sm font-medium text-slate-700">
+                        Ответственный по ФАС
+                      </div>
+                      <input
+                        name="assignedTo"
+                        defaultValue={procurement.fasReview?.assignedTo ?? ""}
+                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                        placeholder="Например, специалист по жалобам ФАС"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="block">
+                    <div className="mb-2 text-sm font-medium text-slate-700">
+                      Какое нарушение найдено
+                    </div>
+                    <input
+                      name="findingTitle"
+                      defaultValue={procurement.fasReview?.findingTitle ?? ""}
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                      placeholder="Например, ограничение конкуренции, товарный знак, дискриминационное требование"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <div className="mb-2 text-sm font-medium text-slate-700">
+                      Основание и привязка к документации
+                    </div>
+                    <textarea
+                      name="findingBasis"
+                      rows={4}
+                      defaultValue={procurement.fasReview?.findingBasis ?? ""}
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm leading-7 outline-none focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                      placeholder="Укажи конкретный пункт документации и почему это выглядит как нарушение."
+                    />
+                  </label>
+
+                  <label className="block">
+                    <div className="mb-2 text-sm font-medium text-slate-700">
+                      Почему уверены или в чём сомнение
+                    </div>
+                    <textarea
+                      name="confidenceNote"
+                      rows={3}
+                      defaultValue={procurement.fasReview?.confidenceNote ?? ""}
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm leading-7 outline-none focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                      placeholder="Например: явное нарушение, либо есть сомнение и что именно нужно проверить сотруднику ФАС."
+                    />
+                  </label>
+
+                  <label className="block">
+                    <div className="mb-2 text-sm font-medium text-slate-700">
+                      Комментарий по ветке ФАС
+                    </div>
+                    <textarea
+                      name="reviewComment"
+                      rows={3}
+                      defaultValue={procurement.fasReview?.reviewComment ?? ""}
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm leading-7 outline-none focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                      placeholder="Что делать дальше: запускать жалобу, проверить вручную, ничего не делать."
+                    />
+                  </label>
+
+                  <button
+                    type="submit"
+                    className="rounded-2xl bg-[#081a4b] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
+                  >
+                    Сохранить ФАС-ветку
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
 
           <div

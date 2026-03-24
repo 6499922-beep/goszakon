@@ -1,6 +1,8 @@
 "use server";
 
 import {
+  TenderFasReviewStatus,
+  TenderPromptConfigKey,
   TenderRuleKind,
   TenderActionType,
   TenderCompanyDocumentType,
@@ -2148,4 +2150,111 @@ export async function saveTenderUserAction(formData: FormData) {
   }
 
   revalidatePath("/users");
+}
+
+export async function saveTenderFasPromptAction(formData: FormData) {
+  const prisma = getPrisma();
+  const currentUser = await getCurrentTenderUser();
+  const fasPromptEditors = new Set<TenderUserRole>([
+    TenderUserRole.ADMIN,
+    TenderUserRole.FAS_MANAGER,
+  ]);
+
+  if (!currentUser || !fasPromptEditors.has(currentUser.role)) {
+    throw new Error("Недостаточно прав для редактирования ФАС-промта");
+  }
+
+  const body = String(formData.get("body") ?? "").trim();
+
+  if (!body) {
+    throw new Error("Промт не может быть пустым");
+  }
+
+  await prisma.tenderPromptConfig.upsert({
+    where: { key: TenderPromptConfigKey.FAS_POTENTIAL_COMPLAINT },
+    update: {
+      body,
+      updatedById: currentUser.id,
+    },
+    create: {
+      key: TenderPromptConfigKey.FAS_POTENTIAL_COMPLAINT,
+      title: "Потенциальная жалоба в ФАС",
+      body,
+      updatedById: currentUser.id,
+    },
+  });
+
+  revalidatePath("/fas");
+}
+
+export async function saveTenderFasReviewAction(formData: FormData) {
+  const prisma = getPrisma();
+  const procurementId = Number(formData.get("procurementId"));
+  const currentUser = await getCurrentTenderUser();
+
+  if (!currentUser) {
+    throw new Error("Нужна авторизация");
+  }
+
+  if (!Number.isInteger(procurementId) || procurementId <= 0) {
+    throw new Error("Procurement is required");
+  }
+
+  const statusRaw = String(formData.get("status") ?? "").trim().toUpperCase();
+  const status = Object.values(TenderFasReviewStatus).includes(
+    statusRaw as TenderFasReviewStatus
+  )
+    ? (statusRaw as TenderFasReviewStatus)
+    : TenderFasReviewStatus.NOT_STARTED;
+
+  const promptConfig = await prisma.tenderPromptConfig.findUnique({
+    where: { key: TenderPromptConfigKey.FAS_POTENTIAL_COMPLAINT },
+  });
+
+  await prisma.tenderFasReview.upsert({
+    where: { procurementId },
+    update: {
+      status,
+      findingTitle: normalizeString(formData.get("findingTitle")),
+      findingBasis: normalizeString(formData.get("findingBasis")),
+      confidenceNote: normalizeString(formData.get("confidenceNote")),
+      assignedTo: normalizeString(formData.get("assignedTo")),
+      reviewComment: normalizeString(formData.get("reviewComment")),
+      promptSnapshot: promptConfig?.body ?? null,
+      lastAnalyzedAt: new Date(),
+    },
+    create: {
+      procurementId,
+      status,
+      findingTitle: normalizeString(formData.get("findingTitle")),
+      findingBasis: normalizeString(formData.get("findingBasis")),
+      confidenceNote: normalizeString(formData.get("confidenceNote")),
+      assignedTo: normalizeString(formData.get("assignedTo")),
+      reviewComment: normalizeString(formData.get("reviewComment")),
+      promptSnapshot: promptConfig?.body ?? null,
+      lastAnalyzedAt: new Date(),
+    },
+  });
+
+  const statusTitleMap: Record<TenderFasReviewStatus, string> = {
+    NOT_STARTED: "ФАС-ветка пока не запускалась",
+    NO_VIOLATION: "Нарушений для жалобы в ФАС не выявлено",
+    POTENTIAL_COMPLAINT: "Выявлено потенциальное нарушение для жалобы в ФАС",
+    MANUAL_REVIEW: "ФАС-ветка отправлена на ручную проверку",
+  };
+
+  await logTenderEvent({
+    procurementId,
+    actionType: TenderActionType.NOTE_ADDED,
+    title: "Обновлён контур жалобы в ФАС",
+    description: statusTitleMap[status],
+    actorName: currentUser.name ?? currentUser.email,
+    metadata: {
+      fasStatus: status,
+      authorRole: currentUser.role,
+    },
+  });
+
+  revalidatePath(`/procurements/${procurementId}`);
+  revalidatePath("/fas");
 }

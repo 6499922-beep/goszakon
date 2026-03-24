@@ -95,6 +95,7 @@ model Admin {
   passwordHash String
   role         TenderUserRole @default(ADMIN)
   comments     TenderStageComment[]
+  promptConfigs TenderPromptConfig[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -105,6 +106,19 @@ enum TenderUserRole {
   ANALYST
   MANAGER
   SUBMITTER
+  FAS_SPECIALIST
+  FAS_MANAGER
+}
+
+enum TenderFasReviewStatus {
+  NOT_STARTED
+  NO_VIOLATION
+  POTENTIAL_COMPLAINT
+  MANUAL_REVIEW
+}
+
+enum TenderPromptConfigKey {
+  FAS_POTENTIAL_COMPLAINT
 }
 
 enum MaterialType {
@@ -373,6 +387,7 @@ model TenderProcurement {
   procurementDocuments     TenderProcurementDocument[]
   sourceDocuments          TenderSourceDocument[]
   stageComments            TenderStageComment[]
+  fasReview                TenderFasReview?
   events                   TenderProcurementEvent[]
   ruleMatches              TenderProcurementRuleMatch[]
   createdAt                DateTime                     @default(now())
@@ -382,6 +397,33 @@ model TenderProcurement {
   @@index([deadline])
   @@index([customerInn])
   @@index([companyProfileId])
+}
+
+model TenderPromptConfig {
+  id          Int                   @id @default(autoincrement())
+  key         TenderPromptConfigKey @unique
+  title       String
+  body        String                @db.Text
+  updatedById Int?
+  updatedBy   Admin?                @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+}
+
+model TenderFasReview {
+  id             Int                   @id @default(autoincrement())
+  procurementId  Int                   @unique
+  status         TenderFasReviewStatus @default(NOT_STARTED)
+  findingTitle   String?
+  findingBasis   String?               @db.Text
+  confidenceNote String?               @db.Text
+  promptSnapshot String?               @db.Text
+  assignedTo     String?
+  reviewComment  String?               @db.Text
+  lastAnalyzedAt DateTime?
+  procurement    TenderProcurement     @relation(fields: [procurementId], references: [id], onDelete: Cascade)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
 }
 
 model TenderStageComment {

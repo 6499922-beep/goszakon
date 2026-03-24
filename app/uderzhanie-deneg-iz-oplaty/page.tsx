@@ -278,6 +278,19 @@ export default function WithheldPaymentPage() {
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             <Link
+              href="/zakazchik-uderzhal-shtraf-iz-oplaty-bez-suda"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Заказчик удержал штраф из оплаты без суда
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Узкий материал о ситуации, когда заказчик сам решил спор о
+                штрафе в свою пользу и сразу уменьшил платеж.
+              </p>
+            </Link>
+
+            <Link
               href="/neustoyka-na-vsyu-summu-kontrakta"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
             >

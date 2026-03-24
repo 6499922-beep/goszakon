@@ -34,12 +34,20 @@ export default async function TenderProtectedLayout({
   }
 
   const currentUser = await getCurrentTenderUser();
+  const fasRoles = new Set<TenderUserRole>([
+    TenderUserRole.ADMIN,
+    TenderUserRole.FAS_MANAGER,
+    TenderUserRole.FAS_SPECIALIST,
+  ]);
 
   const links = [
     { title: "Обзор", href: "/" },
     { title: "Закупки", href: "/procurements" },
     { title: "Компании", href: "/companies" },
     { title: "Стоп-факторы", href: "/rules" },
+    ...(fasRoles.has(currentUser?.role as TenderUserRole)
+      ? [{ title: "Жалобы в ФАС", href: "/fas" }]
+      : []),
     ...(currentUser?.role === TenderUserRole.ADMIN
       ? [{ title: "Пользователи", href: "/users" }]
       : []),

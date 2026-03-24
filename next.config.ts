@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
       allowedOrigins: [
         "tender.goszakon.ru",
         "82.147.71.45",
+        "138.124.118.116",
         "localhost:3000",
         "127.0.0.1:3000",
       ],

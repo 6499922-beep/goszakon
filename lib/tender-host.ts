@@ -1,6 +1,7 @@
 const DEFAULT_TENDER_HOSTS = [
   "tender.goszakon.ru",
   "82.147.71.45",
+  "138.124.118.116",
   "localhost",
   "127.0.0.1",
 ];

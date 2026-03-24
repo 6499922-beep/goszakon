@@ -171,6 +171,23 @@ const handoffStepTone = {
   },
 } as const;
 
+const handoffStepStateLabel = {
+  done: "Этап пройден",
+  active: "Сейчас в работе",
+  waiting: "Ожидает очереди",
+  warning: "Есть задержка",
+  danger: "Остановлено",
+} as const;
+
+const handoffRoleBadge = {
+  Анализ: "А",
+  "Просчёт": "П",
+  Руководитель: "Р",
+  Подача: "ПД",
+  "Руководитель ФАС": "Ф",
+  "ФАС-контур": "Ф",
+} as const;
+
 function renderList(value: unknown) {
   if (!Array.isArray(value) || value.length === 0) return null;
 
@@ -836,6 +853,10 @@ export default async function TenderProcurementDetailsPage({
   ] as const;
   const showFasHandoff =
     fasNeedsWork || procurement.decision === "FAS_COMPLAINT";
+  const activeHandoffStep = handoffSteps.find((step) => step.state === "active");
+  const blockedHandoffSteps = handoffSteps.filter(
+    (step) => step.state === "warning" || step.state === "danger"
+  );
 
   return (
     <main className="space-y-8">
@@ -958,9 +979,30 @@ export default async function TenderProcurementDetailsPage({
           </div>
 
           <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-5">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-              Передача между сотрудниками
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Передача между сотрудниками
+                </div>
+                <div className="mt-2 text-lg font-bold tracking-tight text-[#081a4b]">
+                  Кто уже прошёл этап и у кого сейчас мяч
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {activeHandoffStep ? (
+                  <div className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-800">
+                    Сейчас в работе: {activeHandoffStep.role}
+                  </div>
+                ) : null}
+                {blockedHandoffSteps.length > 0 ? (
+                  <div className="rounded-full bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800">
+                    Есть задержка: {blockedHandoffSteps.map((step) => step.role).join(", ")}
+                  </div>
+                ) : null}
+              </div>
             </div>
+
             <div className="mt-4 overflow-x-auto">
               <div className="flex min-w-max items-stretch gap-3">
                 {handoffSteps.map((step, index) => {
@@ -968,13 +1010,30 @@ export default async function TenderProcurementDetailsPage({
 
                   return (
                     <div key={step.key} className="flex items-center gap-3">
-                      <div className={`w-[260px] rounded-3xl border p-4 ${tone.card}`}>
+                      <div className={`w-[280px] rounded-3xl border p-4 ${tone.card}`}>
                         <div className="flex items-center justify-between gap-3">
-                          <span className={`inline-flex h-8 min-w-8 items-center justify-center rounded-full px-3 text-xs font-bold ${tone.badge}`}>
-                            {index + 1}
-                          </span>
-                          <span className={`text-xs font-semibold uppercase tracking-[0.12em] ${tone.text}`}>
-                            {step.role}
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`inline-flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-xs font-bold ${tone.badge}`}
+                            >
+                              {handoffRoleBadge[step.role as keyof typeof handoffRoleBadge] ??
+                                index + 1}
+                            </span>
+                            <div>
+                              <div
+                                className={`text-xs font-semibold uppercase tracking-[0.12em] ${tone.text}`}
+                              >
+                                {step.role}
+                              </div>
+                              <div className="mt-1 text-xs font-medium text-slate-500">
+                                Шаг {index + 1}
+                              </div>
+                            </div>
+                          </div>
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${tone.badge}`}
+                          >
+                            {handoffStepStateLabel[step.state]}
                           </span>
                         </div>
                         <div className={`mt-3 text-lg font-bold tracking-tight ${tone.text}`}>
@@ -983,11 +1042,31 @@ export default async function TenderProcurementDetailsPage({
                         <div className="mt-2 text-sm leading-7 text-slate-600">
                           {step.detail}
                         </div>
+                        <div className="mt-4">
+                          <div className="h-2 overflow-hidden rounded-full bg-white/70">
+                            <div
+                              className={`h-full rounded-full ${
+                                step.state === "done"
+                                  ? "w-full bg-emerald-400"
+                                  : step.state === "active"
+                                    ? "w-2/3 bg-sky-400"
+                                    : step.state === "warning"
+                                      ? "w-1/2 bg-amber-400"
+                                      : step.state === "danger"
+                                        ? "w-full bg-rose-400"
+                                        : "w-1/4 bg-slate-300"
+                              }`}
+                            />
+                          </div>
+                        </div>
                       </div>
 
                       {index < handoffSteps.length - 1 ? (
-                        <div className="flex items-center">
+                        <div className="flex flex-col items-center gap-2">
                           <div className={`h-1 w-10 rounded-full ${tone.line}`} />
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                            Передача
+                          </div>
                         </div>
                       ) : null}
                     </div>
@@ -999,15 +1078,32 @@ export default async function TenderProcurementDetailsPage({
                     <div className="flex items-center">
                       <div className="h-1 w-10 rounded-full bg-rose-300" />
                     </div>
-                    <div className="w-[260px] rounded-3xl border border-rose-200 bg-rose-50 p-4">
+                    <div className="w-[280px] rounded-3xl border border-rose-200 bg-rose-50 p-4">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-rose-600 px-3 text-xs font-bold text-white">
-                          F
-                        </span>
-                        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-rose-900">
-                          {procurement.fasReview?.status === TenderFasReviewStatus.POTENTIAL_COMPLAINT
-                            ? "Руководитель ФАС"
-                            : "ФАС-контур"}
+                        <div className="flex items-center gap-3">
+                          <span className="inline-flex h-10 min-w-10 items-center justify-center rounded-full bg-rose-600 px-3 text-xs font-bold text-white">
+                            Ф
+                          </span>
+                          <div>
+                            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-rose-900">
+                              {procurement.fasReview?.status ===
+                              TenderFasReviewStatus.POTENTIAL_COMPLAINT
+                                ? "Руководитель ФАС"
+                                : "ФАС-контур"}
+                            </div>
+                            <div className="mt-1 text-xs font-medium text-rose-700/70">
+                              Параллельная ветка
+                            </div>
+                          </div>
+                        </div>
+                        <span className="rounded-full bg-rose-600 px-3 py-1 text-xs font-semibold text-white">
+                          {procurement.fasReview?.status ===
+                          TenderFasReviewStatus.POTENTIAL_COMPLAINT
+                            ? "Нужно решение"
+                            : procurement.fasReview?.status ===
+                                TenderFasReviewStatus.MANUAL_REVIEW
+                              ? "Есть сомнение"
+                              : "ФАС-маршрут"}
                         </span>
                       </div>
                       <div className="mt-3 text-lg font-bold tracking-tight text-rose-900">
@@ -1019,6 +1115,9 @@ export default async function TenderProcurementDetailsPage({
                           : procurement.fasReview?.status === TenderFasReviewStatus.MANUAL_REVIEW
                             ? "По ФАС-ветке есть сомнения. Нужна ручная проверка профильным сотрудником."
                             : "Руководитель выбрал сценарий жалобы в ФАС."}
+                      </div>
+                      <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/70">
+                        <div className="h-full w-2/3 rounded-full bg-rose-400" />
                       </div>
                     </div>
                   </>

@@ -40,6 +40,99 @@ function getDefaultQueue(role: TenderUserRole): QueueKey {
   }
 }
 
+function getUrgencySignals(item: {
+  deadline: Date | null;
+  status: string;
+  aiAnalysisStatus: string | null;
+  decision: TenderDecision | null;
+  technicalItems: Array<{
+    status: string;
+    pricingReady: boolean;
+    approximateUnitPrice: unknown;
+  }>;
+  procurementDocuments: Array<{ status: string }>;
+  sourceDocuments: Array<{
+    status: string;
+    autofillStatus: string;
+    draftContent: string | null;
+  }>;
+  fasReview?: { status: TenderFasReviewStatus } | null;
+  companyProfile?: { name: string } | null;
+}) {
+  const signals: Array<{
+    label: string;
+    tone: string;
+  }> = [];
+
+  const now = new Date();
+  if (item.deadline) {
+    const hoursToDeadline = (item.deadline.getTime() - now.getTime()) / (1000 * 60 * 60);
+    if (hoursToDeadline <= 24) {
+      signals.push({ label: "Срок горит", tone: "bg-rose-50 text-rose-700" });
+    } else if (hoursToDeadline <= 72) {
+      signals.push({ label: "Срок близко", tone: "bg-amber-50 text-amber-700" });
+    }
+  }
+
+  const needsManualReview =
+    item.technicalItems.some(
+      (technicalItem) =>
+        technicalItem.status === "REVIEW" ||
+        (technicalItem.pricingReady && technicalItem.approximateUnitPrice == null)
+    ) ||
+    item.procurementDocuments.some(
+      (document) => document.status === "MISSING" || document.status === "REVIEW"
+    ) ||
+    item.sourceDocuments.some(
+      (document) =>
+        document.status === "READY_FOR_ANALYSIS" &&
+        (document.autofillStatus === "NOT_ANALYZED" ||
+          document.autofillStatus === "MANUAL_ONLY" ||
+          !document.draftContent)
+    ) ||
+    item.fasReview?.status === TenderFasReviewStatus.MANUAL_REVIEW;
+
+  if (needsManualReview) {
+    signals.push({
+      label: "Нужна ручная проверка",
+      tone: "bg-amber-50 text-amber-700",
+    });
+  }
+
+  if (
+    item.aiAnalysisStatus === "completed" &&
+    item.decision == null &&
+    item.status !== "STOPPED" &&
+    !needsManualReview
+  ) {
+    signals.push({
+      label: "Ждёт руководителя",
+      tone: "bg-violet-50 text-violet-700",
+    });
+  }
+
+  if (
+    item.decision === TenderDecision.SUBMIT &&
+    item.companyProfile != null &&
+    !needsManualReview &&
+    item.procurementDocuments.length > 0
+  ) {
+    signals.push({
+      label: "Готово к подаче",
+      tone: "bg-emerald-50 text-emerald-700",
+    });
+  }
+
+  if (item.fasReview?.status === TenderFasReviewStatus.POTENTIAL_COMPLAINT) {
+    signals.push({
+      label: "Есть ФАС-ветка",
+      tone: "bg-rose-50 text-rose-700",
+    });
+  }
+
+  return signals.slice(0, 3);
+}
+
 export default async function TenderProcurementsPage({
   searchParams,
 }: {
@@ -286,10 +379,14 @@ export default async function TenderProcurementsPage({
                 <th className="px-4 py-3 font-medium">Срок</th>
                 <th className="px-4 py-3 font-medium">НМЦ без НДС</th>
                 <th className="px-4 py-3 font-medium">Следующий шаг</th>
+                <th className="px-4 py-3 font-medium">Сигналы</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
-              {filteredProcurements.map((item) => (
+              {filteredProcurements.map((item) => {
+                const signals = getUrgencySignals(item);
+
+                return (
                 <tr key={item.id}>
                   <td className="px-4 py-3 font-medium text-[#081a4b]">
                     <Link
@@ -328,8 +425,24 @@ export default async function TenderProcurementsPage({
                               ? "Разобрать документацию"
                               : "Открыть карточку"}
                   </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    <div className="flex flex-wrap gap-2">
+                      {signals.length > 0 ? (
+                        signals.map((signal) => (
+                          <span
+                            key={signal.label}
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${signal.tone}`}
+                          >
+                            {signal.label}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-slate-400">Без срочных сигналов</span>
+                      )}
+                    </div>
+                  </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>

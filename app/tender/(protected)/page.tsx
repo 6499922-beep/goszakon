@@ -208,6 +208,27 @@ export default async function TenderDashboardPage() {
             </div>
           </div>
 
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-2xl font-bold text-[#081a4b]">Сигналы по работе</h2>
+            <div className="mt-5 space-y-3 text-sm leading-7 text-slate-700">
+              <div className="rounded-2xl bg-rose-50 px-4 py-3 text-rose-800">
+                Срок горит: {data.alerts.deadlineHot}
+              </div>
+              <div className="rounded-2xl bg-amber-50 px-4 py-3 text-amber-800">
+                Нужна ручная проверка: {data.alerts.manualReview}
+              </div>
+              <div className="rounded-2xl bg-violet-50 px-4 py-3 text-violet-800">
+                Ждут решения руководителя: {data.alerts.waitingManager}
+              </div>
+              <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-emerald-800">
+                Готовы к подаче: {data.alerts.readyToSubmit}
+              </div>
+              <div className="rounded-2xl bg-rose-50 px-4 py-3 text-rose-800">
+                Потенциальные ФАС-кейсы: {data.alerts.fasCases}
+              </div>
+            </div>
+          </div>
+
           <div className="rounded-3xl border border-slate-200 bg-[#081a4b] p-6 text-white shadow-sm">
             <div className="text-sm uppercase tracking-[0.12em] text-white/60">
               Что уже заложено

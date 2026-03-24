@@ -280,6 +280,19 @@ export default function FormalDefectsPenaltyPage() {
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             <Link
+              href="/shtraf-za-nekomplektnuyu-postavku-iz-za-dokumentov"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Штраф за некомплектную поставку из-за документов
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Узкий материал о ситуации, когда спорный документ пытаются
+                превратить в доказательство некомплектной поставки.
+              </p>
+            </Link>
+
+            <Link
               href="/shtraf-za-oshibku-v-upd-ili-nakladnoy"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
             >

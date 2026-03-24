@@ -89,6 +89,11 @@ export function getCaseSupportLinks(input: {
         text: "Узкий разбор ситуации, когда санкцию строят на формальной ошибке именно в УПД или товарной накладной.",
         href: "/shtraf-za-oshibku-v-upd-ili-nakladnoy",
       },
+      {
+        title: "Штраф за некомплектную поставку из-за документов",
+        text: "Материал о случаях, когда заказчик пытается через спорные документы объявить поставку некомплектной.",
+        href: "/shtraf-za-nekomplektnuyu-postavku-iz-za-dokumentov",
+      },
     ] satisfies RelatedContentLink[];
   }
 
@@ -123,6 +128,11 @@ export function getCaseSupportLinks(input: {
         title: "Штраф за ошибку в УПД или накладной",
         text: "Отдельная страница под частый спор, когда заказчик пытается построить штраф именно на УПД или накладной.",
         href: "/shtraf-za-oshibku-v-upd-ili-nakladnoy",
+      },
+      {
+        title: "Штраф за некомплектную поставку из-за документов",
+        text: "Если заказчик называет поставку некомплектной только из-за бумаг, это отдельный сценарий спорной санкции.",
+        href: "/shtraf-za-nekomplektnuyu-postavku-iz-za-dokumentov",
       },
       {
         title: "Заказчик удержал деньги из оплаты",

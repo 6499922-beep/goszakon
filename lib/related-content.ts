@@ -79,6 +79,11 @@ export function getCaseSupportLinks(input: {
         text: "Если заказчик удержал санкции из оплаты, спор часто нужно вести сразу по двум направлениям.",
         href: "/sudebnaya-zashita-v-zakupkah/snizhenie-neustojki-postavshiku",
       },
+      {
+        title: "Штраф за формальные недостатки документов",
+        text: "Отдельная страница о том, как заказчики превращают ошибки в УПД, накладных и актах в денежные санкции.",
+        href: "/shtraf-za-formalnye-nedostatki-dokumentov",
+      },
     ] satisfies RelatedContentLink[];
   }
 

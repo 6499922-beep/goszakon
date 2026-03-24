@@ -539,6 +539,19 @@ export default async function NonPaymentPracticeHubPage() {
               </Link>
 
               <Link
+                href="/shtraf-za-formalnye-nedostatki-dokumentov"
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white"
+              >
+                <div className="text-lg font-semibold text-[#081a4b]">
+                  Штраф за формальные недостатки документов
+                </div>
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  Разбор ситуации, когда формальную ошибку в документах
+                  превращают в основание для санкции и последующего удержания из оплаты.
+                </p>
+              </Link>
+
+              <Link
                 href="/spornye-praktiki/vnutrennie-sistemy-oplaty"
                 className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white"
               >

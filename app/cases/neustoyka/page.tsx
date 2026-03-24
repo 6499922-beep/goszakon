@@ -377,6 +377,22 @@ export default async function PenaltyPracticeHubPage() {
                 цены контракта, если часть обязательства уже исполнена и принята.
               </p>
             </Link>
+
+            <Link
+              href="/shtraf-za-formalnye-nedostatki-dokumentov"
+              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
+                Спорная практика
+              </div>
+              <h2 className="mt-4 text-2xl font-semibold text-[#081a4b]">
+                Штраф за формальные недостатки документов
+              </h2>
+              <p className="mt-4 text-base leading-8 text-slate-700">
+                Когда ошибку в УПД, накладной или акте превращают в денежную
+                санкцию, удержание из оплаты и более широкий спор по исполнению.
+              </p>
+            </Link>
           </div>
 
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">

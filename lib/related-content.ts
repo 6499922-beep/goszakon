@@ -75,6 +75,11 @@ export function getCaseSupportLinks(input: {
         href: "/zakazchik-uderzhal-shtraf-iz-oplaty-bez-suda",
       },
       {
+        title: "Заказчик не платит, пока вы не оплатите неустойку",
+        text: "Материал о спорной схеме, когда оплату ставят в зависимость от предварительной уплаты санкции заказчика.",
+        href: "/zakazchik-ne-platit-poka-ne-oplatite-neustoyku",
+      },
+      {
         title: "Спорная практика: внутренние документы заказчика",
         text: "Когда оплату незаконно ставят в зависимость от акта, системы или других внутренних процедур.",
         href: "/spornye-praktiki/vnutrennie-sistemy-oplaty",
@@ -148,6 +153,11 @@ export function getCaseSupportLinks(input: {
         title: "Заказчик удержал штраф из оплаты без суда",
         text: "Отдельная страница о случаях, когда заказчик сам вычитает штраф из платежа и предлагает поставщику потом спорить с остатком.",
         href: "/zakazchik-uderzhal-shtraf-iz-oplaty-bez-suda",
+      },
+      {
+        title: "Заказчик не платит, пока вы не оплатите неустойку",
+        text: "Если основной платеж блокируют до уплаты спорной санкции, это отдельный перекос, который нужно ломать по сроку оплаты и основанию неустойки.",
+        href: "/zakazchik-ne-platit-poka-ne-oplatite-neustoyku",
       },
     ] satisfies RelatedContentLink[];
   }

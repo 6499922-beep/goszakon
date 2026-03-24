@@ -337,6 +337,19 @@ export default function NonPaymentPage() {
             </Link>
 
             <Link
+              href="/zakazchik-ne-prinimaet-postavku-chastyami"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Заказчик не принимает поставку частями
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Когда уже переданный объем не принимают только потому, что
+                заказчик хочет закрыть весь контракт одной партией.
+              </p>
+            </Link>
+
+            <Link
               href="/uderzhanie-deneg-iz-oplaty"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
             >

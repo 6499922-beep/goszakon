@@ -49,6 +49,25 @@ export const tenderAnalysisSchema = {
   },
 } as const;
 
+export const tenderFasAnalysisSchema = {
+  name: "tender_fas_potential_complaint_analysis",
+  strict: true,
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    required: ["status", "finding_title", "finding_basis", "confidence_note"],
+    properties: {
+      status: {
+        type: "string",
+        enum: ["NO_VIOLATION", "POTENTIAL_COMPLAINT", "MANUAL_REVIEW"],
+      },
+      finding_title: { type: "string" },
+      finding_basis: { type: "string" },
+      confidence_note: { type: "string" },
+    },
+  },
+} as const;
+
 type TenderAnalysisResult = {
   summary: string;
   selection_criteria: string;
@@ -62,6 +81,13 @@ type TenderAnalysisResult = {
     name: string;
     reason: string;
   }>;
+};
+
+type TenderFasAnalysisResult = {
+  status: "NO_VIOLATION" | "POTENTIAL_COMPLAINT" | "MANUAL_REVIEW";
+  finding_title: string;
+  finding_basis: string;
+  confidence_note: string;
 };
 
 function extractOutputText(response: any) {
@@ -169,6 +195,91 @@ ${input.sourceText}
   return {
     model,
     result: JSON.parse(outputText) as TenderAnalysisResult,
+  };
+}
+
+export async function runTenderFasAiAnalysis(input: {
+  title: string;
+  customerName?: string | null;
+  customerInn?: string | null;
+  procurementNumber?: string | null;
+  platform?: string | null;
+  sourceText: string;
+  promptBody: string;
+}) {
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY is not set");
+  }
+
+  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+
+  const prompt = `
+Ты анализируешь документацию закупки по 223-ФЗ только на предмет потенциальной жалобы в ФАС.
+
+Работай строго по инструкции ниже. Верни только структурированный JSON по схеме.
+
+Инструкция для ФАС-ветки:
+${input.promptBody}
+
+Карточка закупки:
+- Название: ${input.title}
+- Заказчик: ${input.customerName ?? ""}
+- ИНН заказчика: ${input.customerInn ?? ""}
+- Номер закупки: ${input.procurementNumber ?? ""}
+- Площадка: ${input.platform ?? ""}
+
+Правила результата:
+1. Если явных нарушений с высокой вероятностью обоснования нет, выбери статус NO_VIOLATION.
+2. Если есть формально считываемое нарушение с хорошей привязкой к документации, выбери POTENTIAL_COMPLAINT.
+3. Если нарушение может быть, но ты не уверен и нужна проверка человеком, выбери MANUAL_REVIEW.
+4. Не придумывай нарушение. Не рассуждай о коммерческой невыгодности или целесообразности участия.
+5. Если нарушение найдено, обязательно укажи, в каком месте документации оно проявляется.
+6. Если нарушений нет, прямо так и напиши в finding_title или confidence_note.
+
+Текст документации:
+${input.sourceText}
+  `.trim();
+
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      input: [
+        {
+          role: "user",
+          content: [{ type: "input_text", text: prompt }],
+        },
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          ...tenderFasAnalysisSchema,
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+  }
+
+  const data = await response.json();
+  const outputText = extractOutputText(data);
+
+  if (!outputText) {
+    throw new Error("OpenAI API returned empty output");
+  }
+
+  return {
+    model,
+    result: JSON.parse(outputText) as TenderFasAnalysisResult,
   };
 }
 

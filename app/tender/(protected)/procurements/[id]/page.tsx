@@ -506,6 +506,18 @@ export default async function TenderProcurementDetailsPage({
     POTENTIAL_COMPLAINT: "bg-rose-50 text-rose-700",
     MANUAL_REVIEW: "bg-amber-50 text-amber-700",
   } as const;
+  const aiStatusLabel: Record<string, string> = {
+    not_started: "Ещё не запускали",
+    running: "Идёт анализ",
+    completed: "Анализ завершён",
+    failed: "Ошибка анализа",
+  };
+  const aiStatusTone: Record<string, string> = {
+    not_started: "bg-slate-100 text-slate-700",
+    running: "bg-sky-50 text-sky-700",
+    completed: "bg-emerald-50 text-emerald-700",
+    failed: "bg-rose-50 text-rose-700",
+  };
   const fasPromptEditors: TenderUserRole[] = [
     TenderUserRole.ADMIN,
     TenderUserRole.FAS_MANAGER,
@@ -1869,16 +1881,71 @@ export default async function TenderProcurementDetailsPage({
                 </div>
               </div>
 
-              <div className="rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
-                {procurement.aiAnalysisStatus ?? "not_started"}
-              </div>
+              <span
+                className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] ${
+                  aiStatusTone[procurement.aiAnalysisStatus ?? "not_started"] ??
+                  aiStatusTone.not_started
+                }`}
+              >
+                {aiStatusLabel[procurement.aiAnalysisStatus ?? "not_started"] ??
+                  procurement.aiAnalysisStatus ??
+                  "Ещё не запускали"}
+              </span>
             </div>
 
             <p className="mt-3 text-sm leading-7 text-slate-600">
               Пока самый надёжный рабочий вариант для MVP: вставлять текст
               документации или выжимку из PDF/DOCX сюда, а система разложит её по
-              вашей структуре и прогонит по стоп-факторам.
+              вашей структуре, прогонит по стоп-факторам и параллельно даст
+              отдельный вывод по потенциальной жалобе в ФАС.
             </p>
+
+            <div className="mt-5 grid gap-4 xl:grid-cols-2">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  Основной вывод по закупке
+                </div>
+                <div className="mt-3 text-base font-semibold text-[#081a4b]">
+                  {procurement.summary?.trim()
+                    ? procurement.summary
+                    : "После запуска анализа здесь появится краткая выжимка по закупке."}
+                </div>
+                <div className="mt-4 text-sm leading-7 text-slate-600">
+                  {procurement.stopFactorsSummary?.trim()
+                    ? procurement.stopFactorsSummary
+                    : "Стоп-факторы ещё не проверялись автоматически."}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Потенциальная жалоба в ФАС
+                  </div>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      fasStatusTone[
+                        procurement.fasReview?.status ?? TenderFasReviewStatus.NOT_STARTED
+                      ]
+                    }`}
+                  >
+                    {fasStatusLabel[
+                      procurement.fasReview?.status ?? TenderFasReviewStatus.NOT_STARTED
+                    ]}
+                  </span>
+                </div>
+                <div className="mt-3 text-base font-semibold text-[#081a4b]">
+                  {procurement.fasReview?.findingTitle?.trim()
+                    ? procurement.fasReview.findingTitle
+                    : "После запуска анализа здесь появится отдельный вывод по ФАС-ветке."}
+                </div>
+                <div className="mt-4 text-sm leading-7 text-slate-600">
+                  {procurement.fasReview?.confidenceNote?.trim()
+                    ? procurement.fasReview.confidenceNote
+                    : "Если AI не найдёт явных нарушений, он прямо это укажет. Если будет сомневаться, отправит ветку на ручную проверку."}
+                </div>
+              </div>
+            </div>
 
             {procurement.aiAnalysisError ? (
               <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

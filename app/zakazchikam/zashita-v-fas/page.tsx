@@ -95,6 +95,19 @@ export default function CustomerFasDefensePage() {
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             <Link
+              href="/zakazchikam/osparivanie-predpisaniya-fas"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Оспаривание предписания ФАС
+              </h3>
+              <p className="mt-3 text-slate-700">
+                Если спор уже вышел за рамки обычной жалобы и заказчик не
+                согласен с выданным предписанием.
+              </p>
+            </Link>
+
+            <Link
               href="/zakazchikam/nacionalnyj-rezhim"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 transition hover:bg-white hover:shadow-md"
             >
@@ -108,26 +121,15 @@ export default function CustomerFasDefensePage() {
             </Link>
 
             <Link
-              href="/zakazchikam/audit-zakupki"
+              href="/zakazchikam/soprovozhdenie-zakupki-s-riskom-zhaloby"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 transition hover:bg-white hover:shadow-md"
             >
               <h3 className="text-2xl font-semibold text-[#081a4b]">
-                Аудит закупки до публикации
+                Закупка с риском жалобы
               </h3>
               <p className="mt-3 text-slate-700">
-                Чтобы до жалобы снять слабые места в документации и условиях.
-              </p>
-            </Link>
-
-            <Link
-              href="/zakazchikam/sudebnaya-zashita"
-              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 transition hover:bg-white hover:shadow-md"
-            >
-              <h3 className="text-2xl font-semibold text-[#081a4b]">
-                Судебная защита заказчика
-              </h3>
-              <p className="mt-3 text-slate-700">
-                Если спор по закупке выходит за пределы административной стадии.
+                Если нужно усилить документацию до публикации, когда жалоба по
+                такой процедуре почти ожидаема.
               </p>
             </Link>
           </div>

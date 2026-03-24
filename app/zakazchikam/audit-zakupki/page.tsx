@@ -22,6 +22,24 @@ const services = [
   "Особенно глубоко смотрим на национальный режим, описание объекта закупки и закупочные ограничения.",
 ];
 
+const related = [
+  {
+    title: "Сопровождение закупки с риском жалобы",
+    text: "Если заказчик заранее понимает, что процедура будет конфликтной и документацию нужно собирать уже с учетом будущего спора.",
+    href: "/zakazchikam/soprovozhdenie-zakupki-s-riskom-zhaloby",
+  },
+  {
+    title: "Сопровождение закупки под задачу заказчика",
+    text: "Если нужно собрать всю закупочную конструкцию под предмет закупки, а не только провести стандартную проверку документов.",
+    href: "/zakazchikam/soprovozhdenie-zakupki",
+  },
+  {
+    title: "Защита интересов заказчика в ФАС",
+    text: "Если жалоба уже подана и профилактика перешла в административную защиту закупки.",
+    href: "/zakazchikam/zashita-v-fas",
+  },
+];
+
 export default function CustomerAuditPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
@@ -72,6 +90,31 @@ export default function CustomerAuditPage() {
               <div key={item} className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm">
                 <p className="text-base leading-8 text-slate-700">{item}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="max-w-3xl">
+            <h2 className="text-4xl font-bold tracking-tight text-[#081a4b]">
+              Что смотреть рядом
+            </h2>
+          </div>
+
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {related.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-7 transition hover:bg-white hover:shadow-md"
+              >
+                <h3 className="text-2xl font-semibold text-[#081a4b]">
+                  {item.title}
+                </h3>
+                <p className="mt-3 text-slate-700">{item.text}</p>
+              </Link>
             ))}
           </div>
         </div>

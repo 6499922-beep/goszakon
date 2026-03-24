@@ -113,6 +113,16 @@ export default async function CustomersPage({ searchParams }: PageProps) {
       href: "/zakazchikam/zashita-v-fas",
     },
     {
+      title: "Оспаривание предписания ФАС заказчиком",
+      text: "Помогаем заказчику разбирать и оспаривать предписания ФАС, если они разрушают закупку, документацию или ключевые условия процедуры.",
+      href: "/zakazchikam/osparivanie-predpisaniya-fas",
+    },
+    {
+      title: "Сопровождение закупки с риском жалобы",
+      text: "Собираем конфликтную закупку так, чтобы спорные места были ослаблены еще до публикации и процедура была лучше подготовлена к жалобе.",
+      href: "/zakazchikam/soprovozhdenie-zakupki-s-riskom-zhaloby",
+    },
+    {
       title: "Национальный режим без лишних рисков",
       text: "Помогаем встроить национальный режим в закупку так, чтобы он работал в логике предмета, документации и действующего законодательства.",
       href: "/zakazchikam/nacionalnyj-rezhim",

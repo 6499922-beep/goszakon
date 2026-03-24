@@ -132,6 +132,11 @@ export default async function CustomersPage({ searchParams }: PageProps) {
       text: "Если спор по закупке вышел за пределы ФАС, выстраиваем дальнейшую судебную защиту заказчика и его документации.",
       href: "/zakazchikam/sudebnaya-zashita",
     },
+    {
+      title: "Оспаривание штрафа за закупочную документацию",
+      text: "Помогаем заказчику разбирать и оспаривать штрафы, если привлечение связано с документацией, нацрежимом, критериями оценки или иными дефектами процедуры.",
+      href: "/zakazchikam/osparivanie-shtrafa-za-zakupochnuyu-dokumentaciyu",
+    },
   ];
 
   const situations = [

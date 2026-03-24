@@ -679,6 +679,71 @@ export default async function TenderProcurementDetailsPage({
   ];
   const canEditFasPrompt =
     !!currentUser && fasPromptEditors.includes(currentUser.role);
+  const taskCards = [
+    {
+      title: routeTitle,
+      owner: tenderUserRoleLabels[routeTargetRole],
+      description: routeReason,
+      href: routeAnchor,
+      tone: routeTone,
+    },
+    ...(initialGateReady
+      ? [
+          {
+            title: "Проверить, нет ли скрытых блокеров",
+            owner: "Анализ",
+            description:
+              "Базовый анализ прошёл, но перед передачей дальше полезно быстро сверить документы и чувствительные условия.",
+            href: "#source-docs",
+            tone: "bg-slate-100 text-slate-700 border-slate-200",
+          },
+        ]
+      : []),
+    ...(technicalItemsBlocking.length > 0
+      ? [
+          {
+            title: "Закрыть вопросы по ТЗ и ценам",
+            owner: "Просчёт",
+            description:
+              "Есть позиции ТЗ, которые ещё требуют ручного уточнения или по ним не сохранён ценовой ориентир.",
+            href: "#pricing-review",
+            tone: "bg-sky-50 text-sky-800 border-sky-200",
+          },
+        ]
+      : []),
+    ...(procurement.decision === "SUBMIT" && !canMoveToSubmission
+      ? [
+          {
+            title: "Довести пакет до подачи",
+            owner: "Подача",
+            description:
+              "Решение «Подаём» уже есть, но комплект или формы ещё держат этап.",
+            href: "#documents-checklist",
+            tone: "bg-amber-50 text-amber-800 border-amber-200",
+          },
+        ]
+      : []),
+    ...(fasNeedsWork
+      ? [
+          {
+            title:
+              procurement.fasReview?.status === TenderFasReviewStatus.POTENTIAL_COMPLAINT
+                ? "Принять решение по жалобе в ФАС"
+                : "Проверить спорную ФАС-ветку",
+            owner:
+              procurement.fasReview?.status === TenderFasReviewStatus.POTENTIAL_COMPLAINT
+                ? "Руководитель ФАС"
+                : "Специалист по жалобам ФАС",
+            description:
+              procurement.fasReview?.status === TenderFasReviewStatus.POTENTIAL_COMPLAINT
+                ? "AI уже нашёл возможное нарушение. Нужно решить, запускаем ли жалобу."
+                : "AI сомневается в основании. Нужна ручная проверка по документации.",
+            href: "#fas-branch",
+            tone: "bg-rose-50 text-rose-800 border-rose-200",
+          },
+        ]
+      : []),
+  ].slice(0, 4);
 
   return (
     <main className="space-y-8">
@@ -797,6 +862,27 @@ export default async function TenderProcurementDetailsPage({
               <div className="rounded-2xl bg-white/60 px-4 py-2 text-sm">
                 Маршрут подсказывается автоматически по текущему состоянию закупки.
               </div>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+              Рабочие задачи по этой закупке
+            </div>
+            <div className="mt-4 grid gap-3 xl:grid-cols-2">
+              {taskCards.map((task, index) => (
+                <a
+                  key={`${task.title}-${index}`}
+                  href={task.href}
+                  className={`rounded-3xl border p-4 transition hover:shadow-sm ${task.tone}`}
+                >
+                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    Ответственный: {task.owner}
+                  </div>
+                  <div className="mt-2 text-lg font-bold tracking-tight">{task.title}</div>
+                  <div className="mt-2 text-sm leading-7">{task.description}</div>
+                </a>
+              ))}
             </div>
           </div>
         </div>

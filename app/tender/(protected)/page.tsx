@@ -3,11 +3,13 @@ import { redirect } from "next/navigation";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getTenderDashboardData } from "@/lib/tender-dashboard";
 import { tenderHasCapability } from "@/lib/tender-permissions";
+import { TenderUserRole } from "@prisma/client";
 import {
   formatTenderCurrency,
   tenderStatusLabels,
   tenderStatusTone,
 } from "@/lib/tender-format";
+import { tenderUserRoleLabels } from "@/lib/tender-users";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +23,36 @@ export default async function TenderDashboardPage() {
   }
 
   const data = await getTenderDashboardData();
+  const roleTasks: Record<TenderUserRole, Array<{ title: string; description: string; href: string }>> = {
+    ADMIN: [
+      { title: "Открыть полный реестр", description: "Проверить все очереди и узкие места в общем потоке.", href: "/procurements?view=all" },
+      { title: "Проверить пользователей и правила", description: "Убедиться, что доступы и стоп-факторы настроены корректно.", href: "/users" },
+    ],
+    OPERATOR: [
+      { title: "Разобрать новые закупки", description: "Внести документацию и закрыть первичный анализ.", href: "/procurements?view=analysis" },
+      { title: "Закрыть вопросы по первичному этапу", description: "Проверить закупки, где AI оставил вопросы человеку.", href: "/procurements?view=analysis" },
+    ],
+    ANALYST: [
+      { title: "Просчитать ТЗ и цены", description: "Открыть закупки, где уже пора искать цены и проверять ТЗ.", href: "/procurements?view=pricing" },
+      { title: "Закрыть ручные вопросы по позициям", description: "Довести спорные позиции до просчёта.", href: "/procurements?view=pricing" },
+    ],
+    MANAGER: [
+      { title: "Принять решения по закупкам", description: "Открыть закупки, которые уже ждут согласования.", href: "/procurements?view=manager" },
+      { title: "Проверить проблемные сигналы", description: "Сначала посмотри, где срок горит или нужна ручная проверка.", href: "/procurements?view=all" },
+    ],
+    SUBMITTER: [
+      { title: "Подготовить и подать пакеты", description: "Открыть закупки, дошедшие до подачи.", href: "/procurements?view=submission" },
+      { title: "Проверить готовность форм", description: "Убедиться, что пакет уже можно выгружать на площадку.", href: "/procurements?view=submission" },
+    ],
+    FAS_SPECIALIST: [
+      { title: "Проверить спорные ФАС-кейсы", description: "Открыть закупки, где AI сомневается или видит нарушение.", href: "/procurements?view=fas" },
+      { title: "Открыть ФАС-ветку", description: "Перейти в отдельный раздел по жалобам.", href: "/fas" },
+    ],
+    FAS_MANAGER: [
+      { title: "Принять решения по ФАС-кейсам", description: "Открыть закупки, где возможна жалоба в ФАС.", href: "/procurements?view=fas" },
+      { title: "Настроить ФАС-промт", description: "Проверить, как сформулирован анализ по жалобам.", href: "/fas" },
+    ],
+  };
 
   const cards = [
     { label: "Всего закупок", value: data.procurementsTotal },
@@ -226,6 +258,25 @@ export default async function TenderDashboardPage() {
               <div className="rounded-2xl bg-rose-50 px-4 py-3 text-rose-800">
                 Потенциальные ФАС-кейсы: {data.alerts.fasCases}
               </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-2xl font-bold text-[#081a4b]">Мои задачи сейчас</h2>
+            <div className="mt-2 text-sm text-slate-500">
+              Роль: {tenderUserRoleLabels[currentUser.role]}
+            </div>
+            <div className="mt-5 space-y-3">
+              {roleTasks[currentUser.role].map((task) => (
+                <Link
+                  key={task.title}
+                  href={task.href}
+                  className="block rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:border-[#0d5bd7] hover:bg-white"
+                >
+                  <div className="text-sm font-semibold text-[#081a4b]">{task.title}</div>
+                  <div className="mt-1 text-sm leading-7 text-slate-600">{task.description}</div>
+                </Link>
+              ))}
             </div>
           </div>
 

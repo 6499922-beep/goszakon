@@ -98,6 +98,11 @@ export default async function CustomersPage({ searchParams }: PageProps) {
       href: "/zakazchikam/soprovozhdenie-zakupki",
     },
     {
+      title: "Подготовка закупочной документации",
+      text: "Собираем закупочную документацию под предмет закупки так, чтобы она не разваливалась после публикации и выдерживала жалобу, проверку и контроль.",
+      href: "/zakazchikam/podgotovka-zakupochnoj-dokumentacii",
+    },
+    {
       title: "Расчет НМЦК и обоснование закупки",
       text: "Помогаем собрать доказательственную базу по НМЦК, коммерческим предложениям, описанию объекта закупки и деловой логике закупки.",
       href: "/zakazchikam/raschet-nmck",

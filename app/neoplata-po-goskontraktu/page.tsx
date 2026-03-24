@@ -350,6 +350,19 @@ export default function NonPaymentPage() {
             </Link>
 
             <Link
+              href="/zakazchik-ne-platit-poka-ne-oplatite-neustoyku"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Заказчик не платит, пока вы не оплатите его неустойку
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Когда санкцию заказчика превращают в предварительное условие
+                для самой оплаты по контракту.
+              </p>
+            </Link>
+
+            <Link
               href="/shtraf-za-formalnye-nedostatki-dokumentov"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
             >

@@ -301,6 +301,19 @@ export default function InternalPaymentSystemsPage() {
             </Link>
 
             <Link
+              href="/zakazchik-ne-platit-poka-ne-oplatite-neustoyku"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Заказчик не платит, пока вы не оплатите его неустойку
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Узкий материал о схеме, когда оплату ставят в зависимость от
+                предварительной уплаты спорной санкции.
+              </p>
+            </Link>
+
+            <Link
               href="/uslugi/spory-po-neoplate"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
             >

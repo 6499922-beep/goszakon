@@ -280,6 +280,18 @@ export default async function TenderProcurementDetailsPage({
 
   const processingStages = getTenderProcessingStages(procurement);
   const stopFactorsStage = processingStages.find((stage) => stage.key === "stop-factors");
+  const requiredDocumentsList = (
+    Array.isArray(procurement.requiredDocuments) ? procurement.requiredDocuments : []
+  )
+    .map((item) => String(item).trim())
+    .filter(Boolean);
+  const nonstandardRequirementsList = (
+    Array.isArray(procurement.nonstandardRequirements)
+      ? procurement.nonstandardRequirements
+      : []
+  )
+    .map((item) => String(item).trim())
+    .filter(Boolean);
   const mainAnalysisFindings = [
     ...(procurement.selectionCriteria?.trim()
       ? [`Критерии отбора: ${procurement.selectionCriteria.trim()}`]
@@ -293,16 +305,10 @@ export default async function TenderProcurementDetailsPage({
     ...(procurement.penaltyTerms?.trim()
       ? [`Ответственность: ${procurement.penaltyTerms.trim()}`]
       : []),
-    ...((Array.isArray(procurement.requiredDocuments)
-      ? procurement.requiredDocuments
-      : []
-    ) as string[])
+    ...requiredDocumentsList
       .slice(0, 4)
       .map((item) => `Нужен документ: ${String(item).trim()}`),
-    ...((Array.isArray(procurement.nonstandardRequirements)
-      ? procurement.nonstandardRequirements
-      : []
-    ) as string[])
+    ...nonstandardRequirementsList
       .slice(0, 4)
       .map((item) => `Особое условие: ${String(item).trim()}`),
   ].filter(Boolean);
@@ -329,6 +335,20 @@ export default async function TenderProcurementDetailsPage({
       ? ["Явных нарушений с высокой вероятностью обоснования не выявлено."]
       : []),
   ].filter(Boolean);
+  const initialGateReady =
+    procurement.aiAnalysisStatus === "completed" &&
+    stopFactorsStage?.tone === "green" &&
+    mainAnalysisQuestions.length === 0;
+  const initialGateLabel = initialGateReady
+    ? "Первичный анализ можно передавать дальше"
+    : procurement.aiAnalysisStatus === "completed"
+      ? "Этап ещё держится на проверке"
+      : "Этап ещё не готов";
+  const initialGateTone = initialGateReady
+    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+    : procurement.aiAnalysisStatus === "completed"
+      ? "bg-amber-50 text-amber-800 border-amber-200"
+      : "bg-slate-100 text-slate-700 border-slate-200";
   const stageCommentsByKey = new Map(
     processingStages.map((stage) => [
       stage.key,
@@ -1950,6 +1970,18 @@ export default async function TenderProcurementDetailsPage({
               отдельный вывод по потенциальной жалобе в ФАС.
             </p>
 
+            <div className={`mt-5 rounded-3xl border px-5 py-4 ${initialGateTone}`}>
+              <div className="text-xs font-semibold uppercase tracking-[0.12em]">
+                Готовность этапа
+              </div>
+              <div className="mt-2 text-base font-semibold">{initialGateLabel}</div>
+              <div className="mt-2 text-sm leading-7">
+                {initialGateReady
+                  ? "Основная выжимка собрана, стоп-факторы автоматически не сработали, явных вопросов для оператора на этом шаге нет."
+                  : "Сначала посмотри блоки ниже: система покажет, какие документы и условия уже поняла, а какие места ещё требуют ручной проверки."}
+              </div>
+            </div>
+
             <div className="mt-5 grid gap-4 xl:grid-cols-2">
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                 <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
@@ -1967,6 +1999,44 @@ export default async function TenderProcurementDetailsPage({
                 </div>
 
                 <div className="mt-5 grid gap-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Документы, которые уже увидела система
+                    </div>
+                    <div className="mt-3 space-y-2 text-sm leading-7 text-slate-700">
+                      {requiredDocumentsList.length > 0 ? (
+                        requiredDocumentsList.slice(0, 6).map((item, index) => (
+                          <div key={`${item}-${index}`} className="rounded-2xl bg-slate-50 px-3 py-2">
+                            {item}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-2xl bg-slate-50 px-3 py-2 text-slate-500">
+                          После анализа здесь появится список обязательных документов до подачи.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Условия и особенности
+                    </div>
+                    <div className="mt-3 space-y-2 text-sm leading-7 text-slate-700">
+                      {nonstandardRequirementsList.length > 0 ? (
+                        nonstandardRequirementsList.slice(0, 6).map((item, index) => (
+                          <div key={`${item}-${index}`} className="rounded-2xl bg-slate-50 px-3 py-2">
+                            {item}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-2xl bg-slate-50 px-3 py-2 text-slate-500">
+                          Явных нестандартных требований пока не выделено отдельно.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="rounded-2xl border border-slate-200 bg-white p-4">
                     <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
                       Что найдено
@@ -2039,6 +2109,31 @@ export default async function TenderProcurementDetailsPage({
                 </div>
 
                 <div className="mt-5 grid gap-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Статус передачи в ФАС-контур
+                    </div>
+                    <div className="mt-3 text-sm leading-7 text-slate-700">
+                      {procurement.fasReview?.status === TenderFasReviewStatus.POTENTIAL_COMPLAINT ? (
+                        <div className="rounded-2xl bg-rose-50 px-3 py-2 text-rose-800">
+                          Есть основание передать кейс в отдельную работу по жалобе в ФАС.
+                        </div>
+                      ) : procurement.fasReview?.status === TenderFasReviewStatus.MANUAL_REVIEW ? (
+                        <div className="rounded-2xl bg-amber-50 px-3 py-2 text-amber-800">
+                          AI сомневается. Эту ветку нужно отдать специалисту по жалобам ФАС.
+                        </div>
+                      ) : procurement.fasReview?.status === TenderFasReviewStatus.NO_VIOLATION ? (
+                        <div className="rounded-2xl bg-emerald-50 px-3 py-2 text-emerald-800">
+                          Отдельных оснований для запуска жалобы в ФАС сейчас не видно.
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl bg-slate-50 px-3 py-2 text-slate-500">
+                          После первичного анализа здесь будет видно, нужно ли запускать ФАС-ветку дальше.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="rounded-2xl border border-slate-200 bg-white p-4">
                     <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
                       Что найдено по ФАС-ветке

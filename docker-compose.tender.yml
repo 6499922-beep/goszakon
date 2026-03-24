@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16
+    container_name: goszakon-tender-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - tender_postgres_data:/var/lib/postgresql/data
+
+  app:
+    image: goszakon-tender-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DATABASE_URL: ${DATABASE_URL}
+    container_name: goszakon-tender-app
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET}
+      SESSION_SECRET: ${SESSION_SECRET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+    volumes:
+      - tender_storage:/app/public/docs
+    command: >
+      sh -c "npx prisma db push &&
+      node prisma/bootstrap-tender.ts &&
+      npm start"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000 >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  tender_postgres_data:
+  tender_storage:

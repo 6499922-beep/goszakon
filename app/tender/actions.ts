@@ -92,35 +92,186 @@ function looksLikeExplicitModel(value: string) {
     /\bЗНИ-\d+/,
     /\b4СБ\b/,
     /\b2НБ\b/,
+    /\b\d{1,2}[А-ЯA-Z]{1,2}\d{1,2}[А-ЯA-Z]{1,4}\b/,
+    /\bКШ\.[А-ЯA-Z.0-9-]+\b/,
   ].some((pattern) => pattern.test(normalized));
 }
 
-function buildTechnicalItemDraft(requestedName: string, lineNumber?: number) {
+const knownUnitPattern =
+  /^(шт|штука|уп|упаковка|м|м\.п\.|кг|км|л|пара|пар|компл|комплект|набор|рул|рулон|секции?|ед\.?|тонн?[аы]?|т)$/i;
+
+function isQuantityToken(value: string) {
+  return /^\d+(?:[.,]\d+)?$/.test(value.trim());
+}
+
+function isUnitToken(value: string) {
+  return knownUnitPattern.test(value.trim());
+}
+
+function isLikelyHeaderLine(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return [
+    "№",
+    "п/п",
+    "наименование",
+    "наименование товара",
+    "ед. изм.",
+    "ед изм",
+    "единица измерения",
+    "кол-во",
+    "количество",
+    "технические характеристики",
+    "характеристики",
+  ].includes(normalized);
+}
+
+function cleanTechnicalText(value: string) {
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.;:])/g, "$1")
+    .trim();
+}
+
+function parseTechnicalItemDetails(detailLines: string[]) {
+  const characteristics: string[] = [];
+  let quantity: string | null = null;
+  let unit: string | null = null;
+
+  for (const rawLine of detailLines) {
+    const line = cleanTechnicalText(rawLine);
+    if (!line || isLikelyHeaderLine(line)) continue;
+
+    if (!quantity && isQuantityToken(line)) {
+      quantity = line;
+      continue;
+    }
+
+    if (!unit && isUnitToken(line)) {
+      unit = line;
+      continue;
+    }
+
+    const inlineMatch = line.match(
+      /^(.*?)(?:\s+|,)(шт|штука|уп|упаковка|м|м\.п\.|кг|км|л|пара|пар|компл|комплект|набор|рул|рулон|секции?|ед\.?|тонн?[аы]?|т)\s+(\d+(?:[.,]\d+)?)$/i
+    );
+    if (inlineMatch) {
+      const titlePart = cleanTechnicalText(inlineMatch[1]);
+      if (titlePart) characteristics.push(titlePart);
+      unit ??= inlineMatch[2];
+      quantity ??= inlineMatch[3];
+      continue;
+    }
+
+    characteristics.push(line);
+  }
+
+  return {
+    quantity,
+    unit,
+    rawCharacteristics: characteristics.length ? characteristics.join("; ") : null,
+  };
+}
+
+function inferTechnicalItemMetadata(
+  requestedName: string,
+  rawCharacteristics?: string | null
+) {
+  const joined = `${requestedName}\n${rawCharacteristics ?? ""}`.trim();
+  const normalized = joined.toUpperCase();
   const explicit = looksLikeExplicitModel(requestedName);
+
+  let identifiedProduct: string | null = null;
+  let identifiedBrand: string | null = null;
+  let identifiedModel: string | null = null;
+  let identificationBasis: string;
+  let confidence = explicit ? 90 : 45;
+  let reviewQuestion: string | null = explicit
+    ? null
+    : "Нужно проверить характеристики позиции и понять, что именно заложил заказчик.";
+  let pricingReady = explicit;
+  let status: TenderTechnicalItemStatusValue = explicit ? "EXPLICIT" : "REVIEW";
+
+  if (/\bWAGO\b/.test(normalized)) {
+    identifiedBrand = "WAGO";
+    identifiedProduct = "клемма";
+    confidence = Math.max(confidence, 92);
+  } else if (/\bIEK\b/.test(normalized)) {
+    identifiedBrand = "IEK";
+  } else if (/\bLD\b/.test(normalized)) {
+    identifiedBrand = "LD";
+    identifiedProduct = "кран шаровой";
+  } else if (/\bREXANT\b/.test(normalized)) {
+    identifiedBrand = "REXANT";
+  }
+
+  if (/КЛЕММ/.test(normalized)) identifiedProduct ??= "клемма";
+  if (/СТЯЖК/.test(normalized)) identifiedProduct ??= "стяжка кабельная";
+  if (/КОЛПАЧОК ЗАЩИТН/.test(normalized)) identifiedProduct ??= "колпачок защитный";
+  if (/САЛЬНИК/.test(normalized)) identifiedProduct ??= "сальник кабельный";
+  if (/ВИЛКА|РОЗЕТКА|СШР/.test(normalized)) identifiedProduct ??= "разъем";
+  if (/НАКОНЕЧНИК/.test(normalized)) identifiedProduct ??= "кабельный наконечник";
+  if (/ГИЛЬЗ/.test(normalized)) identifiedProduct ??= "кабельная гильза";
+  if (/СОЕДИНИТЕЛ/.test(normalized)) identifiedProduct ??= "соединитель";
+  if (/ЗАЖИМ/.test(normalized)) identifiedProduct ??= "зажим";
+  if (/КЛАПАН/.test(normalized)) identifiedProduct ??= "клапан";
+  if (/ЗАДВИЖК/.test(normalized)) identifiedProduct ??= "задвижка";
+  if (/КРАН ШАРОВ/.test(normalized)) identifiedProduct ??= "кран шаровой";
+  if (/ВЕНТИЛ/.test(normalized)) identifiedProduct ??= "вентиль";
+  if (/АРМАТУР/.test(normalized)) identifiedProduct ??= "трубопроводная арматура";
+
+  const modelMatch =
+    normalized.match(/\b(WAGO\s?\d{2,4}-\d{2,4}|KZ-\d+-\d+|PG\s?\d+|CV-\d+|ЗНИ-\d+(?:,\d+)?|ТА\s?\d+-\d+-[\d,]+|ТАМ-\d+-\d+-[\d,]+|ТМЛ?\s?\d+-\d+-[\d,]+|СШР\d+[A-ZА-Я0-9]+|4СБ\s?\d+\/\d+|2НБ[-\s]?\d+(?:\/\d+)?|\d{1,2}[А-ЯA-Z]{1,2}\d{1,2}[А-ЯA-Z]{1,4}|КШ\.[А-ЯA-Z.0-9-]+)\b/i) ??
+    normalized.match(/\b[А-ЯA-Z0-9.-]{3,}\b/);
+
+  identifiedModel = modelMatch?.[1] ?? modelMatch?.[0] ?? null;
+
+  if (!explicit && identifiedProduct && identifiedModel) {
+    status = "IDENTIFIED";
+    confidence = 72;
+    pricingReady = true;
+    reviewQuestion = null;
+    identificationBasis =
+      "По названию позиции и характеристикам удалось выделить тип товара и вероятную модель, поэтому позицию можно передавать в просчёт после быстрой проверки.";
+  } else if (explicit) {
+    identificationBasis =
+      "В названии позиции есть явная модель, артикул или бренд, поэтому её можно сразу передавать в просчёт.";
+  } else if (identifiedProduct) {
+    confidence = 58;
+    identificationBasis =
+      "По названию и характеристикам удалось понять тип товара, но модель или производитель ещё нужно подтвердить.";
+  } else {
+    identificationBasis =
+      "В позиции нет достаточно явной модели. Сначала нужно определить товар по характеристикам.";
+  }
+
+  return {
+    status,
+    identifiedProduct: identifiedProduct ?? (explicit ? requestedName.replace(/\s+или\s+эквивалент/gi, "") : null),
+    identifiedBrand,
+    identifiedModel,
+    identificationBasis,
+    confidence,
+    reviewQuestion,
+    pricingReady,
+  };
+}
+
+function buildTechnicalItemDraft(
+  requestedName: string,
+  lineNumber?: number,
+  rawCharacteristics?: string | null,
+  quantity?: string | null,
+  unit?: string | null
+) {
+  const inferred = inferTechnicalItemMetadata(requestedName, rawCharacteristics);
 
   return {
     lineNumber: typeof lineNumber === "number" && Number.isFinite(lineNumber) ? lineNumber : null,
     requestedName,
-    status: explicit ? "EXPLICIT" : ("REVIEW" as TenderTechnicalItemStatusValue),
-    identifiedProduct: explicit ? requestedName.replace(/\s+или\s+эквивалент/gi, "") : null,
-    identifiedBrand: /\bWAGO\b/i.test(requestedName)
-      ? "WAGO"
-      : /\bIEK\b/i.test(requestedName)
-        ? "IEK"
-        : /\bLD\b/i.test(requestedName)
-          ? "LD"
-          : /\bREXANT\b/i.test(requestedName)
-            ? "REXANT"
-            : null,
-    identifiedModel: explicit ? requestedName.match(/[A-ZА-Я0-9.-]+(?:\s?[A-ZА-Я0-9./-]+)*/i)?.[0] ?? null : null,
-    identificationBasis: explicit
-      ? "В названии позиции есть явная модель, артикул или бренд, поэтому её можно сразу передавать в просчёт."
-      : "В позиции нет достаточно явной модели. Сначала нужно определить товар по характеристикам.",
-    confidence: explicit ? 90 : 45,
-    reviewQuestion: explicit
-      ? null
-      : "Нужно проверить характеристики позиции и понять, что именно заложил заказчик.",
-    pricingReady: explicit,
+    quantity: quantity ?? null,
+    unit: unit ?? null,
+    rawCharacteristics: rawCharacteristics ?? null,
+    ...inferred,
   };
 }
 
@@ -146,41 +297,64 @@ function extractTechnicalItemsFromText(sourceText: string) {
     pricingReady: boolean;
   }> = [];
 
+  function collectDetailLines(startIndex: number) {
+    const details: string[] = [];
+    let cursor = startIndex;
+
+    while (cursor < lines.length) {
+      const next = lines[cursor];
+      if (/^(\d{1,3})[.)]?\s+.+$/.test(next) || /^\d{1,3}$/.test(next)) break;
+      details.push(next);
+      cursor += 1;
+    }
+
+    return { details, nextIndex: cursor - 1 };
+  }
+
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     const directMatch = line.match(/^(\d{1,3})[.)]?\s+(.+)$/);
     if (directMatch) {
       const lineNumber = Number(directMatch[1]);
-      const requestedName = directMatch[2].trim();
+      const requestedName = cleanTechnicalText(directMatch[2]);
       if (requestedName.length > 2) {
+        const { details, nextIndex } = collectDetailLines(index + 1);
+        const parsedDetails = parseTechnicalItemDetails(details);
         result.push({
-          ...buildTechnicalItemDraft(requestedName, lineNumber),
+          ...buildTechnicalItemDraft(
+            requestedName,
+            lineNumber,
+            parsedDetails.rawCharacteristics,
+            parsedDetails.quantity,
+            parsedDetails.unit
+          ),
         });
+        index = nextIndex;
       }
       continue;
     }
 
     if (/^\d{1,3}$/.test(line)) {
       const lineNumber = Number(line);
-      const requestedName = lines[index + 1]?.trim();
-      const unitCandidate = lines[index + 2]?.trim();
-      const qtyCandidate = lines[index + 3]?.trim();
+      const requestedName = cleanTechnicalText(lines[index + 1] ?? "");
 
       if (
         requestedName &&
         requestedName.length > 2 &&
         !/^(№|Ед\.?\s?изм\.?|Кол-во|Количество)$/i.test(requestedName)
       ) {
-        const draft = buildTechnicalItemDraft(requestedName, lineNumber);
+        const { details, nextIndex } = collectDetailLines(index + 2);
+        const parsedDetails = parseTechnicalItemDetails(details);
         result.push({
-          ...draft,
-          unit:
-            unitCandidate &&
-            /^(шт|штука|уп|упаковка|м|компл|комплект)$/i.test(unitCandidate)
-              ? unitCandidate
-              : null,
-          quantity: qtyCandidate && /^\d+[.,]?\d*$/.test(qtyCandidate) ? qtyCandidate : null,
+          ...buildTechnicalItemDraft(
+            requestedName,
+            lineNumber,
+            parsedDetails.rawCharacteristics,
+            parsedDetails.quantity,
+            parsedDetails.unit
+          ),
         });
+        index = nextIndex;
       }
     }
   }

@@ -144,3 +144,287 @@ model Material {
   @@index([updatedAt])
   @@index([createdAt])
 }
+
+enum TenderProcurementStatus {
+  NEW
+  ANALYSIS
+  STOPPED
+  PRICING
+  APPROVED
+  IN_PREPARATION
+  READY
+  SUBMITTED
+  ARCHIVED
+}
+
+enum TenderRuleKind {
+  CUSTOMER
+  PROCUREMENT
+  CATEGORY
+  BRAND
+  MANUFACTURER
+  REGULATORY
+  DELIVERY
+  OTHER
+}
+
+enum TenderDecision {
+  SUBMIT
+  DECLINE
+  FAS_COMPLAINT
+  REWORK
+}
+
+enum TenderCompanyDocumentType {
+  COMPANY_CARD
+  CHARTER
+  TIN_CERTIFICATE
+  OGRN_CERTIFICATE
+  DIRECTOR_APPOINTMENT
+  EGRUL_EXTRACT
+  POWER_OF_ATTORNEY
+  BANK_DETAILS
+  DECLARATION
+  OTHER
+}
+
+enum TenderTechnicalItemStatus {
+  EXPLICIT
+  IDENTIFIED
+  REVIEW
+  REJECTED
+}
+
+enum TenderActionType {
+  CREATED
+  STATUS_UPDATED
+  AI_ANALYZED
+  STOP_FACTORS_REVIEWED
+  PRICING_UPDATED
+  DECISION_MADE
+  DOCUMENTS_PREPARED
+  SUBMITTED
+  NOTE_ADDED
+}
+
+model TenderCompanyProfile {
+  id                    Int                     @id @default(autoincrement())
+  name                  String
+  legalName             String?
+  inn                   String?                 @unique
+  kpp                   String?
+  ogrn                  String?
+  registrationDate      DateTime?
+  directorName          String?
+  email                 String?
+  phone                 String?
+  legalAddress          String?
+  postalAddress         String?
+  okpo                  String?
+  oktmo                 String?
+  activityCode          String?
+  activityDescription   String?
+  bankName              String?
+  bankBik               String?
+  bankAccount           String?
+  correspondentAccount  String?
+  notes                 String?
+  isPrimary             Boolean                 @default(false)
+  documents             TenderCompanyDocument[]
+  procurements          TenderProcurement[]
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  tenderDecisionRecords TenderDecisionRecord[]
+}
+
+model TenderCompanyDocument {
+  id           Int                       @id @default(autoincrement())
+  companyId    Int
+  title        String
+  documentType TenderCompanyDocumentType @default(OTHER)
+  fileName     String?
+  storagePath  String?
+  notes        String?
+  company      TenderCompanyProfile      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+
+  @@index([companyId])
+  @@index([documentType])
+}
+
+model TenderStopRule {
+  id                   Int                          @id @default(autoincrement())
+  code                 String                       @unique
+  name                 String
+  description          String?
+  kind                 TenderRuleKind               @default(OTHER)
+  sortOrder            Int                          @default(0)
+  isActive             Boolean                      @default(true)
+  isToggleable         Boolean                      @default(true)
+  requiresManualReview Boolean                      @default(false)
+  customerInn          String?
+  manufacturerName     String?
+  brandName            String?
+  keyword              String?
+  thresholdPercent     Int?
+  matches              TenderProcurementRuleMatch[]
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+
+  @@index([kind])
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model TenderProcurement {
+  id                       Int                          @id @default(autoincrement())
+  title                    String
+  sourceUrl                String?
+  sourceText               String?                      @db.Text
+  customerName             String?
+  customerInn              String?
+  procurementNumber        String?
+  platform                 String?
+  status                   TenderProcurementStatus      @default(NEW)
+  deadline                 DateTime?
+  nmck                     Decimal?                     @db.Decimal(15, 2)
+  nmckWithoutVat           Decimal?                     @db.Decimal(15, 2)
+  itemsCount               Int?
+  purchaseType             String?
+  summary                  String?
+  selectionCriteria        String?
+  requiredDocuments        Json?
+  nonstandardRequirements  Json?
+  deliveryTerms            String?
+  paymentTerms             String?
+  contractTerm             String?
+  penaltyTerms             String?
+  terminationTerms         Json?
+  regulatoryRequirements   Json?
+  requiresCommissioning    Boolean                      @default(false)
+  analogsAllowed           Boolean?
+  stopFactorsSummary       String?
+  aiAnalysis               Json?
+  aiAnalysisStatus         String?
+  aiAnalysisError          String?                      @db.Text
+  aiAnalyzedAt             DateTime?
+  aiModel                  String?
+  approximatePurchasePrice Decimal?                     @db.Decimal(15, 2)
+  pricingComment           String?                      @db.Text
+  pricingStatus            String?
+  pricingReviewedAt        DateTime?
+  approvedBidAmount        Decimal?                     @db.Decimal(15, 2)
+  decision                 TenderDecision?
+  decisionComment          String?                      @db.Text
+  decisionMadeAt           DateTime?
+  estimatedCost            Decimal?                     @db.Decimal(15, 2)
+  bidPrice                 Decimal?                     @db.Decimal(15, 2)
+  isProfitable             Boolean?
+  assignedTo               String?
+  companyProfileId         Int?
+  companyProfile           TenderCompanyProfile?        @relation(fields: [companyProfileId], references: [id])
+  technicalItems           TenderTechnicalItem[]
+  pricingReviews           TenderPricingReview[]
+  decisions                TenderDecisionRecord[]
+  events                   TenderProcurementEvent[]
+  ruleMatches              TenderProcurementRuleMatch[]
+  createdAt                DateTime                     @default(now())
+  updatedAt                DateTime                     @updatedAt
+
+  @@index([status])
+  @@index([deadline])
+  @@index([customerInn])
+  @@index([companyProfileId])
+}
+
+model TenderTechnicalItem {
+  id                   Int                       @id @default(autoincrement())
+  procurementId        Int
+  lineNumber           Int?
+  requestedName        String
+  quantity             String?
+  unit                 String?
+  rawCharacteristics   String?                   @db.Text
+  identifiedProduct    String?
+  identifiedBrand      String?
+  identifiedModel      String?
+  identificationBasis  String?                   @db.Text
+  approximateUnitPrice Decimal?                  @db.Decimal(15, 2)
+  sourceSummary        String?                   @db.Text
+  sourceLinks          Json?
+  status               TenderTechnicalItemStatus @default(REVIEW)
+  confidence           Int?
+  reviewQuestion       String?                   @db.Text
+  pricingReady         Boolean                   @default(false)
+  procurement          TenderProcurement         @relation(fields: [procurementId], references: [id], onDelete: Cascade)
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+
+  @@index([procurementId])
+  @@index([status])
+}
+
+model TenderPricingReview {
+  id                       Int               @id @default(autoincrement())
+  procurementId            Int
+  approximatePurchasePrice Decimal?          @db.Decimal(15, 2)
+  pricingStatus            String?
+  sourceSummary            String?           @db.Text
+  sourceLinks              Json?
+  aiComment                String?           @db.Text
+  createdBy                String?
+  procurement              TenderProcurement @relation(fields: [procurementId], references: [id], onDelete: Cascade)
+  createdAt                DateTime          @default(now())
+
+  @@index([procurementId])
+  @@index([createdAt])
+}
+
+model TenderDecisionRecord {
+  id                Int                   @id @default(autoincrement())
+  procurementId     Int
+  companyProfileId  Int?
+  decision          TenderDecision
+  approvedBidAmount Decimal?              @db.Decimal(15, 2)
+  comment           String?               @db.Text
+  decidedBy         String?
+  companyProfile    TenderCompanyProfile? @relation(fields: [companyProfileId], references: [id])
+  procurement       TenderProcurement     @relation(fields: [procurementId], references: [id], onDelete: Cascade)
+  createdAt         DateTime              @default(now())
+
+  @@index([procurementId])
+  @@index([companyProfileId])
+  @@index([createdAt])
+}
+
+model TenderProcurementEvent {
+  id            Int               @id @default(autoincrement())
+  procurementId Int
+  actionType    TenderActionType
+  title         String
+  description   String?           @db.Text
+  actorName     String?
+  metadata      Json?
+  procurement   TenderProcurement @relation(fields: [procurementId], references: [id], onDelete: Cascade)
+  createdAt     DateTime          @default(now())
+
+  @@index([procurementId])
+  @@index([actionType])
+  @@index([createdAt])
+}
+
+model TenderProcurementRuleMatch {
+  id            Int               @id @default(autoincrement())
+  procurementId Int
+  ruleId        Int
+  matchedValue  String?
+  confidence    Float?
+  isConfirmed   Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  procurement   TenderProcurement @relation(fields: [procurementId], references: [id], onDelete: Cascade)
+  rule          TenderStopRule    @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@unique([procurementId, ruleId])
+  @@index([ruleId])
+}

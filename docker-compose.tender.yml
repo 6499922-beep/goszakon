@@ -36,7 +36,7 @@ services:
     volumes:
       - tender_storage:/app/public/docs
     command: >
-      sh -c "npx prisma db push &&
+      sh -c "npx prisma db push --accept-data-loss &&
       node prisma/bootstrap-tender.ts &&
       npm start"
     healthcheck:

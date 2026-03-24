@@ -138,6 +138,39 @@ const sourceDocumentAutofillTone = {
   READY_TO_FILL: "bg-emerald-50 text-emerald-700",
 } as const;
 
+const handoffStepTone = {
+  done: {
+    card: "border-emerald-200 bg-emerald-50",
+    badge: "bg-emerald-600 text-white",
+    text: "text-emerald-900",
+    line: "bg-emerald-300",
+  },
+  active: {
+    card: "border-sky-300 bg-sky-50 shadow-[0_0_0_4px_rgba(14,165,233,0.08)]",
+    badge: "bg-sky-600 text-white",
+    text: "text-sky-900",
+    line: "bg-sky-300",
+  },
+  waiting: {
+    card: "border-slate-200 bg-white",
+    badge: "bg-slate-200 text-slate-700",
+    text: "text-slate-700",
+    line: "bg-slate-200",
+  },
+  warning: {
+    card: "border-amber-200 bg-amber-50",
+    badge: "bg-amber-500 text-white",
+    text: "text-amber-900",
+    line: "bg-amber-300",
+  },
+  danger: {
+    card: "border-rose-200 bg-rose-50",
+    badge: "bg-rose-600 text-white",
+    text: "text-rose-900",
+    line: "bg-rose-300",
+  },
+} as const;
+
 function renderList(value: unknown) {
   if (!Array.isArray(value) || value.length === 0) return null;
 
@@ -744,6 +777,65 @@ export default async function TenderProcurementDetailsPage({
         ]
       : []),
   ].slice(0, 4);
+  const handoffSteps = [
+    {
+      key: "analysis",
+      role: "Анализ",
+      label: "Первичный разбор",
+      detail: "Загрузка документации и запуск первичного анализа",
+      state: !procurement.sourceText?.trim()
+        ? "active"
+        : initialGateReady
+          ? "done"
+          : procurement.aiAnalysisStatus === "completed"
+            ? "warning"
+            : "active",
+    },
+    {
+      key: "pricing",
+      role: "Просчёт",
+      label: "ТЗ и цены",
+      detail: "Определить товар, найти цены и проверить рентабельность",
+      state:
+        technicalItemsBlocking.length > 0 || pricingByItems.pending > 0
+          ? routeTargetRole === TenderUserRole.ANALYST
+            ? "active"
+            : "warning"
+          : pricingByItems.withPrice > 0
+            ? "done"
+            : "waiting",
+    },
+    {
+      key: "manager",
+      role: "Руководитель",
+      label: "Решение",
+      detail: "Принять решение: подаём, не подаём, доработка или ФАС",
+      state:
+        procurement.decision != null
+          ? procurement.decision === "DECLINE"
+            ? "danger"
+            : "done"
+          : routeTargetRole === TenderUserRole.MANAGER
+            ? "active"
+            : "waiting",
+    },
+    {
+      key: "submission",
+      role: "Подача",
+      label: "Финальный комплект",
+      detail: "Проверить формы, скачать файлы и выгрузить на площадку",
+      state:
+        procurement.status === TenderProcurementStatus.SUBMITTED
+          ? "done"
+          : routeTargetRole === TenderUserRole.SUBMITTER
+            ? canMoveToSubmission
+              ? "active"
+              : "warning"
+            : "waiting",
+    },
+  ] as const;
+  const showFasHandoff =
+    fasNeedsWork || procurement.decision === "FAS_COMPLAINT";
 
   return (
     <main className="space-y-8">
@@ -861,6 +953,76 @@ export default async function TenderProcurementDetailsPage({
               </a>
               <div className="rounded-2xl bg-white/60 px-4 py-2 text-sm">
                 Маршрут подсказывается автоматически по текущему состоянию закупки.
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-5">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+              Передача между сотрудниками
+            </div>
+            <div className="mt-4 overflow-x-auto">
+              <div className="flex min-w-max items-stretch gap-3">
+                {handoffSteps.map((step, index) => {
+                  const tone = handoffStepTone[step.state];
+
+                  return (
+                    <div key={step.key} className="flex items-center gap-3">
+                      <div className={`w-[260px] rounded-3xl border p-4 ${tone.card}`}>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className={`inline-flex h-8 min-w-8 items-center justify-center rounded-full px-3 text-xs font-bold ${tone.badge}`}>
+                            {index + 1}
+                          </span>
+                          <span className={`text-xs font-semibold uppercase tracking-[0.12em] ${tone.text}`}>
+                            {step.role}
+                          </span>
+                        </div>
+                        <div className={`mt-3 text-lg font-bold tracking-tight ${tone.text}`}>
+                          {step.label}
+                        </div>
+                        <div className="mt-2 text-sm leading-7 text-slate-600">
+                          {step.detail}
+                        </div>
+                      </div>
+
+                      {index < handoffSteps.length - 1 ? (
+                        <div className="flex items-center">
+                          <div className={`h-1 w-10 rounded-full ${tone.line}`} />
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+
+                {showFasHandoff ? (
+                  <>
+                    <div className="flex items-center">
+                      <div className="h-1 w-10 rounded-full bg-rose-300" />
+                    </div>
+                    <div className="w-[260px] rounded-3xl border border-rose-200 bg-rose-50 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-rose-600 px-3 text-xs font-bold text-white">
+                          F
+                        </span>
+                        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-rose-900">
+                          {procurement.fasReview?.status === TenderFasReviewStatus.POTENTIAL_COMPLAINT
+                            ? "Руководитель ФАС"
+                            : "ФАС-контур"}
+                        </span>
+                      </div>
+                      <div className="mt-3 text-lg font-bold tracking-tight text-rose-900">
+                        Жалоба в ФАС
+                      </div>
+                      <div className="mt-2 text-sm leading-7 text-rose-900/80">
+                        {procurement.fasReview?.status === TenderFasReviewStatus.POTENTIAL_COMPLAINT
+                          ? "AI увидел основание для жалобы. Эту ветку нужно отдельно довести до решения."
+                          : procurement.fasReview?.status === TenderFasReviewStatus.MANUAL_REVIEW
+                            ? "По ФАС-ветке есть сомнения. Нужна ручная проверка профильным сотрудником."
+                            : "Руководитель выбрал сценарий жалобы в ФАС."}
+                      </div>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </div>
           </div>

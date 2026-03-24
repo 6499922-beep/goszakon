@@ -37,6 +37,7 @@ export default async function TenderSignInPage({ searchParams }: PageProps) {
   async function signInAction(formData: FormData) {
     "use server";
 
+    const headerStore = await headers();
     const email = String(formData.get("email") || "").trim().toLowerCase();
     const password = String(formData.get("password") || "");
 
@@ -61,11 +62,12 @@ export default async function TenderSignInPage({ searchParams }: PageProps) {
 
     const sessionValue = await createAdminSession(admin.id);
     const store = await cookies();
+    const isSecureRequest = headerStore.get("x-forwarded-proto") === "https";
 
     store.set(ADMIN_COOKIE_NAME, sessionValue, {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecureRequest,
       path: "/",
       maxAge: 60 * 60 * 24 * 30,
     });

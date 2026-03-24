@@ -2,6 +2,7 @@ import { TenderPromptConfigKey, TenderUserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { saveTenderFasPromptAction } from "@/app/tender/actions";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
+import { tenderHasCapability } from "@/lib/tender-permissions";
 import { getPrisma } from "@/lib/prisma";
 import { tenderUserRoleLabels } from "@/lib/tender-users";
 
@@ -10,17 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function TenderFasPage() {
   const currentUser = await getCurrentTenderUser();
   const prisma = getPrisma();
-  const fasRoles = new Set<TenderUserRole>([
-    TenderUserRole.ADMIN,
-    TenderUserRole.FAS_MANAGER,
-    TenderUserRole.FAS_SPECIALIST,
-  ]);
-  const promptEditors = new Set<TenderUserRole>([
-    TenderUserRole.ADMIN,
-    TenderUserRole.FAS_MANAGER,
-  ]);
-
-  if (!currentUser || !fasRoles.has(currentUser.role)) {
+  if (!currentUser || !tenderHasCapability(currentUser.role, "fas_access")) {
     redirect("/");
   }
 
@@ -42,7 +33,7 @@ export default async function TenderFasPage() {
     take: 20,
   });
 
-  const canEditPrompt = promptEditors.has(currentUser.role);
+  const canEditPrompt = tenderHasCapability(currentUser.role, "fas_manage");
 
   const fasStatusLabel = {
     NOT_STARTED: "Ещё не запускали",

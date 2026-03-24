@@ -2,6 +2,7 @@ import { TenderUserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { saveTenderUserAction } from "@/app/tender/actions";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
+import { tenderHasCapability } from "@/lib/tender-permissions";
 import { getPrisma } from "@/lib/prisma";
 import {
   tenderUserRoleDescriptions,
@@ -13,7 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function TenderUsersPage() {
   const currentUser = await getCurrentTenderUser();
 
-  if (!currentUser || currentUser.role !== TenderUserRole.ADMIN) {
+  if (!currentUser || !tenderHasCapability(currentUser.role, "users_manage")) {
     redirect("/");
   }
 

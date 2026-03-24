@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createTenderProcurementAction } from "@/app/tender/actions";
 import { Field } from "@/app/tender/_components/field";
+import { getCurrentTenderUser } from "@/lib/admin-auth";
+import { tenderHasCapability } from "@/lib/tender-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +35,13 @@ const firstRoute = [
   "После решения «Подаём» добираем формы и комплект.",
 ];
 
-export default function NewTenderProcurementPage() {
+export default async function NewTenderProcurementPage() {
+  const currentUser = await getCurrentTenderUser();
+
+  if (!currentUser || !tenderHasCapability(currentUser.role, "procurement_create")) {
+    redirect("/procurements");
+  }
+
   return (
     <main className="space-y-8">
       <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">

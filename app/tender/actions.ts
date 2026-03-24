@@ -18,6 +18,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
+import { tenderHasCapability } from "@/lib/tender-permissions";
 import {
   evaluateTenderStopRules,
   runTenderAiAnalysis,
@@ -67,6 +68,16 @@ async function getTenderActorContext() {
     authorRole: user?.role ?? null,
     actorName: user?.name?.trim() || user?.email?.trim() || "Сотрудник",
   };
+}
+
+async function requireTenderCapability(capability: import("@/lib/tender-permissions").TenderCapability) {
+  const user = await getCurrentTenderUser();
+
+  if (!user || !tenderHasCapability(user.role, capability)) {
+    throw new Error("Недостаточно прав для этого действия");
+  }
+
+  return user;
 }
 
 const tenderTechnicalItemStatuses = [
@@ -871,6 +882,7 @@ function extractTechnicalItemsFromText(sourceText: string) {
 }
 
 export async function createTenderProcurementAction(formData: FormData) {
+  await requireTenderCapability("procurement_create");
   const prisma = getPrisma();
 
   const record = await prisma.tenderProcurement.create({
@@ -914,6 +926,7 @@ export async function createTenderProcurementAction(formData: FormData) {
 }
 
 export async function analyzeTenderProcurementAction(formData: FormData) {
+  await requireTenderCapability("procurement_initial");
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
   const sourceText = String(formData.get("sourceText") ?? "").trim();
@@ -1013,6 +1026,7 @@ export async function analyzeTenderProcurementAction(formData: FormData) {
 }
 
 export async function saveTenderPricingReviewAction(formData: FormData) {
+  await requireTenderCapability("procurement_pricing");
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
   const actorName = normalizeString(formData.get("actorName")) ?? "AI/Сотрудник";
@@ -1074,6 +1088,7 @@ export async function saveTenderPricingReviewAction(formData: FormData) {
 }
 
 export async function saveTenderDecisionAction(formData: FormData) {
+  await requireTenderCapability("procurement_decision");
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
   const companyProfileId = Number(formData.get("companyProfileId"));
@@ -1132,6 +1147,7 @@ export async function saveTenderDecisionAction(formData: FormData) {
 }
 
 export async function markTenderDocumentsPreparedAction(formData: FormData) {
+  await requireTenderCapability("procurement_submission");
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
   const actorName = normalizeString(formData.get("actorName")) ?? "Ответственный сотрудник";
@@ -1156,6 +1172,7 @@ export async function markTenderDocumentsPreparedAction(formData: FormData) {
 }
 
 export async function markTenderSubmittedAction(formData: FormData) {
+  await requireTenderCapability("procurement_submission");
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
   const actorName = normalizeString(formData.get("actorName")) ?? "Ответственный сотрудник";
@@ -1180,6 +1197,7 @@ export async function markTenderSubmittedAction(formData: FormData) {
 }
 
 export async function updateTenderSubmissionDeskAction(formData: FormData) {
+  await requireTenderCapability("procurement_submission");
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
   const actorName = normalizeString(formData.get("actorName")) ?? "Сотрудник";
@@ -1212,6 +1230,7 @@ export async function updateTenderSubmissionDeskAction(formData: FormData) {
 }
 
 export async function updateTenderProcurementStatusAction(formData: FormData) {
+  await requireTenderCapability("procurement_decision");
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
   const actorName = normalizeString(formData.get("actorName")) ?? "Сотрудник";
@@ -1236,6 +1255,7 @@ export async function updateTenderProcurementStatusAction(formData: FormData) {
 }
 
 export async function createTenderRuleAction(formData: FormData) {
+  await requireTenderCapability("rules_manage");
   const prisma = getPrisma();
   const name = String(formData.get("name") ?? "").trim();
 
@@ -1272,6 +1292,7 @@ export async function createTenderRuleAction(formData: FormData) {
 }
 
 export async function toggleTenderRuleAction(formData: FormData) {
+  await requireTenderCapability("rules_manage");
   const prisma = getPrisma();
   const ruleId = Number(formData.get("ruleId"));
   const nextValue = String(formData.get("nextValue") ?? "") === "true";
@@ -1285,6 +1306,7 @@ export async function toggleTenderRuleAction(formData: FormData) {
 }
 
 export async function saveTenderCompanyProfileAction(formData: FormData) {
+  await requireTenderCapability("companies_manage");
   const prisma = getPrisma();
   const companyId = Number(formData.get("companyId"));
 
@@ -1335,6 +1357,7 @@ export async function saveTenderCompanyProfileAction(formData: FormData) {
 }
 
 export async function saveTenderCompanyDocumentAction(formData: FormData) {
+  await requireTenderCapability("companies_manage");
   const prisma = getPrisma();
   const companyId = Number(formData.get("companyId"));
   const title = String(formData.get("title") ?? "").trim();
@@ -1364,6 +1387,7 @@ export async function saveTenderCompanyDocumentAction(formData: FormData) {
 }
 
 export async function saveTenderProcurementDocumentAction(formData: FormData) {
+  await requireTenderCapability("procurement_documents");
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
   const companyDocumentId = Number(formData.get("companyDocumentId"));
@@ -1408,6 +1432,7 @@ export async function saveTenderProcurementDocumentAction(formData: FormData) {
 }
 
 export async function buildTenderProcurementChecklistAction(formData: FormData) {
+  await requireTenderCapability("procurement_documents");
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
   const actorName = normalizeString(formData.get("actorName")) ?? "Сотрудник";
@@ -1499,6 +1524,7 @@ export async function buildTenderProcurementChecklistAction(formData: FormData) 
 }
 
 export async function updateTenderProcurementDocumentStatusAction(formData: FormData) {
+  await requireTenderCapability("procurement_documents");
   const prisma = getPrisma();
   const procurementDocumentId = Number(formData.get("procurementDocumentId"));
   const procurementId = Number(formData.get("procurementId"));
@@ -1533,6 +1559,7 @@ export async function updateTenderProcurementDocumentStatusAction(formData: Form
 }
 
 export async function saveTenderSourceDocumentAction(formData: FormData) {
+  await requireTenderCapability("procurement_initial");
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
   const title = String(formData.get("title") ?? "").trim();
@@ -1586,6 +1613,7 @@ export async function saveTenderSourceDocumentAction(formData: FormData) {
 }
 
 export async function updateTenderSourceDocumentStatusAction(formData: FormData) {
+  await requireTenderCapability("procurement_initial");
   const prisma = getPrisma();
   const sourceDocumentId = Number(formData.get("sourceDocumentId"));
   const procurementId = Number(formData.get("procurementId"));
@@ -1621,6 +1649,7 @@ export async function updateTenderSourceDocumentStatusAction(formData: FormData)
 export async function prepareTenderSourceDocumentsForFillingAction(
   formData: FormData
 ) {
+  await requireTenderCapability("procurement_documents");
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
   const actorName = normalizeString(formData.get("actorName")) ?? "Система";
@@ -1683,6 +1712,7 @@ export async function prepareTenderSourceDocumentsForFillingAction(
 }
 
 export async function analyzeTenderSourceDocumentAction(formData: FormData) {
+  await requireTenderCapability("procurement_documents");
   const prisma = getPrisma();
   const sourceDocumentId = Number(formData.get("sourceDocumentId"));
   const procurementId = Number(formData.get("procurementId"));
@@ -1786,6 +1816,7 @@ export async function analyzeTenderSourceDocumentAction(formData: FormData) {
 }
 
 export async function buildTenderSourceDocumentFieldsAction(formData: FormData) {
+  await requireTenderCapability("procurement_documents");
   const prisma = getPrisma();
   const sourceDocumentId = Number(formData.get("sourceDocumentId"));
   const procurementId = Number(formData.get("procurementId"));
@@ -1847,6 +1878,7 @@ export async function buildTenderSourceDocumentFieldsAction(formData: FormData) 
 }
 
 export async function buildTenderSourceDocumentDraftAction(formData: FormData) {
+  await requireTenderCapability("procurement_documents");
   const prisma = getPrisma();
   const sourceDocumentId = Number(formData.get("sourceDocumentId"));
   const procurementId = Number(formData.get("procurementId"));
@@ -1910,6 +1942,7 @@ export async function buildTenderSourceDocumentDraftAction(formData: FormData) {
 }
 
 export async function saveTenderTechnicalItemAction(formData: FormData) {
+  await requireTenderCapability("procurement_pricing");
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
   const requestedName = String(formData.get("requestedName") ?? "").trim();
@@ -1966,6 +1999,7 @@ export async function saveTenderTechnicalItemAction(formData: FormData) {
 }
 
 export async function importTenderTechnicalItemsAction(formData: FormData) {
+  await requireTenderCapability("procurement_pricing");
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
   const actorName = normalizeString(formData.get("actorName")) ?? "Сотрудник";
@@ -2053,6 +2087,7 @@ export async function importTenderTechnicalItemsAction(formData: FormData) {
 }
 
 export async function saveTenderStageCommentAction(formData: FormData) {
+  await requireTenderCapability("procurement_comments");
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
   const stageKey = String(formData.get("stageKey") ?? "").trim();
@@ -2102,11 +2137,7 @@ export async function saveTenderStageCommentAction(formData: FormData) {
 
 export async function saveTenderUserAction(formData: FormData) {
   const prisma = getPrisma();
-  const currentUser = await getCurrentTenderUser();
-
-  if (!currentUser || currentUser.role !== TenderUserRole.ADMIN) {
-    throw new Error("Только администратор может управлять пользователями");
-  }
+  const currentUser = await requireTenderCapability("users_manage");
 
   const userId = normalizeNumber(formData.get("userId"));
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -2154,15 +2185,7 @@ export async function saveTenderUserAction(formData: FormData) {
 
 export async function saveTenderFasPromptAction(formData: FormData) {
   const prisma = getPrisma();
-  const currentUser = await getCurrentTenderUser();
-  const fasPromptEditors = new Set<TenderUserRole>([
-    TenderUserRole.ADMIN,
-    TenderUserRole.FAS_MANAGER,
-  ]);
-
-  if (!currentUser || !fasPromptEditors.has(currentUser.role)) {
-    throw new Error("Недостаточно прав для редактирования ФАС-промта");
-  }
+  const currentUser = await requireTenderCapability("fas_manage");
 
   const body = String(formData.get("body") ?? "").trim();
 
@@ -2190,11 +2213,7 @@ export async function saveTenderFasPromptAction(formData: FormData) {
 export async function saveTenderFasReviewAction(formData: FormData) {
   const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
-  const currentUser = await getCurrentTenderUser();
-
-  if (!currentUser) {
-    throw new Error("Нужна авторизация");
-  }
+  const currentUser = await requireTenderCapability("fas_access");
 
   if (!Number.isInteger(procurementId) || procurementId <= 0) {
     throw new Error("Procurement is required");

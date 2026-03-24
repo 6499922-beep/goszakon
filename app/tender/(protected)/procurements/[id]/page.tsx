@@ -29,6 +29,7 @@ import {
 } from "@/app/tender/actions";
 import { getPrisma } from "@/lib/prisma";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
+import { tenderHasCapability } from "@/lib/tender-permissions";
 import {
   formatTenderCurrency,
   formatTenderDate,
@@ -264,6 +265,15 @@ export default async function TenderProcurementDetailsPage({
     },
   });
   const currentUser = await getCurrentTenderUser();
+  const role = currentUser?.role ?? null;
+  const canWorkInitial = tenderHasCapability(role, "procurement_initial");
+  const canWorkPricing = tenderHasCapability(role, "procurement_pricing");
+  const canWorkDecision = tenderHasCapability(role, "procurement_decision");
+  const canWorkDocuments = tenderHasCapability(role, "procurement_documents");
+  const canWorkSubmission = tenderHasCapability(role, "procurement_submission");
+  const canWorkComments = tenderHasCapability(role, "procurement_comments");
+  const canWorkFas = tenderHasCapability(role, "fas_access");
+  const canWorkSourceDocs = canWorkInitial || canWorkDocuments;
   const promptConfig = await prisma.tenderPromptConfig.findUnique({
     where: { key: "FAS_POTENTIAL_COMPLAINT" },
   });
@@ -475,13 +485,14 @@ export default async function TenderProcurementDetailsPage({
                     "По карточке нет критичных блокеров, но стоит быстро проверить комплект перед финальной подачей.",
                 };
   const sectionLinks = [
-    { href: "#workflow", label: "Этапы" },
-    { href: "#source-docs", label: "Исходные файлы" },
-    { href: "#technical-items", label: "ТЗ" },
-    { href: "#pricing", label: "Предпросчёт" },
-    { href: "#fas-branch", label: "Жалоба в ФАС" },
-    { href: "#documents-checklist", label: "Комплект" },
-    { href: "#submission", label: "Подача" },
+    ...(canWorkComments ? [{ href: "#workflow", label: "Этапы" }] : []),
+    ...(canWorkInitial ? [{ href: "#source-docs", label: "Анализ" }] : []),
+    ...(canWorkDocuments ? [{ href: "#pricing", label: "Исходные файлы" }] : []),
+    ...(canWorkPricing ? [{ href: "#technical-items", label: "ТЗ" }] : []),
+    ...(canWorkPricing ? [{ href: "#pricing-review", label: "Предпросчёт" }] : []),
+    ...(canWorkFas ? [{ href: "#fas-branch", label: "Жалоба в ФАС" }] : []),
+    ...(canWorkDocuments ? [{ href: "#documents-checklist", label: "Комплект" }] : []),
+    ...(canWorkSubmission ? [{ href: "#submission", label: "Подача" }] : []),
   ];
   const fasStatusLabel = {
     NOT_STARTED: "ФАС-ветка не запускалась",
@@ -748,10 +759,11 @@ export default async function TenderProcurementDetailsPage({
             </div>
           </div>
 
-          <div
-            id="source-docs"
-            className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
-          >
+          {canWorkDecision ? (
+            <div
+              id="source-docs"
+              className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+            >
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -815,12 +827,14 @@ export default async function TenderProcurementDetailsPage({
                 Обновить статус
               </button>
             </form>
-          </div>
+            </div>
+          ) : null}
 
-          <div
-            id="documents-checklist"
-            className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
-          >
+          {canWorkInitial ? (
+            <div
+              id="documents-checklist"
+              className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+            >
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -855,7 +869,8 @@ export default async function TenderProcurementDetailsPage({
                 </div>
               </div>
             </div>
-          </div>
+            </div>
+          ) : null}
 
           <div
             id="technical-items"
@@ -874,10 +889,11 @@ export default async function TenderProcurementDetailsPage({
             )}
           </div>
 
-          <div
-            id="pricing"
-            className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
-          >
+          {canWorkSourceDocs ? (
+            <div
+              id="pricing"
+              className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+            >
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -1336,12 +1352,14 @@ export default async function TenderProcurementDetailsPage({
                 приложения, которые позже будут идти в разбор после решения о подаче.
               </div>
             )}
-          </div>
+            </div>
+          ) : null}
 
-          <div
-            id="fas-branch"
-            className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
-          >
+          {canWorkFas ? (
+            <div
+              id="fas-branch"
+              className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+            >
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -1498,12 +1516,14 @@ export default async function TenderProcurementDetailsPage({
                 </form>
               </div>
             </div>
-          </div>
+            </div>
+          ) : null}
 
-          <div
-            id="submission"
-            className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
-          >
+          {canWorkDocuments ? (
+            <div
+              id="submission"
+              className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+            >
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -1774,9 +1794,11 @@ export default async function TenderProcurementDetailsPage({
                 чтобы видно было, что уже готово к подаче, а чего ещё не хватает.
               </div>
             )}
-          </div>
+            </div>
+          ) : null}
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          {canWorkInitial ? (
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
               Нестандартные условия
             </div>
@@ -1788,9 +1810,11 @@ export default async function TenderProcurementDetailsPage({
                 Особые требования пока не заполнены.
               </div>
             )}
-          </div>
+            </div>
+          ) : null}
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          {canWorkComments ? (
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
               История
             </div>
@@ -1828,11 +1852,13 @@ export default async function TenderProcurementDetailsPage({
                 ))
               )}
             </div>
-          </div>
+            </div>
+          ) : null}
         </section>
 
         <section className="space-y-8">
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          {canWorkInitial ? (
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -1881,9 +1907,14 @@ export default async function TenderProcurementDetailsPage({
                 </div>
               </div>
             </form>
-          </div>
+            </div>
+          ) : null}
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          {canWorkPricing ? (
+            <div
+              id="pricing-review"
+              className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+            >
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -2259,9 +2290,11 @@ export default async function TenderProcurementDetailsPage({
                 где сначала нужен подбор по характеристикам.
               </div>
             )}
-          </div>
+            </div>
+          ) : null}
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          {canWorkDecision ? (
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -2439,9 +2472,14 @@ export default async function TenderProcurementDetailsPage({
                 ))}
               </div>
             ) : null}
-          </div>
+            </div>
+          ) : null}
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          {canWorkSubmission ? (
+            <div
+              id="submission-readiness"
+              className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+            >
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -2567,7 +2605,8 @@ export default async function TenderProcurementDetailsPage({
                 ))}
               </div>
             ) : null}
-          </div>
+            </div>
+          ) : null}
 
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">

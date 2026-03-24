@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getTenderDashboardData } from "@/lib/tender-dashboard";
+import { tenderHasCapability } from "@/lib/tender-permissions";
 import {
   formatTenderCurrency,
   tenderStatusLabels,
@@ -9,6 +12,14 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function TenderDashboardPage() {
+  const currentUser = await getCurrentTenderUser();
+  if (!currentUser) {
+    redirect("/signin");
+  }
+  if (!tenderHasCapability(currentUser.role, "overview")) {
+    redirect("/procurements");
+  }
+
   const data = await getTenderDashboardData();
 
   const cards = [
@@ -37,12 +48,14 @@ export default async function TenderDashboardPage() {
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                href="/procurements/new"
-                className="rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#081a4b] transition hover:bg-slate-100"
-              >
-                Занести новую закупку
-              </Link>
+              {tenderHasCapability(currentUser.role, "procurement_create") ? (
+                <Link
+                  href="/procurements/new"
+                  className="rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#081a4b] transition hover:bg-slate-100"
+                >
+                  Занести новую закупку
+                </Link>
+              ) : null}
               <Link
                 href="/procurements"
                 className="rounded-2xl border border-white/20 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
@@ -100,12 +113,14 @@ export default async function TenderDashboardPage() {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Link
-                href="/procurements/new"
-                className="rounded-2xl bg-[#081a4b] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
-              >
-                Новая закупка
-              </Link>
+              {tenderHasCapability(currentUser.role, "procurement_create") ? (
+                <Link
+                  href="/procurements/new"
+                  className="rounded-2xl bg-[#081a4b] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
+                >
+                  Новая закупка
+                </Link>
+              ) : null}
               <Link
                 href="/procurements"
                 className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"

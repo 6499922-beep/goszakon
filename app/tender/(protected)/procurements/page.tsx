@@ -1,4 +1,6 @@
 import { getPrisma } from "@/lib/prisma";
+import { getCurrentTenderUser } from "@/lib/admin-auth";
+import { tenderHasCapability } from "@/lib/tender-permissions";
 import {
   formatTenderCurrency,
   formatTenderDate,
@@ -10,6 +12,11 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function TenderProcurementsPage() {
+  const currentUser = await getCurrentTenderUser();
+  if (!currentUser || !tenderHasCapability(currentUser.role, "procurements_list")) {
+    return null;
+  }
+
   const prisma = getPrisma();
   const procurements = await prisma.tenderProcurement.findMany({
     orderBy: { updatedAt: "desc" },
@@ -35,12 +42,14 @@ export default async function TenderProcurementsPage() {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Link
-                href="/procurements/new"
-                className="rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#081a4b] transition hover:bg-slate-100"
-              >
-                Новая закупка
-              </Link>
+              {tenderHasCapability(currentUser.role, "procurement_create") ? (
+                <Link
+                  href="/procurements/new"
+                  className="rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#081a4b] transition hover:bg-slate-100"
+                >
+                  Новая закупка
+                </Link>
+              ) : null}
             </div>
           </div>
         </div>

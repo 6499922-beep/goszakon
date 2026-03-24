@@ -3,7 +3,10 @@ import {
   saveTenderCompanyProfileAction,
 } from "@/app/tender/actions";
 import { Field } from "@/app/tender/_components/field";
+import { getCurrentTenderUser } from "@/lib/admin-auth";
+import { tenderHasCapability } from "@/lib/tender-permissions";
 import { getPrisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 
 const documentTypeLabels = {
   COMPANY_CARD: "Карточка компании",
@@ -271,6 +274,11 @@ function CompanyForm() {
 }
 
 export default async function TenderCompaniesPage() {
+  const currentUser = await getCurrentTenderUser();
+  if (!currentUser || !tenderHasCapability(currentUser.role, "companies_manage")) {
+    redirect("/procurements");
+  }
+
   const prisma = getPrisma();
   const companies = await prisma.tenderCompanyProfile.findMany({
     orderBy: [{ isPrimary: "desc" }, { updatedAt: "desc" }],

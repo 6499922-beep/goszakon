@@ -2,11 +2,19 @@ import {
   createTenderRuleAction,
   toggleTenderRuleAction,
 } from "@/app/tender/actions";
+import { getCurrentTenderUser } from "@/lib/admin-auth";
+import { tenderHasCapability } from "@/lib/tender-permissions";
 import { getPrisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function TenderRulesPage() {
+  const currentUser = await getCurrentTenderUser();
+  if (!currentUser || !tenderHasCapability(currentUser.role, "rules_manage")) {
+    redirect("/procurements");
+  }
+
   const prisma = getPrisma();
   const rules = await prisma.tenderStopRule.findMany({
     orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],

@@ -10,6 +10,7 @@ import {
 import { isTenderHost } from "@/lib/tender-host";
 import { TenderUserRole } from "@prisma/client";
 import { tenderUserRoleLabels } from "@/lib/tender-users";
+import { tenderHasCapability } from "@/lib/tender-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -34,21 +35,25 @@ export default async function TenderProtectedLayout({
   }
 
   const currentUser = await getCurrentTenderUser();
-  const fasRoles = new Set<TenderUserRole>([
-    TenderUserRole.ADMIN,
-    TenderUserRole.FAS_MANAGER,
-    TenderUserRole.FAS_SPECIALIST,
-  ]);
+  const role = currentUser?.role;
 
   const links = [
-    { title: "Обзор", href: "/" },
-    { title: "Закупки", href: "/procurements" },
-    { title: "Компании", href: "/companies" },
-    { title: "Стоп-факторы", href: "/rules" },
-    ...(fasRoles.has(currentUser?.role as TenderUserRole)
+    ...(tenderHasCapability(role, "overview")
+      ? [{ title: "Обзор", href: "/" }]
+      : []),
+    ...(tenderHasCapability(role, "procurements_list")
+      ? [{ title: "Закупки", href: "/procurements" }]
+      : []),
+    ...(tenderHasCapability(role, "companies_manage")
+      ? [{ title: "Компании", href: "/companies" }]
+      : []),
+    ...(tenderHasCapability(role, "rules_manage")
+      ? [{ title: "Стоп-факторы", href: "/rules" }]
+      : []),
+    ...(tenderHasCapability(role, "fas_access")
       ? [{ title: "Жалобы в ФАС", href: "/fas" }]
       : []),
-    ...(currentUser?.role === TenderUserRole.ADMIN
+    ...(tenderHasCapability(role, "users_manage")
       ? [{ title: "Пользователи", href: "/users" }]
       : []),
   ];

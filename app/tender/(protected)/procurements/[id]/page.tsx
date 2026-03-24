@@ -279,6 +279,56 @@ export default async function TenderProcurementDetailsPage({
   });
 
   const processingStages = getTenderProcessingStages(procurement);
+  const stopFactorsStage = processingStages.find((stage) => stage.key === "stop-factors");
+  const mainAnalysisFindings = [
+    ...(procurement.selectionCriteria?.trim()
+      ? [`Критерии отбора: ${procurement.selectionCriteria.trim()}`]
+      : []),
+    ...(procurement.deliveryTerms?.trim()
+      ? [`Поставка: ${procurement.deliveryTerms.trim()}`]
+      : []),
+    ...(procurement.paymentTerms?.trim()
+      ? [`Оплата: ${procurement.paymentTerms.trim()}`]
+      : []),
+    ...(procurement.penaltyTerms?.trim()
+      ? [`Ответственность: ${procurement.penaltyTerms.trim()}`]
+      : []),
+    ...((Array.isArray(procurement.requiredDocuments)
+      ? procurement.requiredDocuments
+      : []
+    ) as string[])
+      .slice(0, 4)
+      .map((item) => `Нужен документ: ${String(item).trim()}`),
+    ...((Array.isArray(procurement.nonstandardRequirements)
+      ? procurement.nonstandardRequirements
+      : []
+    ) as string[])
+      .slice(0, 4)
+      .map((item) => `Особое условие: ${String(item).trim()}`),
+  ].filter(Boolean);
+  const mainAnalysisQuestions = [
+    ...(stopFactorsStage?.questions ?? []),
+    ...(procurement.aiAnalysisStatus === "failed" && procurement.aiAnalysisError
+      ? [procurement.aiAnalysisError]
+      : []),
+  ].filter(Boolean);
+  const fasAnalysisFindings = [
+    ...(procurement.fasReview?.findingTitle?.trim()
+      ? [procurement.fasReview.findingTitle.trim()]
+      : []),
+    ...(procurement.fasReview?.findingBasis?.trim()
+      ? [procurement.fasReview.findingBasis.trim()]
+      : []),
+  ].filter(Boolean);
+  const fasAnalysisQuestions = [
+    ...(procurement.fasReview?.status === TenderFasReviewStatus.MANUAL_REVIEW &&
+    procurement.fasReview?.confidenceNote?.trim()
+      ? [procurement.fasReview.confidenceNote.trim()]
+      : []),
+    ...(procurement.fasReview?.status === TenderFasReviewStatus.NO_VIOLATION
+      ? ["Явных нарушений с высокой вероятностью обоснования не выявлено."]
+      : []),
+  ].filter(Boolean);
   const stageCommentsByKey = new Map(
     processingStages.map((stage) => [
       stage.key,
@@ -1915,6 +1965,49 @@ export default async function TenderProcurementDetailsPage({
                     ? procurement.stopFactorsSummary
                     : "Стоп-факторы ещё не проверялись автоматически."}
                 </div>
+
+                <div className="mt-5 grid gap-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Что найдено
+                    </div>
+                    <div className="mt-3 space-y-2 text-sm leading-7 text-slate-700">
+                      {mainAnalysisFindings.length > 0 ? (
+                        mainAnalysisFindings.map((item, index) => (
+                          <div key={`${item}-${index}`} className="rounded-2xl bg-slate-50 px-3 py-2">
+                            {item}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-2xl bg-slate-50 px-3 py-2 text-slate-500">
+                          После анализа здесь появятся найденные условия закупки, документы и чувствительные места.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Что нужно проверить человеку
+                    </div>
+                    <div className="mt-3 space-y-2 text-sm leading-7 text-slate-700">
+                      {mainAnalysisQuestions.length > 0 ? (
+                        mainAnalysisQuestions.map((item, index) => (
+                          <div
+                            key={`${item}-${index}`}
+                            className="rounded-2xl bg-amber-50 px-3 py-2 text-amber-800"
+                          >
+                            {item}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-2xl bg-emerald-50 px-3 py-2 text-emerald-800">
+                          Явных вопросов на этом этапе пока нет.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
@@ -1943,6 +2036,54 @@ export default async function TenderProcurementDetailsPage({
                   {procurement.fasReview?.confidenceNote?.trim()
                     ? procurement.fasReview.confidenceNote
                     : "Если AI не найдёт явных нарушений, он прямо это укажет. Если будет сомневаться, отправит ветку на ручную проверку."}
+                </div>
+
+                <div className="mt-5 grid gap-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Что найдено по ФАС-ветке
+                    </div>
+                    <div className="mt-3 space-y-2 text-sm leading-7 text-slate-700">
+                      {fasAnalysisFindings.length > 0 ? (
+                        fasAnalysisFindings.map((item, index) => (
+                          <div key={`${item}-${index}`} className="rounded-2xl bg-slate-50 px-3 py-2">
+                            {item}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-2xl bg-slate-50 px-3 py-2 text-slate-500">
+                          После запуска анализа здесь появится конкретное нарушение или прямой вывод, что оснований для жалобы нет.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Что нужно проверить человеку
+                    </div>
+                    <div className="mt-3 space-y-2 text-sm leading-7 text-slate-700">
+                      {fasAnalysisQuestions.length > 0 ? (
+                        fasAnalysisQuestions.map((item, index) => (
+                          <div
+                            key={`${item}-${index}`}
+                            className={`rounded-2xl px-3 py-2 ${
+                              procurement.fasReview?.status ===
+                              TenderFasReviewStatus.NO_VIOLATION
+                                ? "bg-emerald-50 text-emerald-800"
+                                : "bg-amber-50 text-amber-800"
+                            }`}
+                          >
+                            {item}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-2xl bg-slate-50 px-3 py-2 text-slate-500">
+                          Если AI будет сомневаться, здесь появится вопрос для сотрудника по жалобам ФАС.
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

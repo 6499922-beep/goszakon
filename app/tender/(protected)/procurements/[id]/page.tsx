@@ -3,12 +3,22 @@ import { notFound } from "next/navigation";
 import { TenderProcurementStatus } from "@prisma/client";
 import {
   analyzeTenderProcurementAction,
+  analyzeTenderSourceDocumentAction,
+  buildTenderProcurementChecklistAction,
+  buildTenderSourceDocumentDraftAction,
+  buildTenderSourceDocumentFieldsAction,
   importTenderTechnicalItemsAction,
   markTenderDocumentsPreparedAction,
   markTenderSubmittedAction,
+  prepareTenderSourceDocumentsForFillingAction,
+  saveTenderProcurementDocumentAction,
+  saveTenderSourceDocumentAction,
   saveTenderTechnicalItemAction,
   saveTenderDecisionAction,
   saveTenderPricingReviewAction,
+  updateTenderProcurementDocumentStatusAction,
+  updateTenderSubmissionDeskAction,
+  updateTenderSourceDocumentStatusAction,
   updateTenderProcurementStatusAction,
 } from "@/app/tender/actions";
 import { getPrisma } from "@/lib/prisma";
@@ -63,6 +73,60 @@ const technicalItemLabel = {
   IDENTIFIED: "Подобрано по характеристикам",
   REVIEW: "Нужно уточнение",
   REJECTED: "Не подходит",
+} as const;
+
+const procurementDocumentTone = {
+  REQUIRED: "bg-slate-100 text-slate-700",
+  READY: "bg-emerald-50 text-emerald-700",
+  MISSING: "bg-rose-50 text-rose-700",
+  REVIEW: "bg-amber-50 text-amber-700",
+} as const;
+
+const procurementDocumentLabel = {
+  REQUIRED: "Нужно подготовить",
+  READY: "Готово",
+  MISSING: "Не хватает",
+  REVIEW: "Проверить",
+} as const;
+
+const sourceDocumentTone = {
+  UPLOADED: "bg-slate-100 text-slate-700",
+  WAIT_DECISION: "bg-amber-50 text-amber-700",
+  READY_FOR_ANALYSIS: "bg-sky-50 text-sky-700",
+  ANALYZED: "bg-emerald-50 text-emerald-700",
+} as const;
+
+const sourceDocumentLabel = {
+  UPLOADED: "Загружен",
+  WAIT_DECISION: "Ждёт решения",
+  READY_FOR_ANALYSIS: "Можно разбирать",
+  ANALYZED: "Разобран",
+} as const;
+
+const sourceDocumentFormTypeLabel = {
+  UNKNOWN: "Тип пока не понятен",
+  APPLICATION_FORM: "Форма заявки / согласие",
+  PRICE_FORM: "Ценовая форма",
+  TECHNICAL_PROPOSAL: "Техническое предложение",
+  QUESTIONNAIRE: "Анкета участника",
+  DECLARATION: "Декларация / сведения",
+  CONTRACT_DRAFT: "Проект договора",
+  TECHNICAL_SPEC: "Техническое задание",
+  OTHER_APPENDIX: "Приложение / прочий файл",
+} as const;
+
+const sourceDocumentAutofillLabel = {
+  NOT_ANALYZED: "Ещё не анализировали",
+  PARTIALLY_READY: "Частично готово к заполнению",
+  MANUAL_ONLY: "Нужна ручная работа",
+  READY_TO_FILL: "Хорошо подходит для автозаполнения",
+} as const;
+
+const sourceDocumentAutofillTone = {
+  NOT_ANALYZED: "bg-slate-100 text-slate-700",
+  PARTIALLY_READY: "bg-sky-50 text-sky-700",
+  MANUAL_ONLY: "bg-amber-50 text-amber-700",
+  READY_TO_FILL: "bg-emerald-50 text-emerald-700",
 } as const;
 
 function renderList(value: unknown) {
@@ -126,7 +190,13 @@ export default async function TenderProcurementDetailsPage({
   const procurement = await prisma.tenderProcurement.findUnique({
     where: { id: Number(id) },
     include: {
-      companyProfile: true,
+      companyProfile: {
+        include: {
+          documents: {
+            orderBy: [{ documentType: "asc" }, { createdAt: "desc" }],
+          },
+        },
+      },
       pricingReviews: {
         orderBy: { createdAt: "desc" },
         take: 5,
@@ -144,6 +214,15 @@ export default async function TenderProcurementDetailsPage({
       },
       technicalItems: {
         orderBy: [{ lineNumber: "asc" }, { createdAt: "desc" }],
+      },
+      procurementDocuments: {
+        include: {
+          companyDocument: true,
+        },
+        orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      },
+      sourceDocuments: {
+        orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       },
       ruleMatches: {
         include: {
@@ -200,6 +279,184 @@ export default async function TenderProcurementDetailsPage({
     },
     { ready: 0, withPrice: 0, pending: 0, total: 0 }
   );
+  const companyLibraryDocuments = procurement.companyProfile?.documents ?? [];
+  const procurementDocumentStats = {
+    total: procurement.procurementDocuments.length,
+    ready: procurement.procurementDocuments.filter((item) => item.status === "READY")
+      .length,
+    missing: procurement.procurementDocuments.filter((item) => item.status === "MISSING")
+      .length,
+    review: procurement.procurementDocuments.filter((item) => item.status === "REVIEW")
+      .length,
+  };
+  const sourceDocumentStats = {
+    total: procurement.sourceDocuments.length,
+    waiting: procurement.sourceDocuments.filter((item) => item.status === "WAIT_DECISION")
+      .length,
+    ready: procurement.sourceDocuments.filter(
+      (item) => item.status === "READY_FOR_ANALYSIS"
+    ).length,
+    analyzed: procurement.sourceDocuments.filter((item) => item.status === "ANALYZED")
+      .length,
+  };
+  const sourceFormStats = {
+    readyToFill: procurement.sourceDocuments.filter(
+      (item) => item.autofillStatus === "READY_TO_FILL"
+    ).length,
+    partial: procurement.sourceDocuments.filter(
+      (item) => item.autofillStatus === "PARTIALLY_READY"
+    ).length,
+    manual: procurement.sourceDocuments.filter(
+      (item) => item.autofillStatus === "MANUAL_ONLY"
+    ).length,
+    notAnalyzed: procurement.sourceDocuments.filter(
+      (item) => item.autofillStatus === "NOT_ANALYZED"
+    ).length,
+  };
+  const sourceDocumentsBlocking = procurement.sourceDocuments.filter(
+    (item) =>
+      item.status === "READY_FOR_ANALYSIS" &&
+      (item.autofillStatus === "NOT_ANALYZED" ||
+        item.autofillStatus === "MANUAL_ONLY" ||
+        !item.draftContent)
+  );
+  const procurementDocumentsBlocking = procurement.procurementDocuments.filter(
+    (item) => item.status === "MISSING" || item.status === "REVIEW"
+  );
+  const technicalItemsBlocking = procurement.technicalItems.filter(
+    (item) =>
+      item.status === "REVIEW" ||
+      (item.pricingReady && item.approximateUnitPrice == null)
+  );
+  const hasLeaderSubmitDecision = procurement.decisions.some(
+    (item) => item.decision === "SUBMIT"
+  );
+  const readyProcurementDocuments = procurement.procurementDocuments.filter(
+    (item) => item.status === "READY"
+  );
+  const readySourceDocuments = procurement.sourceDocuments.filter(
+    (item) =>
+      (item.autofillStatus === "READY_TO_FILL" ||
+        item.autofillStatus === "PARTIALLY_READY") &&
+      (item.draftContent || item.structuredFields)
+  );
+  const submissionEvents = procurement.events.filter((item) =>
+    ["DOCUMENTS_PREPARED", "SUBMITTED", "NOTE_ADDED"].includes(item.actionType)
+  );
+  const hasSelectedCompany = Boolean(procurement.companyProfileId);
+  const canMoveToSubmission =
+    hasLeaderSubmitDecision &&
+    hasSelectedCompany &&
+    procurementDocumentsBlocking.length === 0 &&
+    sourceDocumentsBlocking.length === 0 &&
+    technicalItemsBlocking.length === 0 &&
+    procurement.procurementDocuments.length > 0;
+  const submissionReadinessLabel = canMoveToSubmission
+    ? "Можно выгружать на площадку"
+    : hasLeaderSubmitDecision
+      ? "Пакет ещё не готов к подаче"
+      : "Сначала нужно решение «Подаём»";
+  const submissionReadinessTone = canMoveToSubmission
+    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+    : hasLeaderSubmitDecision
+      ? "border-amber-200 bg-amber-50 text-amber-800"
+      : "border-slate-200 bg-slate-50 text-[#081a4b]";
+  const submissionBlockers: string[] = [];
+
+  if (!hasLeaderSubmitDecision) {
+    submissionBlockers.push("Руководитель ещё не принял решение «Подаём».");
+  }
+
+  if (!hasSelectedCompany) {
+    submissionBlockers.push(
+      "Не выбрана ваша компания, от которой будет подаваться заявка."
+    );
+  }
+
+  if (procurement.procurementDocuments.length === 0) {
+    submissionBlockers.push(
+      "Чек-лист комплекта пустой: в пакет ещё не добавлены файлы для подачи."
+    );
+  }
+
+  submissionBlockers.push(
+    ...procurementDocumentsBlocking.slice(0, 5).map((document) =>
+      document.status === "MISSING"
+        ? `В комплекте не хватает файла «${document.title}».`
+        : `По файлу «${document.title}» нужна ручная проверка.`
+    )
+  );
+
+  submissionBlockers.push(
+    ...sourceDocumentsBlocking.slice(0, 5).map((document) => {
+      if (document.autofillStatus === "NOT_ANALYZED") {
+        return `Форма «${document.title}» ещё не анализировалась.`;
+      }
+
+      if (document.autofillStatus === "MANUAL_ONLY") {
+        return `Форма «${document.title}» требует в основном ручного заполнения.`;
+      }
+
+      return `По форме «${document.title}» ещё не собран черновик заполнения.`;
+    })
+  );
+
+  submissionBlockers.push(
+    ...technicalItemsBlocking.slice(0, 5).map((item) =>
+      item.status === "REVIEW"
+        ? `По позиции ТЗ «${item.requestedName}» нужно уточнение перед подачей.`
+        : `По позиции ТЗ «${item.requestedName}» нет цены для предпросчёта.`
+    )
+  );
+  const nextActionSummary = !hasLeaderSubmitDecision
+    ? {
+        title: "Нужно решение руководителя",
+        description:
+          "Сначала зафиксируй итог: подаём, не подаём, жалоба в ФАС или на доработку.",
+      }
+    : !hasSelectedCompany
+      ? {
+          title: "Нужно выбрать компанию участия",
+          description:
+            "После решения «Подаём» выбери, от какой вашей компании будет подаваться заявка.",
+        }
+      : technicalItemsBlocking.length > 0
+        ? {
+            title: "Нужно закрыть ТЗ и предпросчёт",
+            description:
+              "По части позиций ещё есть вопросы или не хватает цены. Без этого рано идти в финальную подготовку.",
+          }
+        : procurementDocumentsBlocking.length > 0
+          ? {
+              title: "Нужно довести комплект документов",
+              description:
+                "В пакете ещё есть отсутствующие файлы или позиции, требующие ручной проверки.",
+            }
+          : sourceDocumentsBlocking.length > 0
+            ? {
+                title: "Нужно добрать формы заказчика",
+                description:
+                  "Часть форм ещё не разобрана или по ним не собраны рабочие черновики заполнения.",
+              }
+            : canMoveToSubmission
+              ? {
+                  title: "Можно переходить к подаче",
+                  description:
+                    "Пакет выглядит собранным: назначай ответственного, проверяй итоговые файлы и выгружай на площадку.",
+                }
+              : {
+                  title: "Нужна ручная сверка",
+                  description:
+                    "По карточке нет критичных блокеров, но стоит быстро проверить комплект перед финальной подачей.",
+                };
+  const sectionLinks = [
+    { href: "#workflow", label: "Этапы" },
+    { href: "#source-docs", label: "Исходные файлы" },
+    { href: "#technical-items", label: "ТЗ" },
+    { href: "#pricing", label: "Предпросчёт" },
+    { href: "#documents-checklist", label: "Комплект" },
+    { href: "#submission", label: "Подача" },
+  ];
 
   return (
     <main className="space-y-8">
@@ -251,11 +508,47 @@ export default async function TenderProcurementDetailsPage({
             value={procurement.companyProfile?.name ?? "Не выбрана"}
           />
         </div>
+
+        <div className="border-t border-slate-200 bg-white px-8 py-5">
+          <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Что делать дальше
+              </div>
+              <div className="mt-2 text-xl font-bold tracking-tight text-[#081a4b]">
+                {nextActionSummary.title}
+              </div>
+              <div className="mt-2 text-sm leading-7 text-slate-600">
+                {nextActionSummary.description}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Быстрый маршрут по карточке
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {sectionLinks.map((item) => (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-[#0d5bd7] hover:text-[#0d5bd7]"
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <div className="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
         <section className="space-y-8">
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <div
+            id="workflow"
+            className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+          >
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -336,7 +629,10 @@ export default async function TenderProcurementDetailsPage({
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <div
+            id="source-docs"
+            className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+          >
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -402,7 +698,10 @@ export default async function TenderProcurementDetailsPage({
             </form>
           </div>
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <div
+            id="documents-checklist"
+            className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+          >
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -439,7 +738,10 @@ export default async function TenderProcurementDetailsPage({
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <div
+            id="technical-items"
+            className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+          >
             <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
               Документы
             </div>
@@ -449,6 +751,746 @@ export default async function TenderProcurementDetailsPage({
             {renderList(procurement.requiredDocuments) ?? (
               <div className="mt-5 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
                 Список документов пока не заполнен.
+              </div>
+            )}
+          </div>
+
+          <div
+            id="pricing"
+            className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
+                  Исходная документация
+                </div>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
+                  Файлы закупки, которые потом будем разбирать
+                </h2>
+              </div>
+              <div className="rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-600">
+                Анализ форм запускаем после решения «Подаём»
+              </div>
+            </div>
+
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              На этом этапе мы не пытаемся заранее заполнить формы заказчика. Мы
+              просто фиксируем, какие исходные файлы пришли в составе закупки, и
+              готовим их к разбору после согласования подачи.
+            </p>
+
+            <form action={prepareTenderSourceDocumentsForFillingAction} className="mt-4">
+              <input type="hidden" name="procurementId" value={procurement.id} />
+              <input type="hidden" name="actorName" value="Система" />
+              <button
+                type="submit"
+                className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+              >
+                После решения «Подаём» перевести формы в разбор
+              </button>
+            </form>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  Всего файлов
+                </div>
+                <div className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
+                  {sourceDocumentStats.total}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-700">
+                  Ждут решения
+                </div>
+                <div className="mt-2 text-2xl font-bold tracking-tight text-amber-800">
+                  {sourceDocumentStats.waiting}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-sky-700">
+                  Можно разбирать
+                </div>
+                <div className="mt-2 text-2xl font-bold tracking-tight text-sky-800">
+                  {sourceDocumentStats.ready}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                  Уже разобраны
+                </div>
+                <div className="mt-2 text-2xl font-bold tracking-tight text-emerald-800">
+                  {sourceDocumentStats.analyzed}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-4">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                  Хорошо подходят
+                </div>
+                <div className="mt-2 text-2xl font-bold tracking-tight text-emerald-800">
+                  {sourceFormStats.readyToFill}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-sky-700">
+                  Частично готовы
+                </div>
+                <div className="mt-2 text-2xl font-bold tracking-tight text-sky-800">
+                  {sourceFormStats.partial}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-700">
+                  Нужна ручная работа
+                </div>
+                <div className="mt-2 text-2xl font-bold tracking-tight text-amber-800">
+                  {sourceFormStats.manual}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  Ещё не разобраны
+                </div>
+                <div className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
+                  {sourceFormStats.notAnalyzed}
+                </div>
+              </div>
+            </div>
+
+            {sourceDocumentsBlocking.length > 0 ? (
+              <div className="mt-5 rounded-3xl border border-amber-200 bg-amber-50 p-5">
+                <div className="text-sm font-semibold text-amber-900">
+                  Что сейчас ещё тормозит подготовку форм
+                </div>
+                <div className="mt-3 space-y-2">
+                  {sourceDocumentsBlocking.slice(0, 5).map((document) => (
+                    <div
+                      key={document.id}
+                      className="rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm leading-6 text-slate-700"
+                    >
+                      <span className="font-semibold text-slate-900">{document.title}.</span>{" "}
+                      {document.autofillStatus === "NOT_ANALYZED"
+                        ? "Файл ещё не анализировали как форму."
+                        : document.autofillStatus === "MANUAL_ONLY"
+                          ? "По файлу ожидается в основном ручная работа."
+                          : "По файлу ещё не собран черновик заполнения."}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <form action={saveTenderSourceDocumentAction} className="mt-6 space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+              <input type="hidden" name="procurementId" value={procurement.id} />
+              <input type="hidden" name="actorName" value="Сотрудник" />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <div className="mb-2 text-sm font-medium text-slate-700">Название файла</div>
+                  <input
+                    name="title"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                    placeholder="Например: Приложение №1. Форма заявки"
+                  />
+                </label>
+                <label className="block">
+                  <div className="mb-2 text-sm font-medium text-slate-700">Имя файла</div>
+                  <input
+                    name="fileName"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                    placeholder="Например: prilozhenie_1_zayavka.docx"
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <div className="mb-2 text-sm font-medium text-slate-700">Тип файла</div>
+                  <input
+                    name="documentKind"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                    placeholder="ТЗ / форма заявки / проект договора / таблица цен"
+                  />
+                </label>
+                <label className="block">
+                  <div className="mb-2 text-sm font-medium text-slate-700">Статус</div>
+                  <select
+                    name="status"
+                    defaultValue="WAIT_DECISION"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                  >
+                    <option value="UPLOADED">Загружен</option>
+                    <option value="WAIT_DECISION">Ждёт решения</option>
+                    <option value="READY_FOR_ANALYSIS">Можно разбирать</option>
+                    <option value="ANALYZED">Разобран</option>
+                  </select>
+                </label>
+              </div>
+
+                <label className="block">
+                  <div className="mb-2 text-sm font-medium text-slate-700">Комментарий</div>
+                  <textarea
+                    name="note"
+                    className="min-h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm leading-7 outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                    placeholder="Например: форму заполняем только после решения руководителя о подаче."
+                  />
+                </label>
+
+                <label className="block">
+                  <div className="mb-2 text-sm font-medium text-slate-700">
+                    Текст или фрагмент формы
+                  </div>
+                  <textarea
+                    name="contentSnippet"
+                    className="min-h-28 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm leading-7 outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                    placeholder="Сюда можно вставить кусок формы заказчика: названия полей, таблицу или фрагмент текста, чтобы система поняла, что именно можно заполнять автоматически."
+                  />
+                </label>
+
+              <button
+                type="submit"
+                className="rounded-2xl bg-[#081a4b] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
+              >
+                Добавить исходный файл
+              </button>
+            </form>
+
+            {procurement.sourceDocuments.length > 0 ? (
+              <div className="mt-6 space-y-4">
+                {procurement.sourceDocuments.map((document) => (
+                  <div
+                    key={document.id}
+                    className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-[#081a4b]">
+                          {document.title}
+                        </div>
+                        <div className="mt-2 text-sm text-slate-500">
+                          {document.documentKind ?? "Тип не указан"}
+                          {document.fileName ? ` • ${document.fileName}` : ""}
+                        </div>
+                      </div>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${sourceDocumentTone[document.status]}`}
+                      >
+                        {sourceDocumentLabel[document.status]}
+                      </span>
+                    </div>
+
+                    {document.note ? (
+                      <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                        <span className="font-semibold text-slate-900">Комментарий:</span>{" "}
+                        {document.note}
+                      </div>
+                    ) : null}
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <div className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                        <span className="font-semibold text-slate-900">Что это за файл:</span>{" "}
+                        {
+                          sourceDocumentFormTypeLabel[
+                            document.formType as keyof typeof sourceDocumentFormTypeLabel
+                          ]
+                        }
+                      </div>
+                      <div
+                        className={`rounded-2xl px-4 py-3 text-sm leading-6 ${
+                          sourceDocumentAutofillTone[
+                            document.autofillStatus as keyof typeof sourceDocumentAutofillTone
+                          ]
+                        }`}
+                      >
+                        <span className="font-semibold">Готовность к автозаполнению:</span>{" "}
+                        {
+                          sourceDocumentAutofillLabel[
+                            document.autofillStatus as keyof typeof sourceDocumentAutofillLabel
+                          ]
+                        }
+                      </div>
+                    </div>
+
+                    {document.extractedSummary ? (
+                      <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                        <span className="font-semibold text-slate-900">Что поняла система:</span>{" "}
+                        {document.extractedSummary}
+                      </div>
+                    ) : null}
+
+                    {Array.isArray(document.extractedFields) &&
+                    document.extractedFields.length > 0 ? (
+                      <div className="mt-4 rounded-2xl bg-white px-4 py-4">
+                        <div className="text-sm font-semibold text-slate-900">
+                          Что можно подставить автоматически
+                        </div>
+                        <div className="mt-3 space-y-3">
+                          {document.extractedFields.map((field, index) => {
+                            const item =
+                              typeof field === "object" && field !== null
+                                ? (field as Record<string, unknown>)
+                                : null;
+                            if (!item) return null;
+
+                            return (
+                              <div
+                                key={`${String(item.label)}-${index}`}
+                                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700"
+                              >
+                                <div className="font-semibold text-slate-900">
+                                  {String(item.label ?? "Поле")}
+                                </div>
+                                <div className="mt-1">{String(item.value ?? "—")}</div>
+                                <div className="mt-1 text-xs text-slate-500">
+                                  Источник: {String(item.source ?? "система")}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {document.reviewQuestion ? (
+                      <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+                        <span className="font-semibold">Что нужно проверить человеку:</span>{" "}
+                        {document.reviewQuestion}
+                      </div>
+                    ) : null}
+
+                    {document.autofillStatus === "READY_TO_FILL" &&
+                    document.draftContent &&
+                    Array.isArray(document.structuredFields) &&
+                    document.structuredFields.length > 0 ? (
+                      <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900">
+                        Форма доведена до рабочего черновика: можно открывать документ
+                        заказчика и переносить значения по таблице полей.
+                      </div>
+                    ) : null}
+
+                    <form action={analyzeTenderSourceDocumentAction} className="mt-4">
+                      <input type="hidden" name="procurementId" value={procurement.id} />
+                      <input type="hidden" name="sourceDocumentId" value={document.id} />
+                      <input type="hidden" name="actorName" value="Система" />
+                      <button
+                        type="submit"
+                        className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                      >
+                        Проанализировать файл как форму заказчика
+                      </button>
+                    </form>
+
+                    <form action={buildTenderSourceDocumentDraftAction} className="mt-3">
+                      <input type="hidden" name="procurementId" value={procurement.id} />
+                      <input type="hidden" name="sourceDocumentId" value={document.id} />
+                      <input type="hidden" name="actorName" value="Система" />
+                      <button
+                        type="submit"
+                        className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                      >
+                        Собрать черновик заполнения
+                      </button>
+                    </form>
+
+                    <form action={buildTenderSourceDocumentFieldsAction} className="mt-3">
+                      <input type="hidden" name="procurementId" value={procurement.id} />
+                      <input type="hidden" name="sourceDocumentId" value={document.id} />
+                      <input type="hidden" name="actorName" value="Система" />
+                      <button
+                        type="submit"
+                        className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                      >
+                        Собрать таблицу полей формы
+                      </button>
+                    </form>
+
+                    {Array.isArray(document.structuredFields) &&
+                    document.structuredFields.length > 0 ? (
+                      <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+                        <div className="bg-slate-900 px-4 py-3 text-sm font-semibold text-white">
+                          Поля формы для переноса
+                        </div>
+                        <div className="divide-y divide-slate-200 bg-white">
+                          {document.structuredFields.map((field, index) => {
+                            const item =
+                              typeof field === "object" && field !== null
+                                ? (field as Record<string, unknown>)
+                                : null;
+                            if (!item) return null;
+
+                            return (
+                              <div
+                                key={`${String(item.fieldName)}-${index}`}
+                                className="grid gap-3 px-4 py-4 md:grid-cols-[0.9fr_1.2fr_0.7fr]"
+                              >
+                                <div>
+                                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                    Поле
+                                  </div>
+                                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                                    {String(item.fieldName ?? "—")}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                    Значение
+                                  </div>
+                                  <div className="mt-1 text-sm leading-6 text-slate-700">
+                                    {String(item.suggestedValue ?? "—")}
+                                  </div>
+                                  <div className="mt-1 text-xs text-slate-500">
+                                    Источник: {String(item.source ?? "система")}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                    Режим
+                                  </div>
+                                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                                    {String(item.fillMode ?? "—")}
+                                  </div>
+                                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                                    {String(item.comment ?? "")}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {document.draftContent ? (
+                      <div className="mt-4 rounded-2xl bg-[#081a4b] px-4 py-4 text-sm leading-7 text-white">
+                        <div className="text-sm font-semibold text-white">
+                          Черновик заполнения формы
+                        </div>
+                        <pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-7 text-white/90">
+                          {document.draftContent}
+                        </pre>
+                      </div>
+                    ) : null}
+
+                    <form
+                      action={updateTenderSourceDocumentStatusAction}
+                      className="mt-4 grid gap-4 md:grid-cols-[0.8fr_1.2fr_auto]"
+                    >
+                      <input type="hidden" name="procurementId" value={procurement.id} />
+                      <input type="hidden" name="sourceDocumentId" value={document.id} />
+                      <input type="hidden" name="actorName" value="Сотрудник" />
+
+                      <select
+                        name="status"
+                        defaultValue={document.status}
+                        className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                      >
+                        <option value="UPLOADED">Загружен</option>
+                        <option value="WAIT_DECISION">Ждёт решения</option>
+                        <option value="READY_FOR_ANALYSIS">Можно разбирать</option>
+                        <option value="ANALYZED">Разобран</option>
+                      </select>
+
+                      <input
+                        name="note"
+                        defaultValue={document.note ?? ""}
+                        className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                        placeholder="Что делать с этим файлом дальше"
+                      />
+
+                      <button
+                        type="submit"
+                        className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                      >
+                        Обновить
+                      </button>
+                    </form>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm leading-7 text-slate-500">
+                Пока сюда не занесены исходные файлы закупки. Следующий рабочий шаг
+                для сотрудника — отмечать здесь формы, ТЗ, проект договора и прочие
+                приложения, которые позже будут идти в разбор после решения о подаче.
+              </div>
+            )}
+          </div>
+
+          <div
+            id="submission"
+            className="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
+                  Комплект заявки
+                </div>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
+                  Чек-лист подготовки документов
+                </h2>
+              </div>
+              <div className="rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-600">
+                Компания: {procurement.companyProfile?.name ?? "ещё не выбрана"}
+              </div>
+            </div>
+
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              Здесь собираем не архив, а понятный рабочий комплект: что уже есть в
+              библиотеке компании, что добавлено под эту закупку и чего пока не
+              хватает для подачи.
+            </p>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  Всего в комплекте
+                </div>
+                <div className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
+                  {procurementDocumentStats.total}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                  Готово
+                </div>
+                <div className="mt-2 text-2xl font-bold tracking-tight text-emerald-800">
+                  {procurementDocumentStats.ready}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-rose-700">
+                  Не хватает
+                </div>
+                <div className="mt-2 text-2xl font-bold tracking-tight text-rose-800">
+                  {procurementDocumentStats.missing}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-700">
+                  Проверить
+                </div>
+                <div className="mt-2 text-2xl font-bold tracking-tight text-amber-800">
+                  {procurementDocumentStats.review}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div className="text-sm font-semibold text-[#081a4b]">
+                  Что уже есть в библиотеке выбранной компании
+                </div>
+                {companyLibraryDocuments.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    {companyLibraryDocuments.map((document) => (
+                      <div
+                        key={document.id}
+                        className="rounded-2xl border border-white bg-white px-4 py-3 text-sm leading-6 text-slate-700"
+                      >
+                        <div className="font-semibold text-slate-900">{document.title}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {document.fileName ?? "Файл ещё не привязан"}{" "}
+                          {document.notes ? `• ${document.notes}` : ""}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-500">
+                    У выбранной компании библиотека документов пока пустая или компания
+                    для участия ещё не выбрана.
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div className="text-sm font-semibold text-[#081a4b]">
+                  Добавить документ в комплект заявки
+                </div>
+                <form action={buildTenderProcurementChecklistAction} className="mt-4">
+                  <input type="hidden" name="procurementId" value={procurement.id} />
+                  <input type="hidden" name="actorName" value="Сотрудник" />
+                  <button
+                    type="submit"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                  >
+                    Собрать черновой чек-лист из выжимки закупки
+                  </button>
+                </form>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  Система возьмёт список обязательных документов из анализа закупки,
+                  попробует сопоставить его с библиотекой выбранной компании и сама
+                  создаст черновой комплект для проверки.
+                </p>
+                <form action={saveTenderProcurementDocumentAction} className="mt-4 space-y-4">
+                  <input type="hidden" name="procurementId" value={procurement.id} />
+                  <input type="hidden" name="actorName" value="Сотрудник" />
+
+                  <label className="block">
+                    <div className="mb-2 text-sm font-medium text-slate-700">
+                      Документ из библиотеки компании
+                    </div>
+                    <select
+                      name="companyDocumentId"
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                      defaultValue=""
+                    >
+                      <option value="">Выбрать из библиотеки или оставить пустым</option>
+                      {companyLibraryDocuments.map((document) => (
+                        <option key={document.id} value={document.id}>
+                          {document.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <div className="mb-2 text-sm font-medium text-slate-700">Название</div>
+                    <input
+                      name="title"
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                      placeholder="Например: Анкета участника"
+                    />
+                  </label>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="block">
+                      <div className="mb-2 text-sm font-medium text-slate-700">Категория</div>
+                      <input
+                        name="category"
+                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                        placeholder="Компания / Форма / Декларация"
+                      />
+                    </label>
+                    <label className="block">
+                      <div className="mb-2 text-sm font-medium text-slate-700">
+                        Статус
+                      </div>
+                      <select
+                        name="status"
+                        defaultValue="REQUIRED"
+                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                      >
+                        <option value="REQUIRED">Нужно подготовить</option>
+                        <option value="READY">Готово</option>
+                        <option value="MISSING">Не хватает</option>
+                        <option value="REVIEW">Проверить</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <label className="block">
+                    <div className="mb-2 text-sm font-medium text-slate-700">Имя файла</div>
+                    <input
+                      name="fileName"
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                      placeholder="Например: 03_Анкета_участника.docx"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <div className="mb-2 text-sm font-medium text-slate-700">Комментарий</div>
+                    <textarea
+                      name="note"
+                      className="min-h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm leading-7 outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                      placeholder="Например: взять из базы Вега, обновить дату, проверить подпись."
+                    />
+                  </label>
+
+                  <button
+                    type="submit"
+                    className="rounded-2xl bg-[#081a4b] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
+                  >
+                    Добавить в комплект
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            {procurement.procurementDocuments.length > 0 ? (
+              <div className="mt-6 space-y-4">
+                {procurement.procurementDocuments.map((document) => (
+                  <div
+                    key={document.id}
+                    className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-[#081a4b]">
+                          {document.title}
+                        </div>
+                        <div className="mt-2 text-sm text-slate-500">
+                          {document.category ?? "Категория не указана"}
+                          {document.fileName ? ` • ${document.fileName}` : ""}
+                        </div>
+                      </div>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${procurementDocumentTone[document.status]}`}
+                      >
+                        {procurementDocumentLabel[document.status]}
+                      </span>
+                    </div>
+
+                    {document.companyDocument ? (
+                      <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                        <span className="font-semibold text-slate-900">
+                          Источник из библиотеки:
+                        </span>{" "}
+                        {document.companyDocument.title}
+                      </div>
+                    ) : null}
+
+                    {document.note ? (
+                      <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                        <span className="font-semibold text-slate-900">Комментарий:</span>{" "}
+                        {document.note}
+                      </div>
+                    ) : null}
+
+                    <form
+                      action={updateTenderProcurementDocumentStatusAction}
+                      className="mt-4 grid gap-4 md:grid-cols-[0.8fr_1.2fr_auto]"
+                    >
+                      <input type="hidden" name="procurementId" value={procurement.id} />
+                      <input type="hidden" name="procurementDocumentId" value={document.id} />
+                      <input type="hidden" name="actorName" value="Сотрудник" />
+
+                      <select
+                        name="status"
+                        defaultValue={document.status}
+                        className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                      >
+                        <option value="REQUIRED">Нужно подготовить</option>
+                        <option value="READY">Готово</option>
+                        <option value="MISSING">Не хватает</option>
+                        <option value="REVIEW">Проверить</option>
+                      </select>
+
+                      <input
+                        name="note"
+                        defaultValue={document.note ?? ""}
+                        className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                        placeholder="Что осталось сделать по этому файлу"
+                      />
+
+                      <button
+                        type="submit"
+                        className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                      >
+                        Обновить
+                      </button>
+                    </form>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm leading-7 text-slate-500">
+                Чек-лист пакета пока пустой. Следующий рабочий шаг для сотрудника —
+                добавлять сюда формы заказчика, документы компании и декларации,
+                чтобы видно было, что уже готово к подаче, а чего ещё не хватает.
               </div>
             )}
           </div>
@@ -1252,6 +2294,270 @@ export default async function TenderProcurementDetailsPage({
             </div>
             <div className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
               Подготовка и подтверждение загрузки на площадку
+            </div>
+
+            <div className={`mt-5 rounded-3xl border p-5 ${submissionReadinessTone}`}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold uppercase tracking-[0.12em]">
+                    Готовность к подаче
+                  </div>
+                  <div className="mt-2 text-2xl font-bold tracking-tight">
+                    {submissionReadinessLabel}
+                  </div>
+                </div>
+                <div className="grid min-w-[260px] gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl bg-white/80 px-4 py-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                      Файлы в комплекте
+                    </div>
+                    <div className="mt-2 text-xl font-bold text-[#081a4b]">
+                      {procurementDocumentStats.ready}/{procurementDocumentStats.total}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-white/80 px-4 py-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                      Формы без блокеров
+                    </div>
+                    <div className="mt-2 text-xl font-bold text-[#081a4b]">
+                      {sourceFormStats.readyToFill + sourceFormStats.partial}/
+                      {sourceDocumentStats.total}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl bg-white/80 px-4 py-4">
+                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    Решение руководителя
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-[#081a4b]">
+                    {hasLeaderSubmitDecision
+                      ? "Подаём"
+                      : "Решение на подачу пока не зафиксировано"}
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-white/80 px-4 py-4">
+                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    Компания участия
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-[#081a4b]">
+                    {procurement.companyProfile?.name ?? "Не выбрана"}
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-white/80 px-4 py-4">
+                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    Позиции без вопросов
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-[#081a4b]">
+                    {pricingByItems.withPrice}/{technicalItemStats.total || 0} с ценовым ориентиром
+                  </div>
+                </div>
+              </div>
+
+              {submissionBlockers.length > 0 ? (
+                <div className="mt-5 rounded-2xl bg-white/80 p-4">
+                  <div className="text-sm font-semibold text-[#081a4b]">
+                    Что ещё мешает нажать «Подано»
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {submissionBlockers.map((item, index) => (
+                      <div
+                        key={`${item}-${index}`}
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700"
+                      >
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5 rounded-2xl bg-white/80 px-4 py-4 text-sm leading-7 text-slate-700">
+                  Пакет выглядит собранным: формы разобраны, критичных вопросов по комплекту нет,
+                  можно проверять финальные файлы и выгружать заявку на площадку.
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="text-sm font-semibold text-[#081a4b]">
+                    Рабочее место подающего
+                  </div>
+                  <div className="mt-2 max-w-3xl text-sm leading-7 text-slate-600">
+                    Здесь видно, кому передана выгрузка, какие файлы уже можно брать в работу
+                    и какие финальные проверки сотрудник должен пройти перед отправкой заявки.
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Ответственный за подачу
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-[#081a4b]">
+                    {procurement.assignedTo ?? "Пока не назначен"}
+                  </div>
+                </div>
+              </div>
+
+              <form
+                action={updateTenderSubmissionDeskAction}
+                className="mt-5 grid gap-4 md:grid-cols-[0.8fr_1.2fr_auto]"
+              >
+                <input type="hidden" name="procurementId" value={procurement.id} />
+                <input
+                  type="hidden"
+                  name="actorName"
+                  value="Руководитель или координатор"
+                />
+                <input
+                  name="assignedTo"
+                  defaultValue={procurement.assignedTo ?? ""}
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                  placeholder="Кому передана выгрузка на площадку"
+                />
+                <input
+                  name="note"
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10"
+                  placeholder="Например: проверяет финальные файлы и подаёт до 17:00"
+                />
+                <button
+                  type="submit"
+                  className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  Обновить
+                </button>
+              </form>
+
+              <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm font-semibold text-[#081a4b]">
+                      Отдельные файлы, которые уже готовы
+                    </div>
+                    <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                      {readyProcurementDocuments.length}
+                    </div>
+                  </div>
+                  {readyProcurementDocuments.length > 0 ? (
+                    <div className="mt-4 space-y-2">
+                      {readyProcurementDocuments.slice(0, 8).map((document) => (
+                        <div
+                          key={document.id}
+                          className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700"
+                        >
+                          <span className="font-semibold text-slate-900">{document.title}</span>
+                          {document.fileName ? ` • ${document.fileName}` : ""}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-7 text-slate-500">
+                      Пока нет файлов со статусом `Готово`. Сначала доведи комплект заявки до
+                      состояния, пригодного для выгрузки.
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm font-semibold text-[#081a4b]">
+                      Формы, которые уже можно переносить
+                    </div>
+                    <div className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                      {readySourceDocuments.length}
+                    </div>
+                  </div>
+                  {readySourceDocuments.length > 0 ? (
+                    <div className="mt-4 space-y-2">
+                      {readySourceDocuments.slice(0, 8).map((document) => (
+                        <div
+                          key={document.id}
+                          className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700"
+                        >
+                          <div className="font-semibold text-slate-900">{document.title}</div>
+                          <div className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-400">
+                            {sourceDocumentFormTypeLabel[document.formType]}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-7 text-slate-500">
+                      Пока нет форм, доведённых до состояния переноса. Сначала разберите файлы
+                      заказчика и соберите по ним черновики.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+                <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <div className="text-sm font-semibold text-[#081a4b]">
+                    Финальная памятка сотруднику
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {[
+                      hasLeaderSubmitDecision
+                        ? "Проверь, что решение руководителя на подачу уже зафиксировано."
+                        : "Подачу нельзя начинать, пока нет решения «Подаём».",
+                      hasSelectedCompany
+                        ? `Убедись, что выбрана правильная компания участия: ${procurement.companyProfile?.name}.`
+                        : "Сначала выбери компанию, от которой будет подаваться заявка.",
+                      readyProcurementDocuments.length > 0
+                        ? "Проверь имена готовых файлов и их порядок перед выгрузкой."
+                        : "В комплекте пока нет готовых отдельных файлов.",
+                      readySourceDocuments.length > 0
+                        ? "Сверь готовые черновики форм с оригиналами заказчика."
+                        : "По формам заказчика пока нечего переносить в финальные файлы.",
+                      sourceDocumentsBlocking.length > 0
+                        ? "Закрой оставшиеся вопросы по формам перед выгрузкой."
+                        : "Критичных блокеров по формам сейчас не видно.",
+                    ].map((item, index) => (
+                      <div
+                        key={`${item}-${index}`}
+                        className="rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700"
+                      >
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <div className="text-sm font-semibold text-[#081a4b]">
+                    Последние события по подаче
+                  </div>
+                  {submissionEvents.length > 0 ? (
+                    <div className="mt-4 space-y-3">
+                      {submissionEvents.slice(0, 6).map((event) => (
+                        <div
+                          key={event.id}
+                          className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+                        >
+                          <div className="text-sm font-semibold text-slate-900">
+                            {event.title}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-400">
+                            {formatTenderDate(event.createdAt)} • {event.actorName ?? "Система"}
+                          </div>
+                          {event.description ? (
+                            <div className="mt-2 text-sm leading-6 text-slate-600">
+                              {event.description}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-7 text-slate-500">
+                      По зоне подачи пока нет действий. Здесь будет видно, кто готовил
+                      выгрузку и как двигалась заявка перед отправкой.
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">

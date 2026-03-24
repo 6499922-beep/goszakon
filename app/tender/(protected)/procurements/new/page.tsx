@@ -9,6 +9,29 @@ const inputClassName =
 
 const textareaClassName = `${inputClassName} min-h-32 resize-y`;
 
+const minimumFields = [
+  "Название закупки",
+  "Заказчик",
+  "Номер закупки",
+  "Окончание подачи",
+  "НМЦ или НМЦ без НДС",
+];
+
+const optionalForLater = [
+  "Полную выжимку по условиям",
+  "Нестандартные требования",
+  "Позиции ТЗ и цены",
+  "Формы заказчика",
+  "Чек-лист комплекта на подачу",
+];
+
+const firstRoute = [
+  "Сохраняем карточку и открываем маршрут обработки.",
+  "Проверяем стоп-факторы и разбираем ТЗ.",
+  "Передаём на предпросчёт и решение руководителя.",
+  "После решения «Подаём» добираем формы и комплект.",
+];
+
 export default function NewTenderProcurementPage() {
   return (
     <main className="space-y-8">
@@ -40,6 +63,46 @@ export default function NewTenderProcurementPage() {
               {item}
             </div>
           ))}
+        </div>
+
+        <div className="grid gap-6 border-b border-slate-200 bg-white px-8 py-6 xl:grid-cols-[1fr_1fr]">
+          <div className="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-6">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+              Что обязательно сейчас
+            </div>
+            <div className="mt-2 text-xl font-bold tracking-tight text-[#081a4b]">
+              Минимум для быстрого старта карточки
+            </div>
+            <div className="mt-4 grid gap-2">
+              {minimumFields.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm leading-6 text-slate-700"
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-sky-200 bg-sky-50 p-6">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">
+              Что можно позже
+            </div>
+            <div className="mt-2 text-xl font-bold tracking-tight text-[#081a4b]">
+              Не тормозим создание закупки из-за деталей
+            </div>
+            <div className="mt-4 grid gap-2">
+              {optionalForLater.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm leading-6 text-slate-700"
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <form action={createTenderProcurementAction} className="px-8 py-8">
@@ -163,7 +226,7 @@ export default function NewTenderProcurementPage() {
                 </div>
               </section>
 
-              <section>
+              <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="mb-5">
                   <h2 className="text-2xl font-bold tracking-tight text-[#081a4b]">
                     Первичная выжимка
@@ -217,6 +280,28 @@ export default function NewTenderProcurementPage() {
             </div>
 
             <div className="space-y-8">
+              <section className="rounded-[2rem] border border-[#081a4b]/10 bg-[linear-gradient(180deg,#f8fbff_0%,#eef5ff_100%)] p-6 shadow-sm">
+                <div className="text-sm font-medium uppercase tracking-[0.14em] text-[#0d5bd7]">
+                  Маршрут после сохранения
+                </div>
+                <div className="mt-3 text-2xl font-bold tracking-tight text-[#081a4b]">
+                  Что система предложит дальше
+                </div>
+                <div className="mt-5 space-y-3">
+                  {firstRoute.map((item, index) => (
+                    <div
+                      key={item}
+                      className="flex gap-3 rounded-2xl border border-white/80 bg-white/90 px-4 py-4"
+                    >
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#081a4b] text-sm font-semibold text-white">
+                        {index + 1}
+                      </div>
+                      <div className="text-sm leading-6 text-slate-700">{item}</div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
               <section className="rounded-[2rem] border border-slate-200 bg-slate-50 p-6">
                 <div className="mb-5">
                   <h2 className="text-2xl font-bold tracking-tight text-[#081a4b]">
@@ -287,7 +372,7 @@ export default function NewTenderProcurementPage() {
                   Подсказка оператору
                 </div>
                 <div className="mt-3 text-lg font-semibold leading-8 text-[#081a4b]">
-                  Не обязательно заполнять всё идеально с первого раза.
+                  Сначала скорость и аккуратность, потом детализация.
                 </div>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
                   Важнее занести закупку быстро и аккуратно, чтобы команда видела
@@ -295,6 +380,12 @@ export default function NewTenderProcurementPage() {
                   дообогащать, передавать в предпросчёт и собирать пакет
                   документов.
                 </p>
+
+                <div className="mt-5 rounded-2xl border border-white/80 bg-white/90 px-4 py-4 text-sm leading-7 text-slate-700">
+                  Если сомневаешься, лучше сохранить карточку с минимальным набором полей,
+                  чем откладывать занесение закупки. Внутри карточки уже есть маршрут,
+                  который подскажет следующий шаг.
+                </div>
 
                 <div className="mt-6 flex flex-wrap gap-3">
                   <button

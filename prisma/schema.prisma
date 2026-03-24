@@ -207,6 +207,39 @@ enum TenderActionType {
   NOTE_ADDED
 }
 
+enum TenderProcurementDocumentStatus {
+  REQUIRED
+  READY
+  MISSING
+  REVIEW
+}
+
+enum TenderSourceDocumentStatus {
+  UPLOADED
+  WAIT_DECISION
+  READY_FOR_ANALYSIS
+  ANALYZED
+}
+
+enum TenderSourceDocumentFormType {
+  UNKNOWN
+  APPLICATION_FORM
+  PRICE_FORM
+  TECHNICAL_PROPOSAL
+  QUESTIONNAIRE
+  DECLARATION
+  CONTRACT_DRAFT
+  TECHNICAL_SPEC
+  OTHER_APPENDIX
+}
+
+enum TenderSourceDocumentAutofillStatus {
+  NOT_ANALYZED
+  PARTIALLY_READY
+  MANUAL_ONLY
+  READY_TO_FILL
+}
+
 model TenderCompanyProfile {
   id                    Int                     @id @default(autoincrement())
   name                  String
@@ -246,6 +279,7 @@ model TenderCompanyDocument {
   storagePath  String?
   notes        String?
   company      TenderCompanyProfile      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  procurementDocuments TenderProcurementDocument[]
   createdAt    DateTime                  @default(now())
   updatedAt    DateTime                  @updatedAt
 
@@ -327,6 +361,8 @@ model TenderProcurement {
   technicalItems           TenderTechnicalItem[]
   pricingReviews           TenderPricingReview[]
   decisions                TenderDecisionRecord[]
+  procurementDocuments     TenderProcurementDocument[]
+  sourceDocuments          TenderSourceDocument[]
   events                   TenderProcurementEvent[]
   ruleMatches              TenderProcurementRuleMatch[]
   createdAt                DateTime                     @default(now())
@@ -396,6 +432,50 @@ model TenderDecisionRecord {
   @@index([procurementId])
   @@index([companyProfileId])
   @@index([createdAt])
+}
+
+model TenderProcurementDocument {
+  id                 Int                           @id @default(autoincrement())
+  procurementId      Int
+  companyDocumentId  Int?
+  title              String
+  category           String?
+  fileName           String?
+  note               String?                       @db.Text
+  status             TenderProcurementDocumentStatus @default(REQUIRED)
+  procurement        TenderProcurement             @relation(fields: [procurementId], references: [id], onDelete: Cascade)
+  companyDocument    TenderCompanyDocument?        @relation(fields: [companyDocumentId], references: [id], onDelete: SetNull)
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+
+  @@index([procurementId])
+  @@index([companyDocumentId])
+  @@index([status])
+}
+
+model TenderSourceDocument {
+  id               Int                              @id @default(autoincrement())
+  procurementId    Int
+  title            String
+  fileName         String?
+  documentKind     String?
+  contentSnippet   String?                          @db.Text
+  status           TenderSourceDocumentStatus       @default(UPLOADED)
+  formType         TenderSourceDocumentFormType     @default(UNKNOWN)
+  autofillStatus   TenderSourceDocumentAutofillStatus @default(NOT_ANALYZED)
+  extractedSummary String?                          @db.Text
+  extractedFields  Json?
+  structuredFields Json?
+  draftContent     String?                          @db.Text
+  reviewQuestion   String?                          @db.Text
+  note             String?                          @db.Text
+  procurement      TenderProcurement                @relation(fields: [procurementId], references: [id], onDelete: Cascade)
+  createdAt        DateTime                         @default(now())
+  updatedAt        DateTime                         @updatedAt
+
+  @@index([procurementId])
+  @@index([status])
+  @@index([formType])
 }
 
 model TenderProcurementEvent {

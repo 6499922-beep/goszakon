@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import "./globals.css";
 import { SITE_CONTACTS } from "@/lib/site-config";
+import { isTenderHost } from "@/lib/tender-host";
 
 export const metadata: Metadata = {
   title: "GOSZAKON — практика ФАС и защита интересов в закупках",
@@ -9,11 +11,13 @@ export const metadata: Metadata = {
     "Практика ФАС, РНП, нарушения в закупках, аналитика закупочных споров, услуги для поставщиков и заказчиков, судебная защита и правовая помощь в закупках.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headerStore = await headers();
+  const tenderHost = isTenderHost(headerStore.get("host"));
   const navigation = [
     { title: "Главная", href: "/" },
     { title: "Практика ФАС", href: "/cases" },
@@ -51,6 +55,10 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className="min-h-screen bg-white text-slate-900 antialiased">
+        {tenderHost ? (
+          <div className="min-h-screen bg-slate-100">{children}</div>
+        ) : (
+          <>
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -293,6 +301,8 @@ export default function RootLayout({
             </div>
           </footer>
         </div>
+          </>
+        )}
       </body>
     </html>
   );

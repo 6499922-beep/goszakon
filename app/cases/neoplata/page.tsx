@@ -526,6 +526,19 @@ export default async function NonPaymentPracticeHubPage() {
               </Link>
 
               <Link
+                href="/uderzhanie-deneg-iz-oplaty"
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white"
+              >
+                <div className="text-lg font-semibold text-[#081a4b]">
+                  Заказчик удержал деньги из оплаты
+                </div>
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  Разбор ситуации, когда заказчик уменьшает платеж на спорную
+                  неустойку, штраф или иную сумму еще до нормального разрешения спора.
+                </p>
+              </Link>
+
+              <Link
                 href="/spornye-praktiki/vnutrennie-sistemy-oplaty"
                 className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white"
               >

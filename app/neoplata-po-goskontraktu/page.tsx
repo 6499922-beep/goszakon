@@ -337,6 +337,19 @@ export default function NonPaymentPage() {
             </Link>
 
             <Link
+              href="/uderzhanie-deneg-iz-oplaty"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Заказчик удержал деньги из оплаты
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Когда заказчик не просто тянет расчет, а сам уменьшает платеж
+                на спорную неустойку, штраф или другую сумму.
+              </p>
+            </Link>
+
+            <Link
               href="/spornye-praktiki/vnutrennie-sistemy-oplaty"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
             >
@@ -363,28 +376,15 @@ export default function NonPaymentPage() {
             </Link>
 
             <Link
-              href="/zatyagivanie-priemki-po-goskontraktu"
+              href="/sudebnaya-zashita-v-zakupkah/snizhenie-neustojki-postavshiku"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
             >
               <h3 className="text-2xl font-semibold text-[#081a4b]">
-                Заказчик затягивает приемку
+                Снижение неустойки поставщику
               </h3>
               <p className="mt-4 text-slate-700">
-                Отдельная страница о том, как заказчик использует приемку для
-                задержки оплаты и последующих санкций.
-              </p>
-            </Link>
-
-            <Link
-              href="/zakazchik-ne-podpisyvaet-upd"
-              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
-            >
-              <h3 className="text-2xl font-semibold text-[#081a4b]">
-                Заказчик не подписывает УПД
-              </h3>
-              <p className="mt-4 text-slate-700">
-                Отдельная страница про неподписанный УПД, формальные замечания и
-                сдвиг срока оплаты через документооборот.
+                Если удержание построено на санкции заказчика, спор часто нужно
+                сразу вести и по неустойке, и по возврату денег.
               </p>
             </Link>
 

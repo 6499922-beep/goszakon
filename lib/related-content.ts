@@ -65,6 +65,11 @@ export function getCaseSupportLinks(input: {
         href: "/zakazchik-ne-podpisyvaet-upd",
       },
       {
+        title: "Заказчик удержал деньги из оплаты",
+        text: "Отдельная страница о том, когда заказчик просто уменьшает платеж на спорную неустойку, штраф или другую сумму.",
+        href: "/uderzhanie-deneg-iz-oplaty",
+      },
+      {
         title: "Спорная практика: внутренние документы заказчика",
         text: "Когда оплату незаконно ставят в зависимость от акта, системы или других внутренних процедур.",
         href: "/spornye-praktiki/vnutrennie-sistemy-oplaty",

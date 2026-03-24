@@ -506,6 +506,91 @@ export default async function TenderProcurementDetailsPage({
     })
   );
 
+  const fasNeedsWork =
+    procurement.fasReview?.status === TenderFasReviewStatus.POTENTIAL_COMPLAINT ||
+    procurement.fasReview?.status === TenderFasReviewStatus.MANUAL_REVIEW;
+  const fasTargetRole =
+    procurement.fasReview?.status === TenderFasReviewStatus.POTENTIAL_COMPLAINT
+      ? TenderUserRole.FAS_MANAGER
+      : TenderUserRole.FAS_SPECIALIST;
+
+  let routeTargetRole: TenderUserRole = TenderUserRole.OPERATOR;
+  let routeTitle = "Передать в анализ";
+  let routeReason =
+    "Сначала нужно загрузить или проверить документацию, чтобы система могла сделать первичный вывод.";
+  let routeAnchor = "#source-docs";
+  let routeTone = "bg-slate-100 text-slate-700 border-slate-200";
+
+  if (fasNeedsWork) {
+    routeTargetRole = fasTargetRole;
+    routeTitle =
+      procurement.fasReview?.status === TenderFasReviewStatus.POTENTIAL_COMPLAINT
+        ? "Передать руководителю ФАС"
+        : "Передать специалисту по жалобам ФАС";
+    routeReason =
+      procurement.fasReview?.status === TenderFasReviewStatus.POTENTIAL_COMPLAINT
+        ? "AI увидел основание для отдельной ФАС-ветки. Нужно решить, запускаем ли жалобу."
+        : "AI сомневается по ФАС-ветке. Нужна ручная проверка профильным сотрудником.";
+    routeAnchor = "#fas-branch";
+    routeTone = "bg-rose-50 text-rose-800 border-rose-200";
+  } else if (!(procurement.sourceText?.trim()) || procurement.aiAnalysisStatus !== "completed") {
+    routeTargetRole = TenderUserRole.OPERATOR;
+    routeTitle = "Передать в анализ";
+    routeReason =
+      "Первичный анализ ещё не завершён. Нужно загрузить документацию или дождаться результата.";
+    routeAnchor = "#source-docs";
+    routeTone = "bg-sky-50 text-sky-800 border-sky-200";
+  } else if (!initialGateReady) {
+    routeTargetRole = TenderUserRole.OPERATOR;
+    routeTitle = "Вернуть в анализ на уточнение";
+    routeReason =
+      "В первичном анализе ещё остались вопросы. Их нужно закрыть до передачи дальше.";
+    routeAnchor = "#source-docs";
+    routeTone = "bg-amber-50 text-amber-800 border-amber-200";
+  } else if (technicalItemsBlocking.length > 0 || pricingByItems.pending > 0) {
+    routeTargetRole = TenderUserRole.ANALYST;
+    routeTitle = "Передать в просчёт";
+    routeReason =
+      "Первичный анализ уже пройден. Следующий этап — разобраться с ТЗ, ценами и предпросчётом.";
+    routeAnchor = "#pricing-review";
+    routeTone = "bg-sky-50 text-sky-800 border-sky-200";
+  } else if (!procurement.decision) {
+    routeTargetRole = TenderUserRole.MANAGER;
+    routeTitle = "Передать руководителю";
+    routeReason =
+      "ТЗ и предпросчёт уже собраны. Теперь нужно принять решение: подаём, не подаём или отправляем в ФАС.";
+    routeAnchor = "#decision";
+    routeTone = "bg-violet-50 text-violet-800 border-violet-200";
+  } else if (procurement.decision === "SUBMIT" && !canMoveToSubmission) {
+    routeTargetRole = TenderUserRole.SUBMITTER;
+    routeTitle = "Передать в подачу";
+    routeReason =
+      "Решение «Подаём» уже есть, но пакет ещё нужно довести до готовности перед выгрузкой.";
+    routeAnchor = "#documents-checklist";
+    routeTone = "bg-amber-50 text-amber-800 border-amber-200";
+  } else if (procurement.decision === "SUBMIT" && canMoveToSubmission) {
+    routeTargetRole = TenderUserRole.SUBMITTER;
+    routeTitle = "Передать в подачу";
+    routeReason =
+      "Пакет готов. Сотрудник подачи может забирать файлы и выгружать их на площадку.";
+    routeAnchor = "#submission";
+    routeTone = "bg-emerald-50 text-emerald-800 border-emerald-200";
+  } else if (procurement.decision === "FAS_COMPLAINT") {
+    routeTargetRole = TenderUserRole.FAS_MANAGER;
+    routeTitle = "Передать в ФАС-контур";
+    routeReason =
+      "Руководитель выбрал сценарий жалобы в ФАС. Дальше дело за профильной ФАС-веткой.";
+    routeAnchor = "#fas-branch";
+    routeTone = "bg-rose-50 text-rose-800 border-rose-200";
+  } else if (procurement.decision === "REWORK") {
+    routeTargetRole = TenderUserRole.OPERATOR;
+    routeTitle = "Вернуть на доработку";
+    routeReason =
+      "Руководитель вернул закупку на доработку. Нужно обновить анализ, документы или условия.";
+    routeAnchor = "#source-docs";
+    routeTone = "bg-amber-50 text-amber-800 border-amber-200";
+  }
+
   submissionBlockers.push(
     ...technicalItemsBlocking.slice(0, 5).map((item) =>
       item.status === "REVIEW"
@@ -674,6 +759,43 @@ export default async function TenderProcurementDetailsPage({
                     {item.label}
                   </a>
                 ))}
+              </div>
+            </div>
+          </div>
+
+          <div className={`mt-4 rounded-3xl border px-5 py-5 ${routeTone}`}>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="max-w-3xl">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em]">
+                  Кому должна уйти закупка сейчас
+                </div>
+                <div className="mt-2 text-xl font-bold tracking-tight">
+                  {routeTitle}
+                </div>
+                <div className="mt-2 text-sm leading-7">
+                  {routeReason}
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  Следующая роль
+                </div>
+                <div className="mt-1 text-base font-semibold text-slate-900">
+                  {tenderUserRoleLabels[routeTargetRole]}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <a
+                href={routeAnchor}
+                className="rounded-2xl border border-current/20 bg-white/80 px-4 py-2 text-sm font-semibold transition hover:bg-white"
+              >
+                Открыть нужный блок
+              </a>
+              <div className="rounded-2xl bg-white/60 px-4 py-2 text-sm">
+                Маршрут подсказывается автоматически по текущему состоянию закупки.
               </div>
             </div>
           </div>

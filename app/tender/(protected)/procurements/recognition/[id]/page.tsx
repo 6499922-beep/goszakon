@@ -107,6 +107,31 @@ function inferDocumentKind(
   return "Файл";
 }
 
+function getDocumentKindOrder(kindLabel: string) {
+  switch (kindLabel) {
+    case "Извещение":
+      return 1;
+    case "ТЗ":
+      return 2;
+    case "Договор":
+      return 3;
+    case "Коммерческая часть":
+      return 4;
+    case "Ценовая форма":
+      return 5;
+    case "НМЦК":
+      return 6;
+    case "Форма заявки":
+      return 7;
+    case "Спецификация":
+      return 8;
+    case "Приложение":
+      return 9;
+    default:
+      return 20;
+  }
+}
+
 function findMatchingSourceDocumentForRequirement(
   requirement: string,
   documents: Array<{
@@ -608,9 +633,13 @@ export default async function TenderRecognitionDetailPage({
       status: describeSourceDocument(item.note),
     };
   });
-  const finalSourceDocuments = sourceDocuments.filter(
-    (item) => !isArchiveFileName(item.fileLabel) && !isArchiveFileName(item.title)
-  );
+  const finalSourceDocuments = sourceDocuments
+    .filter((item) => !isArchiveFileName(item.fileLabel) && !isArchiveFileName(item.title))
+    .sort((left, right) => {
+      const orderDiff = getDocumentKindOrder(left.kindLabel) - getDocumentKindOrder(right.kindLabel);
+      if (orderDiff !== 0) return orderDiff;
+      return left.title.localeCompare(right.title, "ru");
+    });
   const equipmentCount = Math.max(
     procurement.itemsCount ?? 0,
     equipmentItems.length

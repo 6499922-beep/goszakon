@@ -1,5 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { Readable } from "node:stream";
+import Busboy from "busboy";
 import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
 import * as XLSX from "xlsx";
@@ -16,7 +18,22 @@ import { tenderHasCapability } from "@/lib/tender-permissions";
 import { runTenderPrimaryAnalysis } from "@/lib/tender-primary-analysis";
 import { logTenderEvent } from "@/lib/tender-workflow";
 
-function normalizeString(value: FormDataEntryValue | null) {
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type ParsedTenderUpload = {
+  name: string;
+  type: string;
+  size: number;
+  buffer: Buffer;
+};
+
+type ParsedMultipartRequest = {
+  fields: Record<string, string>;
+  files: ParsedTenderUpload[];
+};
+
+function normalizeString(value: string | null | undefined) {
   const normalized = String(value ?? "").trim();
   return normalized.length ? normalized : null;
 }
@@ -45,15 +62,14 @@ function buildTenderIntakeTitle(input: {
   return "Новая закупка";
 }
 
-async function persistTenderUpload(file: File) {
-  const bytes = Buffer.from(await file.arrayBuffer());
+async function persistTenderUpload(file: ParsedTenderUpload) {
   const safeName = slugifyTenderFileName(file.name || "document");
   const stampedName = `${Date.now()}-${safeName || "document.bin"}`;
   const relativePath = path.join("docs", "tender-intake", stampedName);
   const absolutePath = path.join(process.cwd(), "public", relativePath);
 
   await mkdir(path.dirname(absolutePath), { recursive: true });
-  await writeFile(absolutePath, bytes);
+  await writeFile(absolutePath, file.buffer);
 
   return {
     storedRelativePath: relativePath.replaceAll(path.sep, "/"),
@@ -61,10 +77,10 @@ async function persistTenderUpload(file: File) {
   };
 }
 
-async function extractTextFromTenderUpload(file: File) {
+async function extractTextFromTenderUpload(file: ParsedTenderUpload) {
   const type = (file.type || "").toLowerCase();
   const name = (file.name || "").toLowerCase();
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const buffer = file.buffer;
 
   const isPlainText =
     type.startsWith("text/") ||
@@ -163,6 +179,73 @@ function inferSourceDocumentKind(fileName: string) {
   return "Документ закупки";
 }
 
+async function parseMultipartRequest(request: Request): Promise<ParsedMultipartRequest> {
+  const contentType = request.headers.get("content-type");
+
+  if (!contentType?.includes("multipart/form-data")) {
+    throw new Error("Сервер ожидал пакет документов в multipart/form-data.");
+  }
+
+  if (!request.body) {
+    throw new Error("Тело запроса пустое. Повтори загрузку документов.");
+  }
+
+  return await new Promise<ParsedMultipartRequest>((resolve, reject) => {
+    const fields: Record<string, string> = {};
+    const files: ParsedTenderUpload[] = [];
+    const parser = Busboy({
+      headers: {
+        "content-type": contentType,
+      },
+      limits: {
+        files: 200,
+        fileSize: 512 * 1024 * 1024,
+      },
+    });
+
+    parser.on("field", (fieldName, value) => {
+      fields[fieldName] = value;
+    });
+
+    parser.on("file", (fieldName, stream, info) => {
+      const chunks: Buffer[] = [];
+      let totalBytes = 0;
+
+      stream.on("data", (chunk: Buffer) => {
+        const normalizedChunk = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        chunks.push(normalizedChunk);
+        totalBytes += normalizedChunk.length;
+      });
+
+      stream.on("limit", () => {
+        reject(
+          new Error(
+            `Файл "${info.filename}" превышает допустимый размер 512 МБ.`
+          )
+        );
+      });
+
+      stream.on("end", () => {
+        if (fieldName !== "documents" || !info.filename || totalBytes === 0) {
+          return;
+        }
+
+        files.push({
+          name: info.filename,
+          type: info.mimeType || "",
+          size: totalBytes,
+          buffer: Buffer.concat(chunks),
+        });
+      });
+    });
+
+    parser.on("error", (error) => reject(error));
+    parser.on("finish", () => resolve({ fields, files }));
+
+    Readable.fromWeb(request.body as any).pipe(parser);
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const currentUser = await getCurrentTenderUser();
@@ -174,14 +257,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const formData = await request.formData();
+    const { fields, files } = await parseMultipartRequest(request);
     const prisma = getPrisma();
     const actorName =
       currentUser.name?.trim() || currentUser.email?.trim() || "Сотрудник";
-    const sourceUrl = normalizeString(formData.get("sourceUrl"));
-    const uploadedFiles = formData
-      .getAll("documents")
-      .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+    const sourceUrl = normalizeString(fields.sourceUrl);
+    const uploadedFiles = files.filter((file) => file.size > 0);
 
     console.log("[tender-intake] request", {
       actor: actorName,

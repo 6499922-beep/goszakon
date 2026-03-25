@@ -295,169 +295,181 @@ export default async function TenderProcurementsPage({
         />
       ) : null}
 
-      <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-        <div className="bg-[linear-gradient(135deg,#081a4b_0%,#143b8f_55%,#2f78ff_100%)] px-8 py-8 text-white">
-          <div className="flex flex-wrap items-start justify-between gap-6">
-            <div className="max-w-3xl">
-              <div className="text-sm font-medium uppercase tracking-[0.16em] text-white/65">
-                Реестр закупок
-              </div>
-              <h1 className="mt-3 text-4xl font-bold tracking-tight">
+      <section className="rounded-[2rem] border border-slate-200 bg-white px-6 py-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+              Реестр закупок
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight text-[#081a4b]">
                 Закупки в работе
               </h1>
-              <p className="mt-4 text-base leading-7 text-white/80">
-                Здесь сотрудники видят все карточки в одной ленте: сроки, статус,
-                НМЦ и готовность закупки к следующему этапу.
-              </p>
-              <div className="mt-4 inline-flex rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white/90">
+              <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-600">
                 Моя роль: {tenderUserRoleLabels[currentUser.role]}
-              </div>
+              </span>
             </div>
+          </div>
 
-            <div className="flex flex-wrap gap-3">
-              {tenderHasCapability(currentUser.role, "procurement_create") ? (
-                <Link
-                  href="/procurements/new"
-                  className="rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#081a4b] transition hover:bg-slate-100"
-                >
-                  Новая закупка
-                </Link>
-              ) : null}
-            </div>
+          <div className="flex flex-wrap gap-3">
+            {tenderHasCapability(currentUser.role, "procurement_create") ? (
+              <Link
+                href="/procurements/new"
+                className="rounded-2xl bg-[#0d5bd7] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0a4db7]"
+              >
+                Добавить ещё одну закупку
+              </Link>
+            ) : null}
           </div>
         </div>
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-        <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
-          Очереди по ролям и этапам
-        </div>
-        <div className="mt-4 flex flex-wrap gap-3">
-          {queues.map((queue) => {
-            const isActive = queue.key === selectedQueue;
-            return (
-              <Link
-                key={queue.key}
-                href={`/procurements?view=${queue.key}`}
-                className={`rounded-2xl border px-4 py-3 text-sm transition ${
-                  isActive
-                    ? "border-[#0d5bd7] bg-[#0d5bd7] text-white"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-[#0d5bd7] hover:text-[#0d5bd7]"
-                }`}
-              >
-                <div className="font-semibold">{queue.label}</div>
-                <div className={`mt-1 text-xs ${isActive ? "text-white/80" : "text-slate-500"}`}>
-                  {queue.description}
-                </div>
-                <div className={`mt-2 text-xs font-semibold ${isActive ? "text-white" : "text-slate-700"}`}>
-                  {queueCounts.get(queue.key) ?? 0} шт.
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
           <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
-            Список карточек
+            Очереди по ролям и этапам
           </div>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-[#081a4b]">
-            {queues.find((queue) => queue.key === selectedQueue)?.label ?? "Актуальные записи"}
-          </h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {queues.map((queue) => {
+              const isActive = queue.key === selectedQueue;
+              return (
+                <Link
+                  key={queue.key}
+                  href={`/procurements?view=${queue.key}`}
+                  className={`rounded-2xl border px-4 py-4 text-sm transition ${
+                    isActive
+                      ? "border-[#0d5bd7] bg-[#0d5bd7] text-white shadow-sm"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-[#0d5bd7] hover:text-[#0d5bd7]"
+                  }`}
+                >
+                  <div className="font-semibold">{queue.label}</div>
+                  <div
+                    className={`mt-1 text-xs leading-5 ${
+                      isActive ? "text-white/80" : "text-slate-500"
+                    }`}
+                  >
+                    {queue.description}
+                  </div>
+                  <div
+                    className={`mt-3 text-xs font-semibold ${
+                      isActive ? "text-white" : "text-slate-700"
+                    }`}
+                  >
+                    {queueCounts.get(queue.key) ?? 0} шт.
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="rounded-2xl bg-slate-100 px-4 py-2 text-sm text-slate-600">
-          {queues.find((queue) => queue.key === selectedQueue)?.description ??
-            "Можно открыть закупку и сразу перейти к её структурной карточке."}
-        </div>
-      </div>
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
+              Список карточек
+            </div>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-[#081a4b]">
+              {queues.find((queue) => queue.key === selectedQueue)?.label ?? "Актуальные записи"}
+            </h2>
+          </div>
 
-      {filteredProcurements.length === 0 ? (
-        <div className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
-          В этой очереди пока пусто. Когда закупка дойдёт до этого этапа, она появится здесь.
+          <div className="rounded-2xl bg-slate-100 px-4 py-2 text-sm text-slate-600">
+            {queues.find((queue) => queue.key === selectedQueue)?.description ??
+              "Можно открыть закупку и сразу перейти к её структурной карточке."}
+          </div>
         </div>
-      ) : (
-        <div className="mt-6 overflow-hidden rounded-3xl border border-slate-200">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500">
-              <tr>
-                <th className="px-4 py-3 font-medium">Закупка</th>
-                <th className="px-4 py-3 font-medium">Заказчик</th>
-                <th className="px-4 py-3 font-medium">Статус</th>
-                <th className="px-4 py-3 font-medium">Срок</th>
-                <th className="px-4 py-3 font-medium">НМЦ без НДС</th>
-                <th className="px-4 py-3 font-medium">Следующий шаг</th>
-                <th className="px-4 py-3 font-medium">Сигналы</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 bg-white">
-              {filteredProcurements.map((item) => {
-                const signals = getUrgencySignals(item);
 
-                return (
-                <tr key={item.id}>
-                  <td className="px-4 py-3 font-medium text-[#081a4b]">
-                    <Link
-                      href={`/procurements/${item.id}`}
-                      className="transition hover:text-[#0d5bd7]"
-                    >
-                      {item.title}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {item.customerName ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${tenderStatusTone[item.status]}`}
-                    >
-                      {tenderStatusLabels[item.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {formatTenderDate(item.deadline)}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {formatTenderCurrency(item.nmckWithoutVat?.toString())}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {belongsToQueue(item, "fas")
-                      ? "Проверить ФАС-ветку"
-                      : belongsToQueue(item, "submission")
-                        ? "Готовить/подавать"
-                        : belongsToQueue(item, "manager")
-                          ? "Передать руководителю"
-                          : belongsToQueue(item, "pricing")
-                            ? "Просчитать"
-                            : belongsToQueue(item, "analysis")
-                              ? "Разобрать документацию"
-                              : "Открыть карточку"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    <div className="flex flex-wrap gap-2">
-                      {signals.length > 0 ? (
-                        signals.map((signal) => (
-                          <span
-                            key={signal.label}
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${signal.tone}`}
-                          >
-                            {signal.label}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-slate-400">Без срочных сигналов</span>
-                      )}
-                    </div>
-                  </td>
+        {filteredProcurements.length === 0 ? (
+          <div className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
+            В этой очереди пока пусто. Когда закупка дойдёт до этого этапа, она появится здесь.
+          </div>
+        ) : (
+          <div className="mt-6 overflow-hidden rounded-3xl border border-slate-200">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50 text-left text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Закупка</th>
+                  <th className="px-4 py-3 font-medium">Заказчик</th>
+                  <th className="px-4 py-3 font-medium">Статус</th>
+                  <th className="px-4 py-3 font-medium">Срок</th>
+                  <th className="px-4 py-3 font-medium">НМЦ без НДС</th>
+                  <th className="px-4 py-3 font-medium">Следующий шаг</th>
+                  <th className="px-4 py-3 font-medium">Сигналы</th>
                 </tr>
-              )})}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody className="divide-y divide-slate-200 bg-white">
+                {filteredProcurements.map((item) => {
+                  const signals = getUrgencySignals(item);
+                  const nextStepLabel = belongsToQueue(item, "fas")
+                    ? "Проверить ФАС-ветку"
+                    : belongsToQueue(item, "submission")
+                      ? "Готовить/подавать"
+                      : belongsToQueue(item, "manager")
+                        ? "Передать руководителю"
+                        : belongsToQueue(item, "pricing")
+                          ? "Просчитать"
+                          : belongsToQueue(item, "analysis")
+                            ? "Разобрать документацию"
+                            : "Открыть карточку";
+
+                  return (
+                    <tr key={item.id} className="transition hover:bg-slate-50/80">
+                      <td className="px-4 py-4 font-medium text-[#081a4b]">
+                        <Link
+                          href={`/procurements/${item.id}`}
+                          className="transition hover:text-[#0d5bd7]"
+                        >
+                          {item.title}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-4 text-slate-600">
+                        {item.customerName ?? "—"}
+                      </td>
+                      <td className="px-4 py-4 text-slate-600">
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${tenderStatusTone[item.status]}`}
+                        >
+                          {tenderStatusLabels[item.status]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-slate-600">
+                        {formatTenderDate(item.deadline)}
+                      </td>
+                      <td className="px-4 py-4 text-slate-600">
+                        {formatTenderCurrency(item.nmckWithoutVat?.toString())}
+                      </td>
+                      <td className="px-4 py-4 text-slate-600">
+                        <Link
+                          href={`/procurements/${item.id}`}
+                          className="font-medium text-[#081a4b] transition hover:text-[#0d5bd7]"
+                        >
+                          {nextStepLabel}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-4 text-slate-600">
+                        <div className="flex flex-wrap gap-2">
+                          {signals.length > 0 ? (
+                            signals.map((signal) => (
+                              <Link
+                                key={signal.label}
+                                href={`/procurements/${item.id}`}
+                                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold transition hover:opacity-80 ${signal.tone}`}
+                              >
+                                {signal.label}
+                              </Link>
+                            ))
+                          ) : (
+                            <span className="text-xs text-slate-400">Без срочных сигналов</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </main>
   );

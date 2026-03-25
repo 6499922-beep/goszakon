@@ -512,7 +512,19 @@ const cases = [
 ];
 
 async function main() {
-  const categorySlugs = [...new Set(cases.map((item) => item.categorySlug))];
+  const onlySlugs = process.env.ONLY_SLUGS
+    ? new Set(
+        process.env.ONLY_SLUGS.split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+      )
+    : null;
+
+  const itemsToImport = onlySlugs
+    ? cases.filter((item) => onlySlugs.has(item.slug))
+    : cases;
+
+  const categorySlugs = [...new Set(itemsToImport.map((item) => item.categorySlug))];
   const categories = await prisma.category.findMany({
     where: { slug: { in: categorySlugs } },
     select: { id: true, slug: true },
@@ -520,7 +532,7 @@ async function main() {
 
   const categoryMap = new Map(categories.map((item) => [item.slug, item.id]));
 
-  for (const item of cases) {
+  for (const item of itemsToImport) {
     const categoryId = categoryMap.get(item.categorySlug) ?? null;
     const pdfPath = item.pdfUrl
       ? path.join(repoRoot, "public", item.pdfUrl.replace(/^\//, ""))

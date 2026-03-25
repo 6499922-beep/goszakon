@@ -273,13 +273,15 @@ function buildMissingFields(procurement: {
       issue.includes("Нужна ручная проверка") ||
       issue.includes("нужно открыть файл");
 
-    missing.push({
-      title: item.title || item.fileName || "Документ",
-      description: issue,
-      storagePath,
-      fileLabel: item.fileName || item.title,
-      status: isError ? "error" : "ok",
-    });
+    if (isError) {
+      missing.push({
+        title: item.title || item.fileName || "Документ",
+        description: issue,
+        storagePath,
+        fileLabel: item.fileName || item.title,
+        status: "error",
+      });
+    }
   }
 
   return missing.slice(0, 12);

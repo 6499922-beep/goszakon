@@ -107,6 +107,54 @@ function inferDocumentKind(
   return "Файл";
 }
 
+function findMatchingSourceDocumentForRequirement(
+  requirement: string,
+  documents: Array<{
+    id: number;
+    title: string;
+    fileLabel: string;
+    kindLabel: string;
+    href: string | null;
+  }>
+) {
+  const normalizedRequirement = normalizeSearchText(requirement);
+  if (!normalizedRequirement) return null;
+
+  const requirementTokens = normalizedRequirement
+    .split(/[^a-zа-я0-9]+/i)
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 4);
+
+  let bestMatch: (typeof documents)[number] | null = null;
+  let bestScore = 0;
+
+  for (const document of documents) {
+    const haystack = normalizeSearchText(
+      `${document.title} ${document.fileLabel} ${document.kindLabel}`
+    );
+
+    let score = 0;
+    for (const token of requirementTokens) {
+      if (haystack.includes(token)) {
+        score += 1;
+      }
+    }
+
+    if (normalizedRequirement.includes("заявк") && haystack.includes("заяв")) score += 2;
+    if (normalizedRequirement.includes("договор") && haystack.includes("договор")) score += 2;
+    if (normalizedRequirement.includes("цен") && haystack.includes("цен")) score += 2;
+    if (normalizedRequirement.includes("техничес") && haystack.includes("тз")) score += 2;
+    if (normalizedRequirement.includes("стран") && haystack.includes("заяв")) score += 1;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = document;
+    }
+  }
+
+  return bestScore > 0 ? bestMatch : null;
+}
+
 function isArchiveFileName(value: string | null | undefined) {
   const normalized = String(value ?? "").toLowerCase().trim();
   return normalized.endsWith(".zip") || normalized.endsWith(".rar") || normalized.endsWith(".7z");
@@ -768,7 +816,10 @@ export default async function TenderRecognitionDetailPage({
                     6
                   )}
                 </div>
-
+              </div>
+            }
+            contract={
+              <div className="space-y-4">
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <div className="text-base font-bold text-[#081a4b]">Условия договора</div>
                   <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
@@ -783,6 +834,14 @@ export default async function TenderRecognitionDetailPage({
                     <div className="rounded-2xl bg-white px-4 py-3">
                       <span className="font-medium text-[#081a4b]">Срок договора:</span>{" "}
                       {procurement.contractTerm ?? "не определено"}
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Неустойка:</span>{" "}
+                      {procurement.penaltyTerms ?? "не определено"}
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Основания расторжения:</span>{" "}
+                      {terminationReasons.length > 0 ? terminationReasons.join("; ") : "не определено"}
                     </div>
                   </div>
                 </div>
@@ -839,32 +898,6 @@ export default async function TenderRecognitionDetailPage({
                   <div className="text-base font-bold text-[#081a4b]">Требования РРЭП / РПП (2013)</div>
                   <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
                     {rrepRppRequirements || "не указано или не определено"}
-                  </div>
-                </div>
-
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-base font-bold text-[#081a4b]">Условия договора</div>
-                  <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Поставка:</span>{" "}
-                      {procurement.deliveryTerms ?? "не определено"}
-                    </div>
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Оплата:</span>{" "}
-                      {procurement.paymentTerms ?? "не определено"}
-                    </div>
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Срок договора:</span>{" "}
-                      {procurement.contractTerm ?? "не определено"}
-                    </div>
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Неустойка:</span>{" "}
-                      {procurement.penaltyTerms ?? "не определено"}
-                    </div>
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Основания расторжения:</span>{" "}
-                      {terminationReasons.length > 0 ? terminationReasons.join("; ") : "не определено"}
-                    </div>
                   </div>
                 </div>
 
@@ -971,7 +1004,49 @@ export default async function TenderRecognitionDetailPage({
                   <div className="mt-2 text-sm leading-6 text-slate-500">
                     Здесь только тот комплект, который система увидела как обязательный для участия в закупке.
                   </div>
-                  {renderCompactList(requiredDocuments, "Не удалось определить автоматически.")}
+                  {requiredDocuments.length > 0 ? (
+                    <div className="mt-3 grid gap-2 lg:grid-cols-2">
+                      {requiredDocuments.map((item, index) => {
+                        const matchedDocument = findMatchingSourceDocumentForRequirement(
+                          item,
+                          finalSourceDocuments
+                        );
+                        const content = (
+                          <div className="flex items-start gap-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                            <div className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#081a4b]/70" />
+                            <div className="min-w-0 flex-1">
+                              <div>{item}</div>
+                              {matchedDocument ? (
+                                <div className="mt-2 text-xs font-medium text-slate-500">
+                                  Открыть файл: {matchedDocument.title}
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+
+                        if (matchedDocument?.href) {
+                          return (
+                            <a
+                              key={`${item}-${index}`}
+                              href={matchedDocument.href}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block transition hover:opacity-90"
+                            >
+                              {content}
+                            </a>
+                          );
+                        }
+
+                        return <div key={`${item}-${index}`}>{content}</div>;
+                      })}
+                    </div>
+                  ) : (
+                    <div className="mt-3 text-sm leading-6 text-slate-600">
+                      Не удалось определить автоматически.
+                    </div>
+                  )}
                 </div>
               </div>
             }

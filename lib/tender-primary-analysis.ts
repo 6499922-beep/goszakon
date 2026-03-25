@@ -12,6 +12,39 @@ import {
 } from "@/lib/tender-analysis";
 import { logTenderEvent } from "@/lib/tender-workflow";
 
+function extractRelevantParagraphs(sourceText: string, patterns: RegExp[], limit = 3) {
+  const blocks = sourceText
+    .split(/\n{2,}/)
+    .map((item) => item.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  const matches = blocks.filter((block) => patterns.some((pattern) => pattern.test(block)));
+  return matches.slice(0, limit);
+}
+
+function buildPenaltyFallback(sourceText: string) {
+  const matches = extractRelevantParagraphs(sourceText, [
+    /штраф/i,
+    /пен/i,
+    /неустой/i,
+    /ответственност/i,
+    /просрочк/i,
+  ]);
+
+  return matches.length > 0 ? matches.join("\n\n") : null;
+}
+
+function buildTerminationFallback(sourceText: string) {
+  const matches = extractRelevantParagraphs(sourceText, [
+    /односторон/i,
+    /расторж/i,
+    /отказ.*исполн/i,
+    /отказ.*догов/i,
+  ]);
+
+  return matches.length > 0 ? matches : [];
+}
+
 export async function runTenderPrimaryAnalysis(input: {
   procurementId: number;
   sourceText: string;
@@ -74,6 +107,9 @@ export async function runTenderPrimaryAnalysis(input: {
     promptBody: fasPromptBody,
   });
 
+  const penaltyFallback = buildPenaltyFallback(sourceText);
+  const terminationFallback = buildTerminationFallback(sourceText);
+
   await prisma.tenderProcurement.update({
     where: { id: procurementId },
     data: {
@@ -114,10 +150,12 @@ export async function runTenderPrimaryAnalysis(input: {
       deliveryTerms: result.delivery_terms || null,
       paymentTerms: result.payment_terms || null,
       contractTerm: result.contract_term || null,
-      penaltyTerms: result.penalty_terms || null,
+      penaltyTerms: result.penalty_terms?.trim() || penaltyFallback || null,
       terminationTerms: result.termination_reasons.length
         ? result.termination_reasons
-        : undefined,
+        : terminationFallback.length > 0
+          ? terminationFallback
+          : undefined,
       regulatoryRequirements:
         [
           result.rrep_rpp_requirements?.trim(),

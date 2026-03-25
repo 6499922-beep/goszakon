@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { TenderRecognitionTabs } from "@/app/tender/_components/tender-recognition-tabs";
+import { rerunTenderSourceDocumentDeepAnalysisAction } from "@/app/tender/actions";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
@@ -1025,18 +1026,33 @@ export default async function TenderRecognitionDetailPage({
                                 </div>
                               </td>
                               <td className="px-4 py-4 text-right">
-                                {item.href ? (
-                                  <a
-                                    href={item.href}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#081a4b] transition hover:border-slate-300 hover:bg-slate-50 hover:text-[#0b2a72]"
-                                  >
-                                    Открыть
-                                  </a>
-                                ) : (
-                                  <span className="text-xs text-slate-400">Нет ссылки</span>
-                                )}
+                                <div className="flex flex-col items-end gap-2">
+                                  {item.href ? (
+                                    <a
+                                      href={item.href}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#081a4b] transition hover:border-slate-300 hover:bg-slate-50 hover:text-[#0b2a72]"
+                                    >
+                                      Открыть
+                                    </a>
+                                  ) : (
+                                    <span className="text-xs text-slate-400">Нет ссылки</span>
+                                  )}
+                                  {item.status.label !== "Распознан" ? (
+                                    <form action={rerunTenderSourceDocumentDeepAnalysisAction}>
+                                      <input type="hidden" name="sourceDocumentId" value={item.id} />
+                                      <input type="hidden" name="procurementId" value={procurement.id} />
+                                      <input type="hidden" name="actorName" value="Сотрудник" />
+                                      <button
+                                        type="submit"
+                                        className="inline-flex items-center rounded-full border border-[#0d5bd7]/20 bg-[#0d5bd7]/5 px-4 py-2 text-sm font-medium text-[#0d5bd7] transition hover:border-[#0d5bd7]/40 hover:bg-[#0d5bd7]/10"
+                                      >
+                                        Доп. анализ
+                                      </button>
+                                    </form>
+                                  ) : null}
+                                </div>
                               </td>
                             </tr>
                           ))}

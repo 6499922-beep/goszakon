@@ -1,7 +1,7 @@
 "use server";
 
 import { execFile } from "node:child_process";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -33,11 +33,15 @@ import {
   runTenderAiAnalysis,
   runTenderFasAiAnalysis,
 } from "@/lib/tender-analysis";
-import { runTenderPrimaryAnalysis as runTenderPrimaryAnalysisPipeline } from "@/lib/tender-primary-analysis";
+import {
+  enqueueTenderPrimaryAnalysisJob,
+  runTenderPrimaryAnalysis as runTenderPrimaryAnalysisPipeline,
+} from "@/lib/tender-primary-analysis";
 import {
   getDecisionStatus,
   logTenderEvent,
 } from "@/lib/tender-workflow";
+import { extractTextFromTenderUpload as extractTextFromTenderUploadHelper } from "@/lib/tender-intake";
 
 const execFileAsync = promisify(execFile);
 
@@ -119,6 +123,25 @@ function extractStoredPathsFromNote(note: string | null | undefined) {
   const value = String(note ?? "");
   const matches = [...value.matchAll(/Файл сохранён:\s*(\/[^\s]+)/g)];
   return matches.map((match) => match[1]).filter(Boolean);
+}
+
+function upsertTenderSourceBlock(sourceText: string, title: string, text: string) {
+  const normalizedTitle = String(title ?? "").trim();
+  const normalizedText = String(text ?? "").trim();
+  if (!normalizedTitle || !normalizedText) return sourceText;
+
+  const escapedTitle = normalizedTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const blockPattern = new RegExp(
+    `(?:^|\\n\\n)Файл:\\s*${escapedTitle}\\n[\\s\\S]*?(?=\\n\\nФайл:|$)`,
+    "m"
+  );
+  const nextBlock = `Файл: ${normalizedTitle}\n${normalizedText}`;
+
+  if (blockPattern.test(sourceText)) {
+    return sourceText.replace(blockPattern, nextBlock).trim();
+  }
+
+  return [sourceText.trim(), nextBlock].filter(Boolean).join("\n\n").trim();
 }
 
 function buildTenderIntakeTitle(input: {
@@ -2479,6 +2502,96 @@ export async function analyzeTenderSourceDocumentAction(formData: FormData) {
   });
 
   revalidatePath(`/procurements/${procurementId}`);
+}
+
+export async function rerunTenderSourceDocumentDeepAnalysisAction(formData: FormData) {
+  await requireTenderCapability("procurement_documents");
+  const prisma = getPrisma();
+  const sourceDocumentId = Number(formData.get("sourceDocumentId"));
+  const procurementId = Number(formData.get("procurementId"));
+  const actorName = normalizeString(formData.get("actorName")) ?? "Система";
+
+  if (!Number.isInteger(sourceDocumentId) || sourceDocumentId <= 0) {
+    throw new Error("Source document is required");
+  }
+
+  const sourceDocument = await prisma.tenderSourceDocument.findUnique({
+    where: { id: sourceDocumentId },
+    include: {
+      procurement: {
+        select: {
+          id: true,
+          sourceText: true,
+        },
+      },
+    },
+  });
+
+  if (!sourceDocument) {
+    throw new Error("Source document not found");
+  }
+
+  const storedPath = extractStoredPathsFromNote(sourceDocument.note)[0];
+  if (!storedPath) {
+    throw new Error("Не найден путь к сохранённому файлу");
+  }
+
+  const absolutePath = path.join(process.cwd(), "public", storedPath.replace(/^\//, ""));
+  const buffer = await readFile(absolutePath);
+  const extraction = await extractTextFromTenderUploadHelper({
+    name: sourceDocument.fileName || sourceDocument.title,
+    type: "",
+    size: buffer.length,
+    buffer,
+  });
+
+  const nextSourceText = extraction.extractedText?.trim()
+    ? upsertTenderSourceBlock(
+        sourceDocument.procurement.sourceText ?? "",
+        sourceDocument.title,
+        extraction.extractedText
+      )
+    : sourceDocument.procurement.sourceText;
+
+  await prisma.tenderSourceDocument.update({
+    where: { id: sourceDocumentId },
+    data: {
+      contentSnippet: extraction.extractedText?.slice(0, 4000) ?? sourceDocument.contentSnippet,
+      note: `${extraction.extractionNote}\nФайл сохранён: ${storedPath}`,
+      status: extraction.extractedText
+        ? TenderSourceDocumentStatus.READY_FOR_ANALYSIS
+        : TenderSourceDocumentStatus.UPLOADED,
+    },
+  });
+
+  await prisma.tenderProcurement.update({
+    where: { id: procurementId },
+    data: {
+      sourceText: nextSourceText,
+      aiAnalysisStatus: "queued",
+      aiAnalysisError: null,
+    },
+  });
+
+  enqueueTenderPrimaryAnalysisJob({
+    procurementId,
+    sourceText: nextSourceText ?? "",
+  });
+
+  await logTenderEvent({
+    procurementId,
+    actionType: TenderActionType.NOTE_ADDED,
+    title: "Запущен дополнительный анализ файла",
+    description: `Файл "${sourceDocument.title}" повторно отправлен на более тщательное распознавание и общий анализ закупки.`,
+    actorName,
+    metadata: {
+      sourceDocumentId,
+      fileTitle: sourceDocument.title,
+    },
+  });
+
+  revalidatePath(`/procurements/recognition/${procurementId}`);
+  revalidatePath("/procurements/new");
 }
 
 export async function buildTenderSourceDocumentFieldsAction(formData: FormData) {

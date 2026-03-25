@@ -6,8 +6,8 @@ import { NextResponse } from "next/server";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/prisma";
 import {
-  extractTextFromTenderUpload,
   inferSourceDocumentKind,
+  prepareTenderUploadDocuments,
   persistTenderUpload,
 } from "@/lib/tender-intake";
 import { tenderHasCapability } from "@/lib/tender-permissions";
@@ -68,28 +68,36 @@ export async function POST(request: Request) {
       buffer,
     };
 
-    const stored = await persistTenderUpload(uploadedFile);
-    const { extractedText, extractionNote } = await extractTextFromTenderUpload(uploadedFile);
+    const preparedDocuments = await prepareTenderUploadDocuments(uploadedFile);
+    let combinedExtractedBlocks: string[] = [];
 
-    await prisma.tenderSourceDocument.create({
-      data: {
-        procurementId,
-        title: stored.originalFileName,
-        fileName: stored.originalFileName,
-        documentKind: inferSourceDocumentKind(stored.originalFileName),
-        contentSnippet: extractedText?.slice(0, 4000) ?? null,
-        status: extractedText
-          ? TenderSourceDocumentStatus.READY_FOR_ANALYSIS
-          : TenderSourceDocumentStatus.UPLOADED,
-        autofillStatus: TenderSourceDocumentAutofillStatus.NOT_ANALYZED,
-        note: extractionNote
-          ? `${extractionNote}\nФайл сохранён: /${stored.storedRelativePath}`
-          : `Файл сохранён: /${stored.storedRelativePath}`,
-      },
-    });
+    for (const prepared of preparedDocuments) {
+      const stored = await persistTenderUpload(prepared.file);
 
-    if (extractedText?.trim()) {
-      const nextSourceText = [procurement.sourceText?.trim(), `Файл: ${stored.originalFileName}\n${extractedText}`]
+      await prisma.tenderSourceDocument.create({
+        data: {
+          procurementId,
+          title: prepared.title,
+          fileName: prepared.fileName,
+          documentKind: inferSourceDocumentKind(prepared.fileName),
+          contentSnippet: prepared.extractedText?.slice(0, 4000) ?? null,
+          status: prepared.extractedText
+            ? TenderSourceDocumentStatus.READY_FOR_ANALYSIS
+            : TenderSourceDocumentStatus.UPLOADED,
+          autofillStatus: TenderSourceDocumentAutofillStatus.NOT_ANALYZED,
+          note: prepared.extractionNote
+            ? `${prepared.extractionNote}\nФайл сохранён: /${stored.storedRelativePath}`
+            : `Файл сохранён: /${stored.storedRelativePath}`,
+        },
+      });
+
+      if (prepared.extractedText?.trim()) {
+        combinedExtractedBlocks.push(`Файл: ${prepared.title}\n${prepared.extractedText.trim()}`);
+      }
+    }
+
+    if (combinedExtractedBlocks.length > 0) {
+      const nextSourceText = [procurement.sourceText?.trim(), ...combinedExtractedBlocks]
         .filter(Boolean)
         .join("\n\n")
         .trim();
@@ -105,9 +113,12 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       procurementId,
-      fileName: stored.originalFileName,
-      extracted: Boolean(extractedText?.trim()),
-      note: extractionNote,
+      fileName,
+      extracted: combinedExtractedBlocks.length > 0,
+      note:
+        preparedDocuments.length > 1
+          ? `Файл обработан. Внутри создано документов: ${preparedDocuments.length}.`
+          : preparedDocuments[0]?.extractionNote ?? null,
     });
   } catch (error) {
     console.error("[tender-intake-file] failed", error);

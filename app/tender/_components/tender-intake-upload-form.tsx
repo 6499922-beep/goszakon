@@ -238,7 +238,7 @@ export function TenderIntakeUploadForm({
             </div>
 
             <div className="mt-3 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-3">
-              <div className={`grid gap-2 overflow-y-auto pr-1 ${compact ? "max-h-[10rem]" : "max-h-[14rem]"}`}>
+              <div className={`grid gap-2 ${selectedFiles.length > 8 ? "lg:grid-cols-2" : "grid-cols-1"}`}>
                 {selectedFiles.map((file, index) => (
                   <div
                     key={`${file.name}-${index}`}

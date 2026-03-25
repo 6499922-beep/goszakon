@@ -91,6 +91,102 @@ export const tenderAnalysisSchema = {
   },
 } as const;
 
+export const tenderSourceDossierSchema = {
+  name: "tender_source_dossier",
+  strict: true,
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    required: [
+      "procurement_number",
+      "customer_name",
+      "customer_inn",
+      "platform",
+      "items_count",
+      "procurement_type",
+      "nmck_mentions",
+      "security_mentions",
+      "criteria_points",
+      "required_documents",
+      "nonstandard_requirements",
+      "rrep_rpp_requirements",
+      "decree_1875_ban",
+      "requires_commissioning",
+      "lot_structure",
+      "military_acceptance",
+      "equipment_items",
+      "delivery_terms",
+      "payment_terms",
+      "contract_term",
+      "penalty_terms",
+      "termination_reasons",
+      "stop_factor_findings",
+      "unresolved_questions",
+    ],
+    properties: {
+      procurement_number: { type: "string" },
+      customer_name: { type: "string" },
+      customer_inn: { type: "string" },
+      platform: { type: "string" },
+      items_count: { type: "number" },
+      procurement_type: { type: "string" },
+      nmck_mentions: {
+        type: "array",
+        items: { type: "string" },
+      },
+      security_mentions: {
+        type: "array",
+        items: { type: "string" },
+      },
+      criteria_points: {
+        type: "array",
+        items: { type: "string" },
+      },
+      required_documents: {
+        type: "array",
+        items: { type: "string" },
+      },
+      nonstandard_requirements: {
+        type: "array",
+        items: { type: "string" },
+      },
+      rrep_rpp_requirements: { type: "string" },
+      decree_1875_ban: { type: "string" },
+      requires_commissioning: { type: "string" },
+      lot_structure: { type: "string" },
+      military_acceptance: { type: "string" },
+      equipment_items: {
+        type: "array",
+        items: { type: "string" },
+      },
+      delivery_terms: { type: "string" },
+      payment_terms: { type: "string" },
+      contract_term: { type: "string" },
+      penalty_terms: { type: "string" },
+      termination_reasons: {
+        type: "array",
+        items: { type: "string" },
+      },
+      stop_factor_findings: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["name", "reason"],
+          properties: {
+            name: { type: "string" },
+            reason: { type: "string" },
+          },
+        },
+      },
+      unresolved_questions: {
+        type: "array",
+        items: { type: "string" },
+      },
+    },
+  },
+} as const;
+
 export const tenderFasAnalysisSchema = {
   name: "tender_fas_potential_complaint_analysis",
   strict: true,
@@ -150,6 +246,36 @@ type TenderFasAnalysisResult = {
   confidence_note: string;
 };
 
+type TenderSourceDossier = {
+  procurement_number: string;
+  customer_name: string;
+  customer_inn: string;
+  platform: string;
+  items_count: number;
+  procurement_type: string;
+  nmck_mentions: string[];
+  security_mentions: string[];
+  criteria_points: string[];
+  required_documents: string[];
+  nonstandard_requirements: string[];
+  rrep_rpp_requirements: string;
+  decree_1875_ban: string;
+  requires_commissioning: string;
+  lot_structure: string;
+  military_acceptance: string;
+  equipment_items: string[];
+  delivery_terms: string;
+  payment_terms: string;
+  contract_term: string;
+  penalty_terms: string;
+  termination_reasons: string[];
+  stop_factor_findings: Array<{
+    name: string;
+    reason: string;
+  }>;
+  unresolved_questions: string[];
+};
+
 function extractOutputText(response: any) {
   const outputs = Array.isArray(response?.output) ? response.output : [];
   const parts: string[] = [];
@@ -165,6 +291,55 @@ function extractOutputText(response: any) {
   }
 
   return parts.join("\n").trim();
+}
+
+async function runStructuredResponse<T>({
+  apiKey,
+  model,
+  prompt,
+  schema,
+}: {
+  apiKey: string;
+  model: string;
+  prompt: string;
+  schema: unknown;
+}) {
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      input: [
+        {
+          role: "user",
+          content: [{ type: "input_text", text: prompt }],
+        },
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          ...(schema as object),
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+  }
+
+  const data = await response.json();
+  const outputText = extractOutputText(data);
+
+  if (!outputText) {
+    throw new Error("OpenAI API returned empty output");
+  }
+
+  return JSON.parse(outputText) as T;
 }
 
 export async function runTenderAiAnalysis(input: {
@@ -183,22 +358,15 @@ export async function runTenderAiAnalysis(input: {
     throw new Error("OPENAI_API_KEY is not set");
   }
 
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const model = process.env.OPENAI_MODEL || "gpt-5";
 
-  const prompt = `
+  const dossierPrompt = `
 Ты анализируешь документацию закупки по 223-ФЗ для внутреннего тендерного кабинета поставщика.
 
-Верни только структурированный JSON по схеме.
-Не придумывай факты, которых нет в тексте.
-Если данных не хватает, верни пустую строку или пустой массив.
-Ответ должен быть кратким, деловым и пригодным для дальнейшего отображения в CRM.
-
-Дополнительные правила анализа:
-- НДС = 22%, если в документации явно не указано иное.
-- Внимательно проверяй цену: смотри, указано ли, что в цену входят налоги или нет.
-- Для пунктов про обеспечение, ответственность и расторжение фиксируй конкретные проценты, суммы, штрафы, пени и основания, если они указаны.
-- Не пиши ссылки на документы.
-- Если есть перечень оборудования, товаров или позиций, верни его в equipment_items краткими строками.
+Первый проход: собери только фактическое досье по документам.
+Не придумывай факты. Если данных не хватает, верни пустую строку или пустой массив.
+Нужны краткие factual snippets, а не красивые формулировки.
+Не пиши ссылки на документы.
 
 Карточка закупки:
 - Название: ${input.title}
@@ -209,77 +377,78 @@ export async function runTenderAiAnalysis(input: {
 - Количество позиций: ${input.itemsCount ?? ""}
 - НМЦ без НДС: ${input.nmckWithoutVat ?? ""}
 
-Нужно извлечь и вернуть в JSON:
-1. procurement_number: номер закупки.
-2. customer_name: заказчик.
-3. customer_inn: ИНН заказчика.
-4. platform: площадка.
-5. items_count: количество позиций.
-6. procurement_type: вид закупки.
-7. nmck_without_vat: НМЦ без НДС.
-8. nmck_with_vat: НМЦ с НДС.
-9. price_tax_note: коротко поясни, как в документации указана цена и налоги.
-10. bid_security: есть ли обеспечение заявки, в каком размере или проценте.
-11. contract_security: есть ли обеспечение исполнения договора, в каком размере или проценте.
-12. summary: краткая выжимка сути закупки.
-13. selection_criteria: критерии отбора в сжатом виде.
-14. required_documents: документация, требуемая до подачи.
-15. nonstandard_requirements: нестандартные требования.
-16. rrep_rpp_requirements: есть ли требования РРЭП/РПП (постановление 2013).
-17. decree_1875_ban: есть ли запрет по постановлению 1875.
-18. requires_commissioning: требуются ли пуско-наладочные работы.
-19. lot_structure: делимый лот, попозиционная закупка, несколько победителей или нет.
-20. military_acceptance: есть ли военная приемка (приемка номер 5) или РТ-Техприемка.
-21. equipment_items: какое оборудование/товары закупаются, коротким списком.
-22. delivery_terms: сроки и место поставки.
-23. payment_terms: сроки оплаты.
-24. contract_term: срок действия договора.
-25. penalty_terms: ответственность за просрочку поставки и оплаты, штрафы и пени.
-26. termination_reasons: основания одностороннего расторжения договора.
-27. stop_factor_findings: только явные стоп-факторы, из-за которых закупку не берём.
+Собери:
+- номер закупки
+- заказчика и ИНН
+- площадку
+- вид закупки
+- количество позиций
+- все упоминания цены/НМЦ/налогов
+- все упоминания обеспечений
+- критерии отбора
+- документацию до подачи
+- нестандартные требования
+- требования РРЭП/РПП
+- запрет 1875
+- пуско-наладку
+- делимость лота / несколько победителей
+- военную приемку / РТ-Техприемку
+- список оборудования
+- условия поставки, оплаты, срока договора
+- штрафы/пени/неустойки
+- основания расторжения
+- только явные стоп-факторы
+- что осталось неясным
 
 Текст документации:
 ${input.sourceText}
 `.trim();
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      input: [
-        {
-          role: "user",
-          content: [{ type: "input_text", text: prompt }],
-        },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          ...tenderAnalysisSchema,
-        },
-      },
-    }),
+  const dossier = await runStructuredResponse<TenderSourceDossier>({
+    apiKey,
+    model,
+    prompt: dossierPrompt,
+    schema: tenderSourceDossierSchema,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
-  }
+  const prompt = `
+Ты анализируешь документацию закупки по 223-ФЗ для внутреннего тендерного кабинета поставщика.
 
-  const data = await response.json();
-  const outputText = extractOutputText(data);
+Второй проход: на основе factual dossier аккуратно заполни только структурированный JSON по схеме.
+Не придумывай факты, которых нет в dossier.
+Если данных не хватает, верни пустую строку или пустой массив.
+Ответ должен быть кратким, деловым и пригодным для отображения в CRM.
 
-  if (!outputText) {
-    throw new Error("OpenAI API returned empty output");
-  }
+Правила:
+- НДС = 22%, если в документации явно не указано иное.
+- Внимательно проверяй цену: смотри, указано ли, что в цену входят налоги или нет.
+- Для пунктов про обеспечение, ответственность и расторжение фиксируй конкретные проценты, суммы, штрафы, пени и основания, если они указаны.
+- Не пиши ссылки на документы.
+- Если есть перечень оборудования, верни его в equipment_items краткими строками.
+
+Карточка закупки:
+- Название: ${input.title}
+- Заказчик: ${input.customerName ?? ""}
+- ИНН заказчика: ${input.customerInn ?? ""}
+- Номер закупки: ${input.procurementNumber ?? ""}
+- Площадка: ${input.platform ?? ""}
+- Количество позиций: ${input.itemsCount ?? ""}
+- НМЦ без НДС: ${input.nmckWithoutVat ?? ""}
+
+Factual dossier:
+${JSON.stringify(dossier, null, 2)}
+`.trim();
+
+  const result = await runStructuredResponse<TenderAnalysisResult>({
+    apiKey,
+    model,
+    prompt,
+    schema: tenderAnalysisSchema,
+  });
 
   return {
     model,
-    result: JSON.parse(outputText) as TenderAnalysisResult,
+    result,
   };
 }
 
@@ -298,7 +467,7 @@ export async function runTenderFasAiAnalysis(input: {
     throw new Error("OPENAI_API_KEY is not set");
   }
 
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const model = process.env.OPENAI_FAS_MODEL || process.env.OPENAI_MODEL || "gpt-5";
 
   const prompt = `
 Ты анализируешь документацию закупки по 223-ФЗ только на предмет потенциальной жалобы в ФАС.
@@ -327,44 +496,16 @@ ${input.promptBody}
 ${input.sourceText}
   `.trim();
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      input: [
-        {
-          role: "user",
-          content: [{ type: "input_text", text: prompt }],
-        },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          ...tenderFasAnalysisSchema,
-        },
-      },
-    }),
+  const result = await runStructuredResponse<TenderFasAnalysisResult>({
+    apiKey,
+    model,
+    prompt,
+    schema: tenderFasAnalysisSchema,
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
-  }
-
-  const data = await response.json();
-  const outputText = extractOutputText(data);
-
-  if (!outputText) {
-    throw new Error("OpenAI API returned empty output");
-  }
 
   return {
     model,
-    result: JSON.parse(outputText) as TenderFasAnalysisResult,
+    result,
   };
 }
 

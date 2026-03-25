@@ -59,6 +59,11 @@ function safeDocumentHref(path: string | null | undefined) {
   return encodeURI(path);
 }
 
+function isArchiveFileName(value: string | null | undefined) {
+  const normalized = String(value ?? "").toLowerCase().trim();
+  return normalized.endsWith(".zip") || normalized.endsWith(".rar") || normalized.endsWith(".7z");
+}
+
 function extractHumanIssue(note: string | null | undefined) {
   const value = String(note ?? "").trim();
   if (!value) return null;
@@ -295,8 +300,41 @@ function renderReadableText(
   return (
     <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
       {blocks.slice(0, maxItems).map((item, index) => (
-        <div key={`${item}-${index}`} className="rounded-2xl bg-white px-4 py-3">
-          {item}
+        <div
+          key={`${item}-${index}`}
+          className="flex items-start gap-3 rounded-2xl bg-white px-4 py-3"
+        >
+          <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-[#081a4b]">
+            {index + 1}
+          </div>
+          <div className="min-w-0 flex-1">{item}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function renderCompactList(
+  items: string[],
+  emptyFallback: string
+) {
+  if (items.length === 0) {
+    return (
+      <div className="mt-3 text-sm leading-6 text-slate-600">
+        {emptyFallback}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 grid gap-2 lg:grid-cols-2">
+      {items.map((item, index) => (
+        <div
+          key={`${item}-${index}`}
+          className="flex items-start gap-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700"
+        >
+          <div className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#081a4b]/70" />
+          <div className="min-w-0 flex-1">{item}</div>
         </div>
       ))}
     </div>
@@ -466,6 +504,10 @@ export default async function TenderRecognitionDetailPage({
       status: describeSourceDocument(item.note),
     };
   });
+  const finalSourceDocuments = sourceDocuments.filter(
+    (item) => !isArchiveFileName(item.fileLabel) && !isArchiveFileName(item.title)
+  );
+  const equipmentCount = procurement.itemsCount ?? equipmentItems.length;
   const stopFactorState = procurement.ruleMatches.length > 0 ? "stop" : "ok";
   const stopFactorTitle =
     stopFactorState === "stop"
@@ -529,22 +571,52 @@ export default async function TenderRecognitionDetailPage({
                 <div>Вид закупки: {procurement.purchaseType ?? "не определён"}</div>
                 <div>Площадка: {procurement.platform ?? "не определена"}</div>
                 <div>
-                  Позиций:{" "}
-                  {((procurement.itemsCount ?? 0) > 0 || equipmentItems.length > 0) ? (
+                  {equipmentCount > 0 ? (
                     <Link
                       href={`/procurements/recognition/${procurement.id}/equipment`}
                       target="_blank"
-                      className="font-semibold text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
+                      className="inline-flex items-center gap-1 font-semibold text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
                     >
-                      {procurement.itemsCount ?? equipmentItems.length}
+                      <span>Позиций:</span>
+                      <span>{equipmentCount}</span>
                     </Link>
                   ) : (
-                    <span>{procurement.itemsCount ?? "не определено"}</span>
+                    <span>Позиций: {procurement.itemsCount ?? "не определено"}</span>
                   )}
                 </div>
                 <div>Срок подачи: {formatDateTime(procurement.deadline)}</div>
               </div>
             </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="text-lg font-bold text-[#081a4b]">Документы закупки</div>
+              <div className="text-sm text-slate-500">
+                {finalSourceDocuments.length > 0
+                  ? `Файлов: ${finalSourceDocuments.length}`
+                  : "Файлы пока не определены"}
+              </div>
+            </div>
+            {finalSourceDocuments.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {finalSourceDocuments.map((item, index) => (
+                  <a
+                    key={`${item.fileLabel}-${index}`}
+                    href={item.href ?? "#documents-list"}
+                    target={item.href ? "_blank" : undefined}
+                    rel={item.href ? "noreferrer" : undefined}
+                    className="inline-flex max-w-full items-center rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-[#081a4b] hover:border-slate-300 hover:bg-slate-100"
+                  >
+                    <span className="truncate">{item.fileLabel}</span>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-3 text-sm leading-6 text-slate-600">
+                Исходные документы пока не сохранены.
+              </div>
+            )}
           </div>
 
           <div id="equipment-list" className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
@@ -701,35 +773,14 @@ export default async function TenderRecognitionDetailPage({
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-base font-bold text-[#081a4b]">Требуемая документация до подачи</div>
-              {requiredDocuments.length > 0 ? (
-                <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                  {requiredDocuments.map((item) => (
-                    <div key={item} className="rounded-2xl bg-white px-4 py-3">
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-3 text-sm leading-6 text-slate-600">
-                  Не удалось определить автоматически.
-                </div>
-              )}
+              {renderCompactList(requiredDocuments, "Не удалось определить автоматически.")}
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-base font-bold text-[#081a4b]">Нестандартные требования</div>
-              {nonstandardRequirements.length > 0 ? (
-                <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                  {nonstandardRequirements.map((item) => (
-                    <div key={item} className="rounded-2xl bg-white px-4 py-3">
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-3 text-sm leading-6 text-slate-600">
-                  Явных нестандартных требований автоматически не найдено.
-                </div>
+              {renderCompactList(
+                nonstandardRequirements,
+                "Явных нестандартных требований автоматически не найдено."
               )}
             </div>
 
@@ -794,11 +845,11 @@ export default async function TenderRecognitionDetailPage({
               </div>
             </div>
 
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+            <div id="documents-list" className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-base font-bold text-[#081a4b]">Исходные документы закупки</div>
-              {sourceDocuments.length > 0 ? (
+              {finalSourceDocuments.length > 0 ? (
                 <div className="mt-3 grid gap-3">
-                  {sourceDocuments.map((item, index) => (
+                  {finalSourceDocuments.map((item, index) => (
                     <div key={`${item.title}-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>

@@ -32,7 +32,8 @@ services:
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET}
       SESSION_SECRET: ${SESSION_SECRET}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5}
+      OPENAI_FAS_MODEL: ${OPENAI_FAS_MODEL:-gpt-5}
     volumes:
       - tender_storage:/app/public/docs
     command: >

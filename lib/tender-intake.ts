@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import AdmZip from "adm-zip";
 import mammoth from "mammoth";
+import { createExtractorFromData } from "node-unrar-js";
 import * as XLSX from "xlsx";
 
 export type TenderUploadedFile = {
@@ -8,6 +10,15 @@ export type TenderUploadedFile = {
   type: string;
   size: number;
   buffer: Buffer;
+};
+
+export type TenderPreparedSourceDocument = {
+  title: string;
+  fileName: string;
+  documentKind: string;
+  extractedText: string | null;
+  extractionNote: string;
+  file: TenderUploadedFile;
 };
 
 export function normalizeTenderString(value: string | null | undefined) {
@@ -125,6 +136,183 @@ export async function extractTextFromTenderUpload(file: TenderUploadedFile) {
         ? "Текст из файла удалось извлечь автоматически."
         : "Файл загружен, но текста для анализа внутри не найдено.",
   };
+}
+
+function normalizeArchiveEntryName(value: string) {
+  return value.replace(/\\/g, "/").replace(/^\/+/, "").trim();
+}
+
+function joinArchiveChain(parts: string[]) {
+  return parts.filter(Boolean).join(" / ");
+}
+
+async function prepareDirectTenderDocument(
+  file: TenderUploadedFile,
+  archiveChain: string[] = []
+): Promise<TenderPreparedSourceDocument[]> {
+  const { extractedText, extractionNote } = await extractTextFromTenderUpload(file);
+  const visibleName = joinArchiveChain([...archiveChain, file.name || "document"]);
+
+  return [
+    {
+      title: visibleName,
+      fileName: file.name || visibleName,
+      documentKind: inferSourceDocumentKind(file.name || visibleName),
+      extractedText,
+      extractionNote,
+      file,
+    },
+  ];
+}
+
+async function prepareZipArchiveDocuments(
+  file: TenderUploadedFile,
+  archiveChain: string[] = [],
+  depth = 0
+): Promise<TenderPreparedSourceDocument[]> {
+  const archiveTitle = joinArchiveChain([...archiveChain, file.name || "archive.zip"]);
+  const archiveDocument: TenderPreparedSourceDocument = {
+    title: archiveTitle,
+    fileName: file.name || "archive.zip",
+    documentKind: "Архив закупки",
+    extractedText: null,
+    extractionNote: "ZIP-архив сохранён в системе.",
+    file,
+  };
+
+  if (depth >= 3) {
+    archiveDocument.extractionNote =
+      "ZIP-архив сохранён, но глубина вложенных архивов превышает допустимый предел. Нужна ручная проверка.";
+    return [archiveDocument];
+  }
+
+  try {
+    const zip = new AdmZip(file.buffer);
+    const entries = zip
+      .getEntries()
+      .filter((entry) => !entry.isDirectory)
+      .slice(0, 200);
+
+    if (entries.length === 0) {
+      archiveDocument.extractionNote = "ZIP-архив сохранён, но внутри не найдено файлов для анализа.";
+      return [archiveDocument];
+    }
+
+    const extractedDocuments: TenderPreparedSourceDocument[] = [];
+
+    for (const entry of entries) {
+      const entryName = normalizeArchiveEntryName(entry.entryName);
+      const nestedFile: TenderUploadedFile = {
+        name: path.basename(entryName),
+        type: "",
+        size: entry.header.size,
+        buffer: entry.getData(),
+      };
+
+      const nestedDocs = await prepareTenderUploadDocuments(
+        nestedFile,
+        [...archiveChain, file.name || "archive.zip", entryName],
+        depth + 1
+      );
+      extractedDocuments.push(...nestedDocs);
+    }
+
+    const analyzableCount = extractedDocuments.filter((item) => item.extractedText?.trim()).length;
+    archiveDocument.extractionNote =
+      analyzableCount > 0
+        ? `ZIP-архив сохранён. Внутри найдено ${entries.length} файлов, для анализа извлечено ${analyzableCount}.`
+        : `ZIP-архив сохранён. Внутри найдено ${entries.length} файлов, но текста для анализа извлечь не удалось.`;
+
+    return [archiveDocument, ...extractedDocuments];
+  } catch {
+    archiveDocument.extractionNote =
+      "ZIP-архив сохранён, но его не удалось автоматически раскрыть. Нужна ручная проверка.";
+    return [archiveDocument];
+  }
+}
+
+async function prepareRarArchiveDocuments(
+  file: TenderUploadedFile,
+  archiveChain: string[] = [],
+  depth = 0
+): Promise<TenderPreparedSourceDocument[]> {
+  const archiveTitle = joinArchiveChain([...archiveChain, file.name || "archive.rar"]);
+  const archiveDocument: TenderPreparedSourceDocument = {
+    title: archiveTitle,
+    fileName: file.name || "archive.rar",
+    documentKind: "Архив закупки",
+    extractedText: null,
+    extractionNote: "RAR-архив сохранён в системе.",
+    file,
+  };
+
+  if (depth >= 3) {
+    archiveDocument.extractionNote =
+      "RAR-архив сохранён, но глубина вложенных архивов превышает допустимый предел. Нужна ручная проверка.";
+    return [archiveDocument];
+  }
+
+  try {
+    const extractor = await createExtractorFromData({ data: Uint8Array.from(file.buffer).buffer });
+    const extracted = extractor.extract();
+    const files = [...extracted.files].filter(
+      (item) => !item.fileHeader.flags.directory && item.extraction
+    );
+
+    if (files.length === 0) {
+      archiveDocument.extractionNote = "RAR-архив сохранён, но внутри не найдено файлов для анализа.";
+      return [archiveDocument];
+    }
+
+    const nestedDocuments: TenderPreparedSourceDocument[] = [];
+
+    for (const item of files.slice(0, 200)) {
+      const entryName = normalizeArchiveEntryName(item.fileHeader.name);
+      const nestedFile: TenderUploadedFile = {
+        name: path.basename(entryName),
+        type: "",
+        size: item.extraction?.byteLength ?? item.fileHeader.unpSize ?? 0,
+        buffer: Buffer.from(item.extraction ?? new Uint8Array()),
+      };
+
+      const nestedDocs = await prepareTenderUploadDocuments(
+        nestedFile,
+        [...archiveChain, file.name || "archive.rar", entryName],
+        depth + 1
+      );
+      nestedDocuments.push(...nestedDocs);
+    }
+
+    const analyzableCount = nestedDocuments.filter((item) => item.extractedText?.trim()).length;
+    archiveDocument.extractionNote =
+      analyzableCount > 0
+        ? `RAR-архив сохранён. Внутри найдено ${files.length} файлов, для анализа извлечено ${analyzableCount}.`
+        : `RAR-архив сохранён. Внутри найдено ${files.length} файлов, но текста для анализа извлечь не удалось.`;
+
+    return [archiveDocument, ...nestedDocuments];
+  } catch {
+    archiveDocument.extractionNote =
+      "RAR-архив сохранён, но его не удалось автоматически раскрыть. Нужна ручная проверка.";
+    return [archiveDocument];
+  }
+}
+
+export async function prepareTenderUploadDocuments(
+  file: TenderUploadedFile,
+  archiveChain: string[] = [],
+  depth = 0
+): Promise<TenderPreparedSourceDocument[]> {
+  const normalizedName = (file.name || "").toLowerCase();
+
+  if (normalizedName.endsWith(".zip")) {
+    return prepareZipArchiveDocuments(file, archiveChain, depth);
+  }
+
+  if (normalizedName.endsWith(".rar")) {
+    return prepareRarArchiveDocuments(file, archiveChain, depth);
+  }
+
+  return prepareDirectTenderDocument(file, archiveChain);
 }
 
 export function inferSourceDocumentKind(fileName: string) {

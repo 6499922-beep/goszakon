@@ -161,22 +161,19 @@ export function TenderIntakeUploadForm({
         }}
       />
 
-      <div className="group flex w-full flex-col rounded-[2.5rem] border-2 border-dashed border-[#0d5bd7]/30 bg-[radial-gradient(circle_at_top,#eef5ff_0%,#ffffff_55%)] px-8 py-5 text-center transition hover:border-[#0d5bd7]/60 hover:bg-[radial-gradient(circle_at_top,#e6f0ff_0%,#ffffff_60%)]">
+      <div className="group flex w-full flex-col rounded-[2rem] border-2 border-dashed border-[#0d5bd7]/30 bg-[radial-gradient(circle_at_top,#eef5ff_0%,#ffffff_55%)] px-5 py-4 text-center transition hover:border-[#0d5bd7]/60 hover:bg-[radial-gradient(circle_at_top,#e6f0ff_0%,#ffffff_60%)]">
         <div className="max-w-3xl self-center">
-          <div className="text-3xl font-bold tracking-tight text-[#081a4b]">
+          <div className="text-2xl font-bold tracking-tight text-[#081a4b]">
             {isPending
               ? "Загружаем документы и запускаем анализ..."
               : "Загрузить всю документацию по закупке"}
           </div>
-          <p className="mt-4 text-base leading-7 text-slate-600">
-            Нажми на это поле и выбери весь пакет файлов: извещение, ТЗ, проект
-            договора, приложения, формы заказчика, расчёт НМЦК, таблицы и другие
-            материалы. После загрузки система сама начнёт первичный анализ и
-            переведёт тебя в реестр закупок.
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Только один шаг: загрузи весь пакет документов. Система сама создаст карточку, распознает базовые поля и проверит стоп-факторы.
           </p>
         </div>
 
-        <div className="mt-5 flex justify-center">
+        <div className="mt-4 flex justify-center">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -187,37 +184,35 @@ export function TenderIntakeUploadForm({
           </button>
         </div>
 
-        <div className="mt-3 text-sm leading-6 text-slate-500">
-          Поддерживаются PDF, DOCX, XLSX, TXT и другие файлы закупки. Архивы и
-          сложные форматы тоже сохранятся в карточке, даже если текст из них не
-          получится извлечь сразу.
+        <div className="mt-2 text-xs leading-5 text-slate-500">
+          PDF, DOCX, XLSX, TXT и архивы тоже сохраняются. Если часть текста не получится извлечь, система прямо покажет это справа.
         </div>
 
         {selectedFiles.length > 0 ? (
-          <div className="mt-4 w-full rounded-[2rem] border border-slate-200 bg-white/95 p-4 text-left shadow-sm">
+          <div className="mt-4 w-full rounded-[1.75rem] border border-slate-200 bg-white/95 p-4 text-left shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
                   Подготовлено к загрузке
                 </div>
-                <div className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
+                <div className="mt-1 text-xl font-bold tracking-tight text-[#081a4b]">
                   {selectedFiles.length} {selectedFilesLabel}
                 </div>
               </div>
 
               {estimatedSeconds ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-slate-700">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm leading-6 text-slate-700">
                   Ориентир по первичному анализу: около {estimatedSeconds} сек.
                 </div>
               ) : null}
             </div>
 
             <div className="mt-3 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-3">
-              <div className="grid max-h-[18rem] gap-2 overflow-y-auto pr-1">
+              <div className="grid max-h-[14rem] gap-2 overflow-y-auto pr-1">
                 {selectedFiles.map((file, index) => (
                   <div
                     key={`${file.name}-${index}`}
-                    className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm text-slate-700"
+                    className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-2.5 text-sm text-slate-700"
                   >
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#081a4b] text-xs font-semibold text-white">
                       {index + 1}
@@ -244,14 +239,15 @@ export function TenderIntakeUploadForm({
                   ? "Загружаем документы и запускаем анализ..."
                   : "Запустить анализ"}
               </button>
-              <button
-                type="button"
-                disabled={isPending}
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-70"
-              >
-                Заменить документы
-              </button>
+              {!isPending ? (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  Заменить документы
+                </button>
+              ) : null}
             </div>
           </div>
         ) : (

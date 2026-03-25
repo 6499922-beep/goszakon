@@ -310,6 +310,12 @@ export default function NonPaymentPage() {
               >
                 Смотреть короткий материал по ответственности заказчика →
               </Link>
+              <Link
+                href="/analitika/moskovskoe-ufas-preduprezhdenie-za-prosrochku-oplaty-uaz-077-04-7-30-4-11579-2025"
+                className="mt-3 inline-flex text-sm font-semibold text-[#081a4b] underline underline-offset-4"
+              >
+                Еще один пример: Московское УФАС подтвердило ответственность за просрочку оплаты →
+              </Link>
             </div>
           </div>
         </div>
@@ -443,6 +449,20 @@ export default function NonPaymentPage() {
                 Короткий материал по письму Челябинского УФАС: нарушение срока
                 оплаты по договору уже привело к административной
                 ответственности заказчика.
+              </p>
+            </Link>
+
+            <Link
+              href="/analitika/moskovskoe-ufas-preduprezhdenie-za-prosrochku-oplaty-uaz-077-04-7-30-4-11579-2025"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Московское УФАС: даже предупреждение важно для спора по оплате
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Короткий материал по письму Московского УФАС: за просрочку
+                оплаты по договору к ответственности привлекли и заказчика, и
+                его должностное лицо.
               </p>
             </Link>
 

@@ -942,15 +942,37 @@ export default async function TenderRecognitionDetailPage({
                     </div>
                   </div>
                   {finalSourceDocuments.length > 0 ? (
-                    <div className="mt-3 grid gap-3 xl:grid-cols-2">
-                      {finalSourceDocuments.map((item, index) => (
-                        <div key={`${item.title}-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
+                    <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                      <table className="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead className="bg-slate-50 text-left text-slate-500">
+                          <tr>
+                            <th className="px-4 py-3 font-medium">Тип</th>
+                            <th className="px-4 py-3 font-medium">Документ</th>
+                            <th className="px-4 py-3 font-medium">Статус</th>
+                            <th className="px-4 py-3 font-medium">Фрагмент</th>
+                            <th className="px-4 py-3 text-right font-medium">Открыть</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 bg-white">
+                          {finalSourceDocuments.map((item, index) => (
+                            <tr key={`${item.title}-${index}`} className="align-top">
+                              <td className="px-4 py-4">
                                 <span className="rounded-full bg-[#081a4b]/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#081a4b]">
                                   {item.kindLabel}
                                 </span>
+                              </td>
+                              <td className="px-4 py-4">
+                                <div
+                                  className="max-w-[420px] text-sm font-semibold text-[#081a4b]"
+                                  title={item.title}
+                                >
+                                  {item.title}
+                                </div>
+                                <div className="mt-1 text-xs leading-5 text-slate-500">
+                                  {item.status.description}
+                                </div>
+                              </td>
+                              <td className="px-4 py-4">
                                 <span
                                   className={`rounded-full px-3 py-1 text-xs font-semibold ${
                                     item.status.tone === "success"
@@ -962,32 +984,30 @@ export default async function TenderRecognitionDetailPage({
                                 >
                                   {item.status.label}
                                 </span>
-                              </div>
-                              <div className="mt-3 truncate text-sm font-semibold text-[#081a4b]" title={item.title}>
-                                {item.title}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="mt-2 text-sm leading-6 text-slate-600">{item.status.description}</div>
-                          {item.excerpt ? (
-                            <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">
-                              {item.excerpt}
-                            </div>
-                          ) : null}
-                          {item.href ? (
-                            <div className="mt-3">
-                              <a
-                                href={item.href}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="font-medium text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
-                              >
-                                Открыть файл
-                              </a>
-                            </div>
-                          ) : null}
-                        </div>
-                      ))}
+                              </td>
+                              <td className="px-4 py-4">
+                                <div className="max-w-[520px] text-sm leading-6 text-slate-600">
+                                  {item.excerpt ?? "Фрагмент текста не показан."}
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-right">
+                                {item.href ? (
+                                  <a
+                                    href={item.href}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#081a4b] transition hover:border-slate-300 hover:bg-slate-50 hover:text-[#0b2a72]"
+                                  >
+                                    Открыть
+                                  </a>
+                                ) : (
+                                  <span className="text-xs text-slate-400">Нет ссылки</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   ) : (
                     <div className="mt-3 text-sm leading-6 text-slate-600">

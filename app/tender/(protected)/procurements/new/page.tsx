@@ -10,29 +10,28 @@ export const dynamic = "force-dynamic";
 const inputClassName =
   "w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#0d5bd7] focus:ring-4 focus:ring-[#0d5bd7]/10";
 
-const textareaClassName = `${inputClassName} min-h-32 resize-y`;
+const textareaClassName = `${inputClassName} min-h-36 resize-y`;
 
-const minimumFields = [
-  "Название закупки",
-  "Заказчик",
-  "Номер закупки",
-  "Окончание подачи",
-  "НМЦ или НМЦ без НДС",
+const systemSteps = [
+  "Сохранит весь пакет исходной документации внутри закупки.",
+  "Попробует извлечь текст из PDF, DOCX, XLSX и текстовых файлов.",
+  "Автоматически заполнит карточку закупки по документации.",
+  "Проверит стоп-факторы и создаст параллельную ФАС-ветку.",
+  "Подсветит, что не получилось определить и что нужно проверить человеку.",
 ];
 
-const optionalForLater = [
-  "Полную выжимку по условиям",
-  "Нестандартные требования",
-  "Позиции ТЗ и цены",
-  "Формы заказчика",
-  "Чек-лист комплекта на подачу",
+const employeeRole = [
+  "скачать документы из агрегатора или ЭТП",
+  "загрузить весь пакет без ручного заполнения карточки",
+  "при необходимости вставить текст документации, если он уже есть под рукой",
 ];
 
-const firstRoute = [
-  "Сохраняем карточку и открываем маршрут обработки.",
-  "Проверяем стоп-факторы и разбираем ТЗ.",
-  "Передаём на предпросчёт и решение руководителя.",
-  "После решения «Подаём» добираем формы и комплект.",
+const aiResult = [
+  "заполненная карточка закупки",
+  "основной вывод по закупке",
+  "вывод по потенциальной жалобе в ФАС",
+  "список найденных стоп-факторов",
+  "список того, что не удалось определить автоматически",
 ];
 
 export default async function NewTenderProcurementPage() {
@@ -47,46 +46,48 @@ export default async function NewTenderProcurementPage() {
       <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#081a4b_0%,#0d5bd7_100%)] px-8 py-8 text-white">
           <div className="text-sm font-medium uppercase tracking-[0.16em] text-white/70">
-            Новая закупка
+            Первый этап обработки
           </div>
-          <h1 className="mt-3 max-w-3xl text-4xl font-bold tracking-tight">
-            Занести закупку в систему и собрать первичную карточку анализа.
+          <h1 className="mt-3 max-w-4xl text-4xl font-bold tracking-tight">
+            Сотрудник только загружает документацию. Дальше система сама разбирает
+            закупку и заполняет карточку.
           </h1>
           <p className="mt-4 max-w-3xl text-base leading-7 text-white/80">
-            Эта форма покрывает первый рабочий шаг: сотрудник вручную заносит
-            ключевые данные закупки, а затем система ведёт её по этапам
-            анализа, предпросчёта и подготовки пакета документов.
+            На этом экране не нужно вручную заносить заказчика, НМЦ, критерии,
+            договорные условия и первичную выжимку. Задача сотрудника: загрузить
+            все документы закупки для первичного анализа.
           </p>
         </div>
 
         <div className="grid gap-6 border-b border-slate-200 bg-slate-50 px-8 py-6 lg:grid-cols-3">
-          {[
-            "Сначала фиксируем заказчика, сроки, НМЦ и состав лота.",
-            "Потом заносим выжимку: критерии, документы, нестандартные условия.",
-            "После сохранения открывается карточка закупки с удобными блоками.",
-          ].map((item) => (
-            <div
-              key={item}
-              className="rounded-3xl border border-white bg-white/90 px-5 py-4 text-sm leading-6 text-slate-600"
-            >
-              {item}
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-6">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+              Что делает сотрудник
             </div>
-          ))}
-        </div>
-
-        <div className="grid gap-6 border-b border-slate-200 bg-white px-8 py-6 xl:grid-cols-[1fr_1fr]">
-          <div className="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-6">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
-              Что обязательно сейчас
-            </div>
-            <div className="mt-2 text-xl font-bold tracking-tight text-[#081a4b]">
-              Минимум для быстрого старта карточки
-            </div>
-            <div className="mt-4 grid gap-2">
-              {minimumFields.map((item) => (
+            <div className="mt-4 space-y-3">
+              {employeeRole.map((item, index) => (
                 <div
                   key={item}
-                  className="rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm leading-6 text-slate-700"
+                  className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700"
+                >
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0d5bd7] text-xs font-semibold text-white">
+                    {index + 1}
+                  </div>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-6">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+              Что система сделает сама
+            </div>
+            <div className="mt-4 space-y-3">
+              {systemSteps.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-slate-700"
                 >
                   {item}
                 </div>
@@ -94,18 +95,15 @@ export default async function NewTenderProcurementPage() {
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-sky-200 bg-sky-50 p-6">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">
-              Что можно позже
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-6">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+              Что получится на выходе
             </div>
-            <div className="mt-2 text-xl font-bold tracking-tight text-[#081a4b]">
-              Не тормозим создание закупки из-за деталей
-            </div>
-            <div className="mt-4 grid gap-2">
-              {optionalForLater.map((item) => (
+            <div className="mt-4 space-y-3">
+              {aiResult.map((item) => (
                 <div
                   key={item}
-                  className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm leading-6 text-slate-700"
+                  className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm leading-6 text-slate-700"
                 >
                   {item}
                 </div>
@@ -115,304 +113,119 @@ export default async function NewTenderProcurementPage() {
         </div>
 
         <form action={createTenderProcurementAction} className="px-8 py-8">
-          <input type="hidden" name="actorName" value="Сотрудник-загрузчик" />
+          <input type="hidden" name="actorName" value={currentUser.name || currentUser.email || "Сотрудник"} />
+
           <div className="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
             <div className="space-y-8">
-              <section>
-                <div className="mb-5">
-                  <h2 className="text-2xl font-bold tracking-tight text-[#081a4b]">
-                    Основные сведения
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Всё, что нужно для идентификации закупки и быстрой передачи в
-                    работу.
-                  </p>
-                </div>
-
-                <div className="grid gap-5 md:grid-cols-2">
-                  <div className="md:col-span-2">
-                    <Field label="Название закупки" required>
-                      <input
-                        name="title"
-                        required
-                        className={inputClassName}
-                        placeholder="Например: Поставка кабельно-проводниковой продукции"
-                      />
-                    </Field>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <Field
-                      label="Ссылка на закупку"
-                      hint="Сюда можно вставить ссылку из агрегатора или ЭТП."
-                    >
-                      <input
-                        name="sourceUrl"
-                        type="url"
-                        className={inputClassName}
-                        placeholder="https://..."
-                      />
-                    </Field>
-                  </div>
-
-                  <Field label="Заказчик">
-                    <input
-                      name="customerName"
-                      className={inputClassName}
-                      placeholder="АО Восточный Порт"
-                    />
-                  </Field>
-
-                  <Field label="ИНН заказчика">
-                    <input
-                      name="customerInn"
-                      className={inputClassName}
-                      placeholder="2508000000"
-                    />
-                  </Field>
-
-                  <Field label="Номер закупки">
-                    <input
-                      name="procurementNumber"
-                      className={inputClassName}
-                      placeholder="32615804162"
-                    />
-                  </Field>
-
-                  <Field label="Площадка">
-                    <input
-                      name="platform"
-                      className={inputClassName}
-                      placeholder="РТС-Тендер / B2B / АСТ ГОЗ"
-                    />
-                  </Field>
-
-                  <Field label="Окончание подачи">
-                    <input name="deadline" type="datetime-local" className={inputClassName} />
-                  </Field>
-
-                  <Field label="Вид закупки">
-                    <input
-                      name="purchaseType"
-                      className={inputClassName}
-                      placeholder="Товары / инструмент / оборудование"
-                    />
-                  </Field>
-
-                  <Field label="НМЦ, руб.">
-                    <input
-                      name="nmck"
-                      className={inputClassName}
-                      placeholder="4446300.76"
-                    />
-                  </Field>
-
-                  <Field label="НМЦ без НДС, руб.">
-                    <input
-                      name="nmckWithoutVat"
-                      className={inputClassName}
-                      placeholder="3644508.82"
-                    />
-                  </Field>
-
-                  <Field label="Количество позиций">
-                    <input
-                      name="itemsCount"
-                      type="number"
-                      min={1}
-                      className={inputClassName}
-                      placeholder="6"
-                    />
-                  </Field>
-
-                  <Field label="Ответственный">
-                    <input
-                      name="assignedTo"
-                      className={inputClassName}
-                      placeholder="ФИО сотрудника"
-                    />
-                  </Field>
-                </div>
-              </section>
-
               <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="mb-5">
                   <h2 className="text-2xl font-bold tracking-tight text-[#081a4b]">
-                    Первичная выжимка
+                    Загрузить пакет документации
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Та самая структурная выкладка, по которой вы принимаете
-                    решение брать закупку или нет.
+                    Добавь все документы, которые есть по закупке: извещение, ТЗ,
+                    проект договора, приложения, формы заказчика, расчёт НМЦК,
+                    таблицы и архивы с формами.
                   </p>
                 </div>
 
                 <div className="space-y-5">
-                  <Field label="Краткая суть закупки">
-                    <textarea
-                      name="summary"
-                      className={textareaClassName}
-                      placeholder="Короткая выжимка по предмету закупки, условиям и важным ограничениям..."
-                    />
-                  </Field>
-
-                  <Field label="Критерии отбора">
-                    <textarea
-                      name="selectionCriteria"
-                      className={textareaClassName}
-                      placeholder="Цена 100%, опыт 0% или иная логика оценки..."
+                  <Field
+                    label="Документы закупки"
+                    required
+                    hint="Можно загрузить сразу несколько файлов любых доступных форматов."
+                  >
+                    <input
+                      name="documents"
+                      type="file"
+                      multiple
+                      required
+                      className={`${inputClassName} cursor-pointer file:mr-4 file:rounded-xl file:border-0 file:bg-[#0d5bd7] file:px-4 file:py-2 file:text-sm file:font-medium file:text-white`}
                     />
                   </Field>
 
                   <Field
-                    label="Требуемая документация до подачи"
-                    hint="Один документ на строку."
+                    label="Ссылка на закупку"
+                    hint="Необязательно. Если есть ссылка из агрегатора или ЭТП, приложи её для удобства."
                   >
-                    <textarea
-                      name="requiredDocuments"
-                      className={textareaClassName}
-                      placeholder={"Заявка по форме заказчика\nКоммерческое предложение\nУстав\nВыписка ЕГРЮЛ"}
+                    <input
+                      name="sourceUrl"
+                      type="url"
+                      className={inputClassName}
+                      placeholder="https://..."
                     />
                   </Field>
 
                   <Field
-                    label="Нестандартные требования"
-                    hint="Один пункт на строку."
+                    label="Текст документации, если он уже есть"
+                    hint="Необязательно. Это запасной вариант, если текст уже выгружен из закупки и его можно сразу отдать на анализ."
                   >
                     <textarea
-                      name="nonstandardRequirements"
+                      name="sourceText"
                       className={textareaClassName}
-                      placeholder={"Аналоги не рассматриваются\nТовар должен быть новым\nНужны паспорта качества"}
+                      placeholder="Можно вставить текст извещения, ТЗ или всего пакета документации. Если не вставлять, система сначала попробует извлечь текст из загруженных файлов сама."
                     />
                   </Field>
                 </div>
               </section>
             </div>
 
-            <div className="space-y-8">
-              <section className="rounded-[2rem] border border-[#081a4b]/10 bg-[linear-gradient(180deg,#f8fbff_0%,#eef5ff_100%)] p-6 shadow-sm">
-                <div className="text-sm font-medium uppercase tracking-[0.14em] text-[#0d5bd7]">
-                  Маршрут после сохранения
+            <aside className="space-y-6">
+              <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">
+                  Маршрут после загрузки
                 </div>
                 <div className="mt-3 text-2xl font-bold tracking-tight text-[#081a4b]">
-                  Что система предложит дальше
+                  Что произойдёт дальше
                 </div>
-                <div className="mt-5 space-y-3">
-                  {firstRoute.map((item, index) => (
+                <div className="mt-5 space-y-4">
+                  {[
+                    "Сохраняем всю исходную документацию в карточке закупки.",
+                    "Пытаемся извлечь текст и запускаем первичный AI-анализ.",
+                    "Автоматически строим основной вывод и ФАС-ветку.",
+                    "Подсвечиваем, что заполнено, а что ещё требует проверки человеком.",
+                  ].map((item, index) => (
                     <div
                       key={item}
-                      className="flex gap-3 rounded-2xl border border-white/80 bg-white/90 px-4 py-4"
+                      className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4"
                     >
-                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#081a4b] text-sm font-semibold text-white">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#081a4b] text-sm font-semibold text-white">
                         {index + 1}
                       </div>
                       <div className="text-sm leading-6 text-slate-700">{item}</div>
                     </div>
                   ))}
                 </div>
-              </section>
+              </div>
 
-              <section className="rounded-[2rem] border border-slate-200 bg-slate-50 p-6">
-                <div className="mb-5">
-                  <h2 className="text-2xl font-bold tracking-tight text-[#081a4b]">
-                    Условия договора
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Самые чувствительные условия для операционного решения.
-                  </p>
+              <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6">
+                <div className="text-lg font-bold tracking-tight text-[#081a4b]">
+                  Что система может не понять сразу
                 </div>
-
-                <div className="space-y-5">
-                  <Field label="Сроки и место поставки">
-                    <textarea
-                      name="deliveryTerms"
-                      className={textareaClassName}
-                      placeholder="60 календарных дней, склад покупателя, доставка за счет поставщика..."
-                    />
-                  </Field>
-
-                  <Field label="Сроки оплаты">
-                    <textarea
-                      name="paymentTerms"
-                      className={textareaClassName}
-                      placeholder="7 рабочих дней после приемки и подписания УПД..."
-                    />
-                  </Field>
-
-                  <Field label="Срок действия договора">
-                    <textarea
-                      name="contractTerm"
-                      className={textareaClassName}
-                      placeholder="С момента подписания до полного исполнения обязательств..."
-                    />
-                  </Field>
-
-                  <Field label="Ответственность и неустойка">
-                    <textarea
-                      name="penaltyTerms"
-                      className={textareaClassName}
-                      placeholder="0,1% за день просрочки, 1% после 14 дней..."
-                    />
-                  </Field>
-                </div>
-              </section>
-
-              <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="mb-5">
-                  <h2 className="text-2xl font-bold tracking-tight text-[#081a4b]">
-                    Стоп-факторы
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Можно кратко зафиксировать результат проверки до подключения
-                    автоматического rule engine.
-                  </p>
-                </div>
-
-                <Field label="Итог по стоп-факторам">
-                  <textarea
-                    name="stopFactorsSummary"
-                    className={textareaClassName}
-                    placeholder="Стоп-фактора не выявлено / Есть признаки по монобренду / Нужна ручная проверка..."
-                  />
-                </Field>
-              </section>
-
-              <section className="rounded-[2rem] border border-[#081a4b]/10 bg-[linear-gradient(180deg,#f8fbff_0%,#eef5ff_100%)] p-6">
-                <div className="text-sm font-medium uppercase tracking-[0.14em] text-[#0d5bd7]">
-                  Подсказка оператору
-                </div>
-                <div className="mt-3 text-lg font-semibold leading-8 text-[#081a4b]">
-                  Сначала скорость и аккуратность, потом детализация.
-                </div>
-                <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Важнее занести закупку быстро и аккуратно, чтобы команда видела
-                  её в системе. На следующем шаге карточку можно будет
-                  дообогащать, передавать в предпросчёт и собирать пакет
-                  документов.
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  Если часть файлов окажется в сложном формате или внутри будет
+                  мало извлекаемого текста, система всё равно сохранит документы,
+                  заполнит то, что смогла определить, и отдельно покажет, что
+                  нужно проверить вручную.
                 </p>
+              </div>
+            </aside>
+          </div>
 
-                <div className="mt-5 rounded-2xl border border-white/80 bg-white/90 px-4 py-4 text-sm leading-7 text-slate-700">
-                  Если сомневаешься, лучше сохранить карточку с минимальным набором полей,
-                  чем откладывать занесение закупки. Внутри карточки уже есть маршрут,
-                  который подскажет следующий шаг.
-                </div>
+          <div className="mt-8 flex flex-wrap items-center gap-4 border-t border-slate-200 pt-6">
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center rounded-full bg-[#0d5bd7] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0a4db7]"
+            >
+              Загрузить документы и запустить первичный анализ
+            </button>
 
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <button
-                    type="submit"
-                    className="rounded-2xl bg-[#081a4b] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
-                  >
-                    Сохранить закупку
-                  </button>
-
-                  <Link
-                    href="/procurements"
-                    className="rounded-2xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    Вернуться в реестр
-                  </Link>
-                </div>
-              </section>
-            </div>
+            <Link
+              href="/procurements"
+              className="inline-flex items-center justify-center rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+            >
+              Вернуться в реестр
+            </Link>
           </div>
         </form>
       </section>

@@ -1,5 +1,10 @@
 "use server";
 
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import mammoth from "mammoth";
+import { PDFParse } from "pdf-parse";
+import * as XLSX from "xlsx";
 import {
   TenderFasReviewStatus,
   TenderPromptConfigKey,
@@ -59,6 +64,317 @@ function splitLines(value: FormDataEntryValue | null) {
     .split("\n")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function slugifyTenderFileName(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[^\w.\-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+}
+
+function buildTenderIntakeTitle(input: {
+  sourceUrl: string | null;
+  uploadedNames: string[];
+  procurementNumber: string | null;
+  customerName: string | null;
+}) {
+  if (input.procurementNumber?.trim()) {
+    return `Закупка ${input.procurementNumber.trim()}`;
+  }
+
+  if (input.customerName?.trim()) {
+    return `Закупка ${input.customerName.trim()}`;
+  }
+
+  if (input.uploadedNames.length > 0) {
+    return `Закупка по файлам: ${input.uploadedNames[0]}`;
+  }
+
+  if (input.sourceUrl?.trim()) {
+    return `Закупка по ссылке`;
+  }
+
+  return "Новая закупка";
+}
+
+async function persistTenderUpload(file: File) {
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const safeName = slugifyTenderFileName(file.name || "document");
+  const stampedName = `${Date.now()}-${safeName || "document.bin"}`;
+  const relativePath = path.join("docs", "tender-intake", stampedName);
+  const absolutePath = path.join(process.cwd(), "public", relativePath);
+
+  await mkdir(path.dirname(absolutePath), { recursive: true });
+  await writeFile(absolutePath, bytes);
+
+  return {
+    storedRelativePath: relativePath.replaceAll(path.sep, "/"),
+    storedFileName: stampedName,
+    originalFileName: file.name || stampedName,
+  };
+}
+
+async function extractTextFromTenderUpload(file: File) {
+  const type = (file.type || "").toLowerCase();
+  const name = (file.name || "").toLowerCase();
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const isPlainText =
+    type.startsWith("text/") ||
+    type.includes("json") ||
+    name.endsWith(".txt") ||
+    name.endsWith(".md") ||
+    name.endsWith(".csv") ||
+    name.endsWith(".json");
+
+  if (!isPlainText) {
+    if (name.endsWith(".docx")) {
+      const docxResult = await mammoth.extractRawText({ buffer });
+      const extractedText = docxResult.value.trim();
+
+      return {
+        extractedText: extractedText.length > 0 ? extractedText : null,
+        extractionNote:
+          extractedText.length > 0
+            ? "Текст из DOCX удалось извлечь автоматически."
+            : "DOCX загружен, но текст для анализа извлечь не удалось.",
+      };
+    }
+
+    if (name.endsWith(".pdf")) {
+      const parser = new PDFParse({ data: buffer });
+      const pdfResult = await parser.getText();
+      await parser.destroy();
+      const extractedText = pdfResult.text.trim();
+
+      return {
+        extractedText: extractedText.length > 0 ? extractedText : null,
+        extractionNote:
+          extractedText.length > 0
+            ? "Текст из PDF удалось извлечь автоматически."
+            : "PDF загружен, но текст для анализа извлечь не удалось.",
+      };
+    }
+
+    if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+      const workbook = XLSX.read(buffer, { type: "buffer" });
+      const extractedText = workbook.SheetNames.map((sheetName) => {
+        const worksheet = workbook.Sheets[sheetName];
+        const csv = XLSX.utils.sheet_to_csv(worksheet, { blankrows: false }).trim();
+        return csv ? `Лист: ${sheetName}\n${csv}` : "";
+      })
+        .filter(Boolean)
+        .join("\n\n")
+        .trim();
+
+      return {
+        extractedText: extractedText.length > 0 ? extractedText : null,
+        extractionNote:
+          extractedText.length > 0
+            ? "Текст из Excel удалось извлечь автоматически."
+            : "Excel-файл загружен, но данных для анализа извлечь не удалось.",
+      };
+    }
+
+    return {
+      extractedText: null,
+      extractionNote:
+        "Файл сохранён в системе, но этот формат пока не удалось разобрать автоматически. Его можно использовать дальше как исходный документ закупки.",
+    };
+  }
+
+  const extractedText = buffer.toString("utf-8").trim();
+
+  return {
+    extractedText: extractedText.length > 0 ? extractedText : null,
+    extractionNote:
+      extractedText.trim().length > 0
+        ? "Текст из файла удалось извлечь автоматически."
+        : "Файл загружен, но текста для анализа внутри не найдено.",
+  };
+}
+
+async function runTenderPrimaryAnalysis(prisma: ReturnType<typeof getPrisma>, input: {
+  procurementId: number;
+  sourceText: string;
+}) {
+  const procurementId = input.procurementId;
+  const sourceText = input.sourceText.trim();
+
+  await prisma.tenderProcurement.update({
+    where: { id: procurementId },
+    data: {
+      sourceText,
+      aiAnalysisStatus: "running",
+      aiAnalysisError: null,
+      status: TenderProcurementStatus.ANALYSIS,
+    },
+  });
+
+  const procurement = await prisma.tenderProcurement.findUnique({
+    where: { id: procurementId },
+  });
+
+  if (!procurement) {
+    throw new Error("Procurement not found");
+  }
+
+  const { model, result } = await runTenderAiAnalysis({
+    title: procurement.title,
+    customerName: procurement.customerName,
+    customerInn: procurement.customerInn,
+    procurementNumber: procurement.procurementNumber,
+    platform: procurement.platform,
+    itemsCount: procurement.itemsCount,
+    nmckWithoutVat: procurement.nmckWithoutVat?.toString() ?? null,
+    sourceText,
+  });
+
+  const fasPromptConfig = await prisma.tenderPromptConfig.findUnique({
+    where: { key: TenderPromptConfigKey.FAS_POTENTIAL_COMPLAINT },
+  });
+
+  const fasPromptBody =
+    fasPromptConfig?.body?.trim() ||
+    [
+      "Если явных нарушений с высокой вероятностью обоснования не выявлено — прямо укажи это и не выдумывай основания.",
+      "Запрещено:",
+      "придумывать нарушения при отсутствии прямых оснований;",
+      "включать спорные/оценочные доводы без формальной доказуемости;",
+      "рассуждать о целесообразности участия или коммерческих рисках;",
+      "давать теорию без привязки к конкретному пункту документации.",
+    ].join("\n");
+
+  const { result: fasResult } = await runTenderFasAiAnalysis({
+    title: procurement.title,
+    customerName: procurement.customerName,
+    customerInn: procurement.customerInn,
+    procurementNumber: procurement.procurementNumber,
+    platform: procurement.platform,
+    sourceText,
+    promptBody: fasPromptBody,
+  });
+
+  await prisma.tenderProcurement.update({
+    where: { id: procurementId },
+    data: {
+      sourceText,
+      aiAnalysis: result,
+      aiAnalysisStatus: "completed",
+      aiAnalysisError: null,
+      aiAnalyzedAt: new Date(),
+      aiModel: model,
+      title:
+        procurement.title === "Новая закупка" && result.summary?.trim()
+          ? result.summary.trim().slice(0, 140)
+          : procurement.title,
+      summary: result.summary || null,
+      selectionCriteria: result.selection_criteria || null,
+      requiredDocuments: result.required_documents.length
+        ? result.required_documents
+        : undefined,
+      nonstandardRequirements: result.nonstandard_requirements.length
+        ? result.nonstandard_requirements
+        : undefined,
+      deliveryTerms: result.delivery_terms || null,
+      paymentTerms: result.payment_terms || null,
+      contractTerm: result.contract_term || null,
+      penaltyTerms: result.penalty_terms || null,
+      stopFactorsSummary: result.stop_factor_findings.length
+        ? result.stop_factor_findings.map((item) => `${item.name}: ${item.reason}`).join("\n")
+        : "Стоп-факторы в тексте не обнаружены",
+    },
+  });
+
+  await prisma.tenderFasReview.upsert({
+    where: { procurementId },
+    update: {
+      status: fasResult.status as TenderFasReviewStatus,
+      findingTitle:
+        fasResult.finding_title ||
+        (fasResult.status === "NO_VIOLATION"
+          ? "Нарушений для жалобы в ФАС не выявлено"
+          : null),
+      findingBasis: fasResult.finding_basis || null,
+      confidenceNote: fasResult.confidence_note || null,
+      promptSnapshot: fasPromptBody,
+      lastAnalyzedAt: new Date(),
+    },
+    create: {
+      procurementId,
+      status: fasResult.status as TenderFasReviewStatus,
+      findingTitle:
+        fasResult.finding_title ||
+        (fasResult.status === "NO_VIOLATION"
+          ? "Нарушений для жалобы в ФАС не выявлено"
+          : null),
+      findingBasis: fasResult.finding_basis || null,
+      confidenceNote: fasResult.confidence_note || null,
+      promptSnapshot: fasPromptBody,
+      lastAnalyzedAt: new Date(),
+    },
+  });
+
+  await evaluateTenderStopRules(procurementId);
+
+  await logTenderEvent({
+    procurementId,
+    actionType: TenderActionType.AI_ANALYZED,
+    title: "AI-анализ выполнен",
+    description: "Система автоматически разобрала документацию и заполнила карточку закупки.",
+    actorName: "AI",
+    metadata: {
+      model,
+      stopFactorFindings: result.stop_factor_findings.length,
+      fasStatus: fasResult.status,
+    },
+  });
+
+  await logTenderEvent({
+    procurementId,
+    actionType: TenderActionType.NOTE_ADDED,
+    title: "ФАС-ветка проверена автоматически",
+    description:
+      fasResult.status === "POTENTIAL_COMPLAINT"
+        ? `AI нашёл потенциальное нарушение: ${fasResult.finding_title || "см. карточку ФАС-ветки"}.`
+        : fasResult.status === "MANUAL_REVIEW"
+          ? "AI не уверен по ФАС-ветке и отправил её на ручную проверку."
+          : "AI не нашёл явных нарушений для жалобы в ФАС.",
+    actorName: "AI",
+    metadata: {
+      model,
+      fasStatus: fasResult.status,
+    },
+  });
+}
+
+function inferSourceDocumentKind(fileName: string) {
+  const normalized = fileName.toLowerCase();
+
+  if (normalized.includes("тз") || normalized.includes("техническ")) {
+    return "Техническое задание";
+  }
+
+  if (normalized.includes("договор")) {
+    return "Проект договора";
+  }
+
+  if (normalized.includes("цен") || normalized.includes("price")) {
+    return "Ценовая форма";
+  }
+
+  if (normalized.includes("анкет")) {
+    return "Анкета";
+  }
+
+  if (normalized.includes("заявк") || normalized.includes("соглас")) {
+    return "Форма заявки";
+  }
+
+  return "Документ закупки";
 }
 
 async function getTenderActorContext() {
@@ -885,41 +1201,138 @@ function extractTechnicalItemsFromText(sourceText: string) {
 export async function createTenderProcurementAction(formData: FormData) {
   await requireTenderCapability("procurement_create");
   const prisma = getPrisma();
+  const actorName = normalizeString(formData.get("actorName")) ?? "Сотрудник";
+  const sourceUrl = normalizeString(formData.get("sourceUrl"));
+  const pastedSourceText = normalizeString(formData.get("sourceText"));
+  const uploadedFiles = formData
+    .getAll("documents")
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+
+  if (uploadedFiles.length === 0 && !pastedSourceText) {
+    throw new Error("Нужно загрузить хотя бы один документ или вставить текст документации.");
+  }
+
+  const procurementTitle = buildTenderIntakeTitle({
+    sourceUrl,
+    uploadedNames: uploadedFiles.map((file) => file.name),
+    procurementNumber: null,
+    customerName: null,
+  });
 
   const record = await prisma.tenderProcurement.create({
     data: {
-      title: String(formData.get("title") ?? "").trim(),
-      sourceUrl: normalizeString(formData.get("sourceUrl")),
-      customerName: normalizeString(formData.get("customerName")),
-      customerInn: normalizeString(formData.get("customerInn")),
-      procurementNumber: normalizeString(formData.get("procurementNumber")),
-      platform: normalizeString(formData.get("platform")),
-      deadline: normalizeDate(formData.get("deadline")),
-      nmck: normalizeNumber(formData.get("nmck")),
-      nmckWithoutVat: normalizeNumber(formData.get("nmckWithoutVat")),
-      itemsCount: normalizeNumber(formData.get("itemsCount")),
-      purchaseType: normalizeString(formData.get("purchaseType")),
-      summary: normalizeString(formData.get("summary")),
-      selectionCriteria: normalizeString(formData.get("selectionCriteria")),
-      requiredDocuments: splitLines(formData.get("requiredDocuments")),
-      nonstandardRequirements: splitLines(formData.get("nonstandardRequirements")),
-      deliveryTerms: normalizeString(formData.get("deliveryTerms")),
-      paymentTerms: normalizeString(formData.get("paymentTerms")),
-      contractTerm: normalizeString(formData.get("contractTerm")),
-      penaltyTerms: normalizeString(formData.get("penaltyTerms")),
-      stopFactorsSummary: normalizeString(formData.get("stopFactorsSummary")),
-      assignedTo: normalizeString(formData.get("assignedTo")),
+      title: procurementTitle,
+      sourceUrl,
       status: TenderProcurementStatus.NEW,
+      aiAnalysisStatus: uploadedFiles.length || pastedSourceText ? "queued" : null,
     },
   });
+
+  const extractedChunks: string[] = [];
+  const extractionWarnings: string[] = [];
+
+  for (const file of uploadedFiles) {
+    const stored = await persistTenderUpload(file);
+    const { extractedText, extractionNote } = await extractTextFromTenderUpload(file);
+
+    if (extractedText) {
+      extractedChunks.push(`Файл: ${stored.originalFileName}\n${extractedText}`);
+    } else if (extractionNote) {
+      extractionWarnings.push(`${stored.originalFileName}: ${extractionNote}`);
+    }
+
+    await prisma.tenderSourceDocument.create({
+      data: {
+        procurementId: record.id,
+        title: stored.originalFileName,
+        fileName: stored.originalFileName,
+        documentKind: inferSourceDocumentKind(stored.originalFileName),
+        contentSnippet: extractedText?.slice(0, 4000) ?? null,
+        status: extractedText
+          ? TenderSourceDocumentStatus.READY_FOR_ANALYSIS
+          : TenderSourceDocumentStatus.UPLOADED,
+        autofillStatus: TenderSourceDocumentAutofillStatus.NOT_ANALYZED,
+        note: extractionNote
+          ? `${extractionNote}\nФайл сохранён: /${stored.storedRelativePath}`
+          : `Файл сохранён: /${stored.storedRelativePath}`,
+      },
+    });
+  }
+
+  if (pastedSourceText) {
+    extractedChunks.push(`Текст документации, вставленный сотрудником:\n${pastedSourceText}`);
+  }
 
   await logTenderEvent({
     procurementId: record.id,
     actionType: TenderActionType.CREATED,
-    title: "Закупка создана",
-    description: "Создана первичная карточка закупки.",
-    actorName: normalizeString(formData.get("actorName")) ?? "Сотрудник",
+    title: "Закупка загружена",
+    description:
+      uploadedFiles.length > 0
+        ? "Сотрудник загрузил пакет исходной документации. Система начала первичный разбор."
+        : "Создана карточка закупки по вставленному тексту документации.",
+    actorName,
   });
+
+  const combinedSourceText = extractedChunks.join("\n\n").trim();
+
+  if (!combinedSourceText) {
+    const message =
+      extractionWarnings.length > 0
+        ? `Не удалось автоматически извлечь текст из загруженных файлов.\n${extractionWarnings.join("\n")}`
+        : "Для первичного анализа не хватило текста документации.";
+
+    await prisma.tenderProcurement.update({
+      where: { id: record.id },
+      data: {
+        aiAnalysisStatus: "needs_text",
+        aiAnalysisError: message,
+        sourceText: null,
+      },
+    });
+
+    await logTenderEvent({
+      procurementId: record.id,
+      actionType: TenderActionType.NOTE_ADDED,
+      title: "Нужно проверить исходные файлы",
+      description:
+        "Система сохранила документацию, но не смогла извлечь из неё достаточно текста для автоматического первичного анализа.",
+      actorName: "AI",
+      metadata: {
+        warnings: extractionWarnings,
+      },
+    });
+  } else {
+    try {
+      await runTenderPrimaryAnalysis(prisma, {
+        procurementId: record.id,
+        sourceText: combinedSourceText,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Не удалось выполнить первичный AI-анализ";
+
+      await prisma.tenderProcurement.update({
+        where: { id: record.id },
+        data: {
+          sourceText: combinedSourceText,
+          aiAnalysisStatus: "failed",
+          aiAnalysisError: message,
+        },
+      });
+
+      await logTenderEvent({
+        procurementId: record.id,
+        actionType: TenderActionType.NOTE_ADDED,
+        title: "Первичный анализ не завершён",
+        description: message,
+        actorName: "AI",
+        metadata: {
+          warnings: extractionWarnings,
+        },
+      });
+    }
+  }
 
   revalidatePath("/");
   revalidatePath("/procurements");
@@ -936,149 +1349,10 @@ export async function analyzeTenderProcurementAction(formData: FormData) {
     throw new Error("Invalid procurement id");
   }
 
-  await prisma.tenderProcurement.update({
-    where: { id: procurementId },
-    data: {
-      sourceText,
-      aiAnalysisStatus: "running",
-      aiAnalysisError: null,
-      status: TenderProcurementStatus.ANALYSIS,
-    },
-  });
-
   try {
-    const procurement = await prisma.tenderProcurement.findUnique({
-      where: { id: procurementId },
-    });
-
-    if (!procurement) {
-      throw new Error("Procurement not found");
-    }
-
-    const { model, result } = await runTenderAiAnalysis({
-      title: procurement.title,
-      customerName: procurement.customerName,
-      customerInn: procurement.customerInn,
-      procurementNumber: procurement.procurementNumber,
-      platform: procurement.platform,
-      itemsCount: procurement.itemsCount,
-      nmckWithoutVat: procurement.nmckWithoutVat?.toString() ?? null,
-      sourceText,
-    });
-
-    const fasPromptConfig = await prisma.tenderPromptConfig.findUnique({
-      where: { key: TenderPromptConfigKey.FAS_POTENTIAL_COMPLAINT },
-    });
-
-    const fasPromptBody =
-      fasPromptConfig?.body?.trim() ||
-      [
-        "Если явных нарушений с высокой вероятностью обоснования не выявлено — прямо укажи это и не выдумывай основания.",
-        "Запрещено:",
-        "придумывать нарушения при отсутствии прямых оснований;",
-        "включать спорные/оценочные доводы без формальной доказуемости;",
-        "рассуждать о целесообразности участия или коммерческих рисках;",
-        "давать теорию без привязки к конкретному пункту документации.",
-      ].join("\n");
-
-    const { result: fasResult } = await runTenderFasAiAnalysis({
-      title: procurement.title,
-      customerName: procurement.customerName,
-      customerInn: procurement.customerInn,
-      procurementNumber: procurement.procurementNumber,
-      platform: procurement.platform,
-      sourceText,
-      promptBody: fasPromptBody,
-    });
-
-    await prisma.tenderProcurement.update({
-      where: { id: procurementId },
-      data: {
-        sourceText,
-        aiAnalysis: result,
-        aiAnalysisStatus: "completed",
-        aiAnalysisError: null,
-        aiAnalyzedAt: new Date(),
-        aiModel: model,
-        summary: result.summary || null,
-        selectionCriteria: result.selection_criteria || null,
-        requiredDocuments: result.required_documents.length
-          ? result.required_documents
-          : undefined,
-        nonstandardRequirements: result.nonstandard_requirements.length
-          ? result.nonstandard_requirements
-          : undefined,
-        deliveryTerms: result.delivery_terms || null,
-        paymentTerms: result.payment_terms || null,
-        contractTerm: result.contract_term || null,
-        penaltyTerms: result.penalty_terms || null,
-        stopFactorsSummary: result.stop_factor_findings.length
-          ? result.stop_factor_findings
-              .map((item) => `${item.name}: ${item.reason}`)
-              .join("\n")
-          : "Стоп-факторы в тексте не обнаружены",
-      },
-    });
-
-    await prisma.tenderFasReview.upsert({
-      where: { procurementId },
-      update: {
-        status: fasResult.status as TenderFasReviewStatus,
-        findingTitle:
-          fasResult.finding_title ||
-          (fasResult.status === "NO_VIOLATION"
-            ? "Нарушений для жалобы в ФАС не выявлено"
-            : null),
-        findingBasis: fasResult.finding_basis || null,
-        confidenceNote: fasResult.confidence_note || null,
-        promptSnapshot: fasPromptBody,
-        lastAnalyzedAt: new Date(),
-      },
-      create: {
-        procurementId,
-        status: fasResult.status as TenderFasReviewStatus,
-        findingTitle:
-          fasResult.finding_title ||
-          (fasResult.status === "NO_VIOLATION"
-            ? "Нарушений для жалобы в ФАС не выявлено"
-            : null),
-        findingBasis: fasResult.finding_basis || null,
-        confidenceNote: fasResult.confidence_note || null,
-        promptSnapshot: fasPromptBody,
-        lastAnalyzedAt: new Date(),
-      },
-    });
-
-    await evaluateTenderStopRules(procurementId);
-
-    await logTenderEvent({
+    await runTenderPrimaryAnalysis(prisma, {
       procurementId,
-      actionType: TenderActionType.AI_ANALYZED,
-      title: "AI-анализ выполнен",
-      description: "Структурная выжимка сформирована и применена к карточке закупки.",
-      actorName: "AI",
-      metadata: {
-        model,
-        stopFactorFindings: result.stop_factor_findings.length,
-        fasStatus: fasResult.status,
-      },
-    });
-
-    await logTenderEvent({
-      procurementId,
-      actionType: TenderActionType.NOTE_ADDED,
-      title: "ФАС-ветка проверена автоматически",
-      description:
-        fasResult.status === "POTENTIAL_COMPLAINT"
-          ? `AI нашёл потенциальное нарушение: ${fasResult.finding_title || "см. карточку ФАС-ветки"}.`
-          : fasResult.status === "MANUAL_REVIEW"
-            ? "AI не уверен по ФАС-ветке и отправил её на ручную проверку."
-            : "AI не нашёл явных нарушений для жалобы в ФАС.",
-      actorName: "AI",
-      metadata: {
-        model,
-        fasStatus: fasResult.status,
-      },
+      sourceText,
     });
   } catch (error) {
     const message =

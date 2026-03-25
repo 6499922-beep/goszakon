@@ -133,7 +133,7 @@ export function TenderIntakeUploadForm({
             return;
           }
 
-          router.push(`/procurements/new?uploaded=${procurementId}&selected=${procurementId}`);
+          router.push(`/procurements/new?uploaded=${procurementId}`);
           router.refresh();
         } catch (error) {
           setErrorMessage(

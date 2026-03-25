@@ -36,6 +36,43 @@ function extractStoredDocumentPath(note: string | null | undefined) {
   return match?.[1] ?? null;
 }
 
+function extractHumanIssue(note: string | null | undefined) {
+  const value = String(note ?? "").trim();
+  if (!value) return null;
+
+  const withoutPath = value.replace(/\s*Файл сохранён:\s*\/[^\s]+/g, "").trim();
+
+  if (withoutPath.includes("не удалось разобрать автоматически")) {
+    return "Формат пока не удалось разобрать автоматически. Нужна ручная проверка файла.";
+  }
+
+  if (withoutPath.includes("Текст из PDF не удалось извлечь автоматически")) {
+    return "Не удалось извлечь текст из PDF. Нужно открыть файл и проверить его вручную.";
+  }
+
+  if (withoutPath.includes("Текст из DOCX не удалось извлечь автоматически")) {
+    return "Не удалось извлечь текст из DOCX. Нужно открыть файл и проверить его вручную.";
+  }
+
+  if (withoutPath.includes("Текст из Excel не удалось извлечь автоматически")) {
+    return "Не удалось извлечь текст из таблицы Excel. Нужно открыть файл и проверить данные вручную.";
+  }
+
+  if (withoutPath.includes("Текст из DOCX удалось извлечь автоматически")) {
+    return "Текст из DOCX извлечён, файл успешно сохранён в систему.";
+  }
+
+  if (withoutPath.includes("Текст из PDF удалось извлечь автоматически")) {
+    return "Текст из PDF извлечён, файл успешно сохранён в систему.";
+  }
+
+  if (withoutPath.includes("Текст из Excel удалось извлечь автоматически")) {
+    return "Текст из Excel извлечён, файл успешно сохранён в систему.";
+  }
+
+  return withoutPath;
+}
+
 function normalizeSearchText(value: string | null | undefined) {
   return String(value ?? "").toLowerCase().replace(/\s+/g, " ").trim();
 }
@@ -82,24 +119,117 @@ function findMatchingDocumentsForRule(
   return ranked.length > 0 ? ranked.slice(0, 3) : sourceDocuments.slice(0, 3);
 }
 
+function splitReadableText(value: string | null | undefined) {
+  const normalized = String(value ?? "")
+    .replace(/\r/g, "")
+    .trim();
+
+  if (!normalized) return [];
+
+  const byLines = normalized
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (byLines.length > 1) {
+    return byLines;
+  }
+
+  return normalized
+    .split(/(?<=[.!?])\s+(?=[А-ЯA-Z0-9])/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function renderReadableText(value: string | null | undefined, fallback: string) {
+  const blocks = splitReadableText(value);
+
+  if (blocks.length === 0) {
+    return <div className="mt-3 text-sm leading-6 text-slate-600">{fallback}</div>;
+  }
+
+  return (
+    <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+      {blocks.map((item, index) => (
+        <div key={`${item}-${index}`} className="rounded-2xl bg-white px-4 py-3">
+          {item}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function buildMissingFields(procurement: {
   procurementNumber: string | null;
   customerName: string | null;
   customerInn: string | null;
   nmckWithoutVat: { toString(): string } | null;
-  sourceDocuments: Array<{ note: string | null }>;
+  sourceDocuments: Array<{
+    title: string;
+    fileName: string | null;
+    note: string | null;
+  }>;
 }) {
-  const missing: string[] = [];
-  if (!procurement.procurementNumber) missing.push("Не удалось определить номер закупки.");
-  if (!procurement.customerName) missing.push("Не удалось определить заказчика.");
-  if (!procurement.customerInn) missing.push("Не удалось определить ИНН заказчика.");
-  if (!procurement.nmckWithoutVat) missing.push("Не удалось определить НМЦ без НДС.");
+  const missing: Array<{
+    title: string;
+    description: string;
+    storagePath?: string | null;
+    fileLabel?: string | null;
+    status: "error" | "ok";
+  }> = [];
 
-  const extractionNotes = procurement.sourceDocuments
-    .map((item) => item.note?.trim())
-    .filter(Boolean) as string[];
+  if (!procurement.procurementNumber) {
+    missing.push({
+      title: "Номер закупки не определён",
+      description: "Система не смогла уверенно вытащить номер закупки из загруженной документации.",
+      status: "error",
+    });
+  }
 
-  return [...missing, ...extractionNotes].slice(0, 8);
+  if (!procurement.customerName) {
+    missing.push({
+      title: "Заказчик не определён",
+      description: "Не удалось автоматически определить наименование заказчика.",
+      status: "error",
+    });
+  }
+
+  if (!procurement.customerInn) {
+    missing.push({
+      title: "ИНН заказчика не определён",
+      description: "Не удалось автоматически определить ИНН заказчика.",
+      status: "error",
+    });
+  }
+
+  if (!procurement.nmckWithoutVat) {
+    missing.push({
+      title: "НМЦ без НДС не определена",
+      description: "В документации не нашлось уверенного значения НМЦ без НДС.",
+      status: "error",
+    });
+  }
+
+  for (const item of procurement.sourceDocuments) {
+    const issue = extractHumanIssue(item.note);
+    if (!issue) continue;
+
+    const storagePath = extractStoredDocumentPath(item.note);
+    const isError =
+      issue.includes("не удалось") ||
+      issue.includes("Нужна ручная проверка") ||
+      issue.includes("нужно открыть файл");
+
+    missing.push({
+      title: item.title || item.fileName || "Документ",
+      description: issue,
+      storagePath,
+      fileLabel: item.fileName || item.title,
+      status: isError ? "error" : "ok",
+    });
+  }
+
+  return missing.slice(0, 12);
 }
 
 export const dynamic = "force-dynamic";
@@ -275,9 +405,31 @@ export default async function TenderRecognitionDetailPage({
                 {procurement.stopFactorsSummary ? <div>{procurement.stopFactorsSummary}</div> : null}
               </div>
             ) : stopFactorState === "review" ? (
-              <div className="mt-3 space-y-2 text-sm leading-6">
+              <div className="mt-3 grid gap-3">
                 {missingFields.map((item, index) => (
-                  <div key={`${item}-${index}`}>{item}</div>
+                  <div
+                    key={`${item.title}-${index}`}
+                    className={`rounded-2xl border px-4 py-3 ${
+                      item.status === "error"
+                        ? "border-amber-200 bg-white/80"
+                        : "border-emerald-200 bg-white/80"
+                    }`}
+                  >
+                    <div className="font-semibold">{item.title}</div>
+                    <div className="mt-1 text-sm leading-6">{item.description}</div>
+                    {item.storagePath ? (
+                      <div className="mt-2">
+                        <a
+                          href={item.storagePath}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm font-medium underline decoration-amber-300 underline-offset-2 hover:text-amber-900"
+                        >
+                          Открыть файл: {item.fileLabel ?? "документ"}
+                        </a>
+                      </div>
+                    ) : null}
+                  </div>
                 ))}
               </div>
             ) : (
@@ -290,15 +442,14 @@ export default async function TenderRecognitionDetailPage({
           <div className="grid gap-4 xl:grid-cols-2">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-sm font-semibold text-slate-500">Краткая суть закупки</div>
-              <div className="mt-3 text-sm leading-6 text-slate-700">
-                {procurement.summary ?? "Не удалось определить автоматически"}
-              </div>
+              {renderReadableText(procurement.summary, "Не удалось определить автоматически")}
             </div>
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-sm font-semibold text-slate-500">Критерии отбора</div>
-              <div className="mt-3 text-sm leading-6 text-slate-700">
-                {procurement.selectionCriteria ?? "Не удалось определить автоматически"}
-              </div>
+              {renderReadableText(
+                procurement.selectionCriteria,
+                "Не удалось определить автоматически"
+              )}
             </div>
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-sm font-semibold text-slate-500">Требуемая документация</div>
@@ -330,20 +481,20 @@ export default async function TenderRecognitionDetailPage({
             </div>
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-sm font-semibold text-slate-500">Условия договора</div>
-              <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                <div>
+              <div className="mt-3 grid gap-2 text-sm leading-6 text-slate-700">
+                <div className="rounded-2xl bg-white px-4 py-3">
                   <span className="font-medium text-[#081a4b]">Поставка:</span>{" "}
                   {procurement.deliveryTerms ?? "не определено"}
                 </div>
-                <div>
+                <div className="rounded-2xl bg-white px-4 py-3">
                   <span className="font-medium text-[#081a4b]">Оплата:</span>{" "}
                   {procurement.paymentTerms ?? "не определено"}
                 </div>
-                <div>
+                <div className="rounded-2xl bg-white px-4 py-3">
                   <span className="font-medium text-[#081a4b]">Срок договора:</span>{" "}
                   {procurement.contractTerm ?? "не определено"}
                 </div>
-                <div>
+                <div className="rounded-2xl bg-white px-4 py-3">
                   <span className="font-medium text-[#081a4b]">Неустойка:</span>{" "}
                   {procurement.penaltyTerms ?? "не определено"}
                 </div>
@@ -354,9 +505,31 @@ export default async function TenderRecognitionDetailPage({
                 Что не удалось определить автоматически
               </div>
               {missingFields.length > 0 ? (
-                <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                <div className="mt-3 grid gap-3 text-sm leading-6 text-slate-700">
                   {missingFields.map((item, index) => (
-                    <div key={`${item}-${index}`}>{item}</div>
+                    <div
+                      key={`${item.title}-${index}`}
+                      className={`rounded-2xl border px-4 py-3 ${
+                        item.status === "error"
+                          ? "border-rose-200 bg-white"
+                          : "border-emerald-200 bg-white"
+                      }`}
+                    >
+                      <div className="font-semibold text-[#081a4b]">{item.title}</div>
+                      <div className="mt-1">{item.description}</div>
+                      {item.storagePath ? (
+                        <div className="mt-2">
+                          <a
+                            href={item.storagePath}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-medium text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
+                          >
+                            Открыть файл: {item.fileLabel ?? "документ"}
+                          </a>
+                        </div>
+                      ) : null}
+                    </div>
                   ))}
                 </div>
               ) : (

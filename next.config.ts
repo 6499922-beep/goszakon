@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
-      bodySizeLimit: "100mb",
+      bodySizeLimit: "200mb",
       allowedOrigins: [
         "tender.goszakon.ru",
         "82.147.71.45",

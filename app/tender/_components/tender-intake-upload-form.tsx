@@ -19,6 +19,12 @@ export function TenderIntakeUploadForm({
     selectedFiles.length === 0
       ? null
       : Math.min(180, Math.max(20, selectedFiles.length * 12));
+  const selectedFilesLabel =
+    selectedFiles.length === 1
+      ? "файл"
+      : selectedFiles.length < 5
+        ? "файла"
+        : "файлов";
 
   return (
     <form
@@ -34,9 +40,26 @@ export function TenderIntakeUploadForm({
             body: formData,
           });
 
-          const payload = await response.json().catch(() => null);
+          const rawText = await response.text();
+          let payload: { ok?: boolean; error?: string } | null = null;
+
+          if (rawText) {
+            try {
+              payload = JSON.parse(rawText) as { ok?: boolean; error?: string };
+            } catch {
+              payload = null;
+            }
+          }
 
           if (!response.ok || !payload?.ok) {
+            if (response.status === 413) {
+              setErrorMessage(
+                "Пакет документов слишком большой для одной отправки. Раздели его на две части или уменьши общий вес файлов."
+              );
+              setIsPending(false);
+              return;
+            }
+
             setErrorMessage(
               payload?.error || "Не удалось загрузить документы и запустить анализ."
             );
@@ -46,12 +69,16 @@ export function TenderIntakeUploadForm({
 
           router.push("/procurements?view=analysis");
           router.refresh();
-        } catch {
-          setErrorMessage("Не удалось загрузить документы и запустить анализ.");
+        } catch (error) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Не удалось загрузить документы и запустить анализ."
+          );
           setIsPending(false);
         }
       }}
-      className="space-y-4"
+      className="space-y-3"
     >
       <input type="hidden" name="actorName" value={actorName} />
 
@@ -69,7 +96,7 @@ export function TenderIntakeUploadForm({
         }}
       />
 
-      <div className="group flex w-full flex-col rounded-[2.5rem] border-2 border-dashed border-[#0d5bd7]/30 bg-[radial-gradient(circle_at_top,#eef5ff_0%,#ffffff_55%)] px-8 py-6 text-center transition hover:border-[#0d5bd7]/60 hover:bg-[radial-gradient(circle_at_top,#e6f0ff_0%,#ffffff_60%)]">
+      <div className="group flex w-full flex-col rounded-[2.5rem] border-2 border-dashed border-[#0d5bd7]/30 bg-[radial-gradient(circle_at_top,#eef5ff_0%,#ffffff_55%)] px-8 py-5 text-center transition hover:border-[#0d5bd7]/60 hover:bg-[radial-gradient(circle_at_top,#e6f0ff_0%,#ffffff_60%)]">
         <div className="max-w-3xl self-center">
           <div className="text-3xl font-bold tracking-tight text-[#081a4b]">
             {isPending
@@ -84,7 +111,7 @@ export function TenderIntakeUploadForm({
           </p>
         </div>
 
-        <div className="mt-6 flex justify-center">
+        <div className="mt-5 flex justify-center">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -95,26 +122,21 @@ export function TenderIntakeUploadForm({
           </button>
         </div>
 
-        <div className="mt-4 text-sm leading-6 text-slate-500">
+        <div className="mt-3 text-sm leading-6 text-slate-500">
           Поддерживаются PDF, DOCX, XLSX, TXT и другие файлы закупки. Архивы и
           сложные форматы тоже сохранятся в карточке, даже если текст из них не
           получится извлечь сразу.
         </div>
 
         {selectedFiles.length > 0 ? (
-          <div className="mt-5 w-full rounded-[2rem] border border-slate-200 bg-white/90 p-4 text-left shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="mt-4 w-full rounded-[2rem] border border-slate-200 bg-white/95 p-4 text-left shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
                   Подготовлено к загрузке
                 </div>
                 <div className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
-                  {selectedFiles.length}{" "}
-                  {selectedFiles.length === 1
-                    ? "файл"
-                    : selectedFiles.length < 5
-                      ? "файла"
-                      : "файлов"}
+                  {selectedFiles.length} {selectedFilesLabel}
                 </div>
               </div>
 
@@ -126,7 +148,7 @@ export function TenderIntakeUploadForm({
             </div>
 
             <div className="mt-3 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-3">
-              <div className="grid gap-2">
+              <div className="grid max-h-[18rem] gap-2 overflow-y-auto pr-1">
                 {selectedFiles.map((fileName, index) => (
                   <div
                     key={`${fileName}-${index}`}
@@ -151,6 +173,14 @@ export function TenderIntakeUploadForm({
                   ? "Загружаем документы и запускаем анализ..."
                   : "Запустить анализ"}
               </button>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-70"
+              >
+                Заменить документы
+              </button>
             </div>
           </div>
         ) : (
@@ -160,18 +190,6 @@ export function TenderIntakeUploadForm({
           </div>
         )}
       </div>
-
-      {selectedFiles.length > 0 ? (
-        <div className="rounded-[2rem] border border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-6 text-slate-500">
-          После отправки система перейдёт в реестр закупок и покажет, что
-          первичный анализ запущен.
-        </div>
-      ) : (
-        <div className="rounded-[2rem] border border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-6 text-slate-500">
-          На первом этапе сотрудник делает только одно действие: загружает
-          документы для анализа.
-        </div>
-      )}
 
       {errorMessage ? (
         <div className="rounded-[2rem] border border-rose-200 bg-rose-50 px-5 py-4 text-sm leading-6 text-rose-700">

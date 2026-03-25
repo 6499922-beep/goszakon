@@ -437,13 +437,14 @@ export default async function TenderRecognitionDetailPage({
                 <div>Площадка: {procurement.platform ?? "не определена"}</div>
                 <div>
                   Позиций:{" "}
-                  {equipmentItems.length > 0 ? (
-                    <a
-                      href="#equipment-list"
+                  {((procurement.itemsCount ?? 0) > 0 || equipmentItems.length > 0) ? (
+                    <Link
+                      href={`/procurements/recognition/${procurement.id}/equipment`}
+                      target="_blank"
                       className="font-semibold text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
                     >
                       {procurement.itemsCount ?? equipmentItems.length}
-                    </a>
+                    </Link>
                   ) : (
                     <span>{procurement.itemsCount ?? "не определено"}</span>
                   )}
@@ -463,18 +464,15 @@ export default async function TenderRecognitionDetailPage({
                   </div>
                 ))}
                 {equipmentItems.length > 3 ? (
-                  <details className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
-                    <summary className="cursor-pointer font-medium text-[#081a4b]">
-                      Показать ещё {equipmentItems.length - 3}
-                    </summary>
-                    <div className="mt-3 space-y-2">
-                      {equipmentItems.slice(3).map((item) => (
-                        <div key={item} className="rounded-2xl bg-slate-50 px-4 py-3">
-                          {item}
-                        </div>
-                      ))}
-                    </div>
-                  </details>
+                  <div className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                    <Link
+                      href={`/procurements/recognition/${procurement.id}/equipment`}
+                      target="_blank"
+                      className="font-medium text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
+                    >
+                      Открыть весь список из {procurement.itemsCount ?? equipmentItems.length} позиций
+                    </Link>
+                  </div>
                 ) : null}
               </div>
             ) : (

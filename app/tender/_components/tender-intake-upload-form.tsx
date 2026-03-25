@@ -12,9 +12,10 @@ export function TenderIntakeUploadForm({
 }: TenderIntakeUploadFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [progressLabel, setProgressLabel] = useState<string | null>(null);
   const estimatedSeconds =
     selectedFiles.length === 0
       ? null
@@ -31,28 +32,90 @@ export function TenderIntakeUploadForm({
       onSubmit={async (event) => {
         event.preventDefault();
         setErrorMessage(null);
+        setProgressLabel(null);
         setIsPending(true);
 
         try {
-          const formData = new FormData(event.currentTarget);
-          const response = await fetch("/api/tender/intake", {
+          if (selectedFiles.length === 0) {
+            setErrorMessage("Сначала выбери документы для загрузки.");
+            setIsPending(false);
+            return;
+          }
+
+          setProgressLabel("Создаём карточку закупки...");
+          const startResponse = await fetch("/api/tender/intake/start", {
             method: "POST",
-            body: formData,
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              actorName,
+              fileNames: selectedFiles.map((file) => file.name),
+            }),
           });
 
-          const rawText = await response.text();
-          let payload: { ok?: boolean; error?: string } | null = null;
+          const startPayload =
+            ((await startResponse.json().catch(() => null)) as
+              | { ok?: boolean; error?: string; procurementId?: number }
+              | null) ?? null;
 
-          if (rawText) {
-            try {
-              payload = JSON.parse(rawText) as { ok?: boolean; error?: string };
-            } catch {
-              payload = null;
+          if (!startResponse.ok || !startPayload?.ok || !startPayload.procurementId) {
+            setErrorMessage(
+              startPayload?.error || "Не удалось создать карточку закупки."
+            );
+            setIsPending(false);
+            return;
+          }
+
+          const procurementId = startPayload.procurementId;
+
+          for (let index = 0; index < selectedFiles.length; index += 1) {
+            const file = selectedFiles[index];
+            setProgressLabel(
+              `Загружаем файл ${index + 1} из ${selectedFiles.length}: ${file.name}`
+            );
+
+            const uploadResponse = await fetch("/api/tender/intake/file", {
+              method: "POST",
+              headers: {
+                "Content-Type": file.type || "application/octet-stream",
+                "X-Procurement-Id": String(procurementId),
+                "X-File-Name": encodeURIComponent(file.name),
+              },
+              body: file,
+            });
+
+            const uploadPayload =
+              ((await uploadResponse.json().catch(() => null)) as
+                | { ok?: boolean; error?: string }
+                | null) ?? null;
+
+            if (!uploadResponse.ok || !uploadPayload?.ok) {
+              setErrorMessage(
+                uploadPayload?.error ||
+                  `Не удалось загрузить файл "${file.name}".`
+              );
+              setIsPending(false);
+              return;
             }
           }
 
-          if (!response.ok || !payload?.ok) {
-            if (response.status === 413) {
+          setProgressLabel("Запускаем первичный анализ...");
+          const finalizeResponse = await fetch("/api/tender/intake/finalize", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ procurementId }),
+          });
+
+          const finalizePayload =
+            ((await finalizeResponse.json().catch(() => null)) as
+              | { ok?: boolean; error?: string }
+              | null) ?? null;
+
+          if (!finalizeResponse.ok || !finalizePayload?.ok) {
+            if (finalizeResponse.status === 413) {
               setErrorMessage(
                 "Пакет документов слишком большой для одной отправки. Раздели его на две части или уменьши общий вес файлов."
               );
@@ -61,7 +124,8 @@ export function TenderIntakeUploadForm({
             }
 
             setErrorMessage(
-              payload?.error || "Не удалось загрузить документы и запустить анализ."
+              finalizePayload?.error ||
+                "Не удалось завершить загрузку и запустить анализ."
             );
             setIsPending(false);
             return;
@@ -91,8 +155,9 @@ export function TenderIntakeUploadForm({
         className="sr-only"
         onChange={(event) => {
           const files = Array.from(event.target.files ?? []);
-          setSelectedFiles(files.map((file) => file.name));
+          setSelectedFiles(files);
           setErrorMessage(null);
+          setProgressLabel(null);
         }}
       />
 
@@ -149,19 +214,25 @@ export function TenderIntakeUploadForm({
 
             <div className="mt-3 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-3">
               <div className="grid max-h-[18rem] gap-2 overflow-y-auto pr-1">
-                {selectedFiles.map((fileName, index) => (
+                {selectedFiles.map((file, index) => (
                   <div
-                    key={`${fileName}-${index}`}
+                    key={`${file.name}-${index}`}
                     className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm text-slate-700"
                   >
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#081a4b] text-xs font-semibold text-white">
                       {index + 1}
                     </div>
-                    <span className="truncate">{fileName}</span>
+                    <span className="truncate">{file.name}</span>
                   </div>
                 ))}
               </div>
             </div>
+
+            {progressLabel ? (
+              <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-800">
+                {progressLabel}
+              </div>
+            ) : null}
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <button

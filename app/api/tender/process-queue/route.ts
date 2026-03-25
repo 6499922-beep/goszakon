@@ -1,17 +1,8 @@
 import { NextResponse } from "next/server";
-import { TenderActionType } from "@prisma/client";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
-import { runTenderPrimaryAnalysis } from "@/lib/tender-primary-analysis";
-import { logTenderEvent } from "@/lib/tender-workflow";
-
-function truncateErrorMessage(value: string | null | undefined, limit = 1200) {
-  const normalized = String(value ?? "").replace(/\s+/g, " ").trim();
-  if (!normalized) return "Не удалось выполнить первичный AI-анализ";
-  if (normalized.length <= limit) return normalized;
-  return `${normalized.slice(0, limit - 3).trim()}...`;
-}
+import { enqueueTenderPrimaryAnalysisJob } from "@/lib/tender-primary-analysis";
 
 export async function POST(request: Request) {
   const currentUser = await getCurrentTenderUser();
@@ -69,37 +60,10 @@ export async function POST(request: Request) {
     });
   }
 
-  try {
-    await runTenderPrimaryAnalysis({
-      procurementId,
-      sourceText: procurement.sourceText,
-    });
+  enqueueTenderPrimaryAnalysisJob({
+    procurementId,
+    sourceText: procurement.sourceText,
+  });
 
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    const message = truncateErrorMessage(
-      error instanceof Error ? error.message : "Не удалось выполнить первичный AI-анализ"
-    );
-
-    await prisma.tenderProcurement.update({
-      where: { id: procurementId },
-      data: {
-        aiAnalysisStatus: "failed",
-        aiAnalysisError: message,
-      },
-    });
-
-    await logTenderEvent({
-      procurementId,
-      actionType: TenderActionType.NOTE_ADDED,
-      title: "Первичный анализ не завершён",
-      description: message,
-      actorName: "AI",
-    });
-
-    return NextResponse.json(
-      { ok: false, error: message },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json({ ok: true, started: true });
 }

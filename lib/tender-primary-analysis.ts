@@ -458,3 +458,46 @@ export async function runTenderPrimaryAnalysis(input: {
 
   return { model, result, fasResult };
 }
+
+export async function executeTenderPrimaryAnalysisJob(input: {
+  procurementId: number;
+  sourceText: string;
+}) {
+  const prisma = getPrisma();
+  const procurementId = input.procurementId;
+
+  try {
+    return await runTenderPrimaryAnalysis(input);
+  } catch (error) {
+    const message = truncateErrorMessage(
+      error instanceof Error ? error.message : "Не удалось выполнить первичный AI-анализ"
+    );
+
+    await prisma.tenderProcurement.update({
+      where: { id: procurementId },
+      data: {
+        aiAnalysisStatus: "failed",
+        aiAnalysisError: message,
+      },
+    });
+
+    await logTenderEvent({
+      procurementId,
+      actionType: TenderActionType.NOTE_ADDED,
+      title: "Первичный анализ не завершён",
+      description: message || "Не удалось выполнить первичный AI-анализ",
+      actorName: "AI",
+    });
+
+    throw error;
+  }
+}
+
+export function enqueueTenderPrimaryAnalysisJob(input: {
+  procurementId: number;
+  sourceText: string;
+}) {
+  void executeTenderPrimaryAnalysisJob(input).catch((error) => {
+    console.error("[tender-primary-analysis] background job failed", error);
+  });
+}

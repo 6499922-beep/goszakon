@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
+import { enqueueTenderPrimaryAnalysisJob } from "@/lib/tender-primary-analysis";
 import { logTenderEvent } from "@/lib/tender-workflow";
 
 export const runtime = "nodejs";
@@ -107,6 +108,11 @@ export async function POST(request: Request) {
       title: "Первичный анализ запущен",
       description: "Документация поставлена в очередь на автоматический разбор.",
       actorName: "AI",
+    });
+
+    enqueueTenderPrimaryAnalysisJob({
+      procurementId,
+      sourceText: combinedSourceText,
     });
 
     return NextResponse.json({

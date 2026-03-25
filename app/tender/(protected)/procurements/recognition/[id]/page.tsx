@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { TenderRecognitionTabs } from "@/app/tender/_components/tender-recognition-tabs";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
@@ -544,407 +545,422 @@ export default async function TenderRecognitionDetailPage({
         </div>
 
         <div className="mt-5 space-y-4">
-          <div className="grid gap-3 xl:grid-cols-4">
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Номер закупки</div>
-              <div className="mt-1 text-2xl font-bold text-[#081a4b]">
-                {procurement.procurementNumber ?? "Не удалось определить"}
-              </div>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Заказчик</div>
-              <div className="mt-1 text-base font-semibold text-[#081a4b]">
-                {procurement.customerName ?? "Не удалось определить"}
-              </div>
-              <div className="mt-2 text-sm text-slate-500">
-                ИНН: {procurement.customerInn ?? "не определён"}
-              </div>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Цена договора</div>
-              <div className="mt-1 text-base font-semibold text-[#081a4b]">
-                Без НДС: {formatCurrency(procurement.nmckWithoutVat)}
-              </div>
-              <div className="mt-2 text-sm text-slate-500">
-                С НДС: {nmckWithVat || formatCurrency(procurement.nmck)}
-              </div>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Позиции и вид закупки</div>
-              <div className="mt-1 text-sm leading-6 text-slate-700">
-                <div>Вид закупки: {procurement.purchaseType ?? "не определён"}</div>
-                <div>Площадка: {procurement.platform ?? "не определена"}</div>
-                <div>
-                  {equipmentCount > 0 ? (
-                    <Link
-                      href={`/procurements/recognition/${procurement.id}/equipment`}
-                      target="_blank"
-                      className="inline-flex items-center gap-1 font-semibold text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
-                    >
-                      <span>Позиций:</span>
-                      <span>{equipmentCount}</span>
-                    </Link>
+          <TenderRecognitionTabs
+            about={
+              <div className="space-y-4">
+                <div
+                  id="stop-factors-result"
+                  className={`rounded-3xl border p-4 ${stopFactorTone}`}
+                >
+                  <div className="text-sm font-semibold uppercase tracking-[0.12em]">
+                    Стоп-факторы
+                  </div>
+                  <div className="mt-2 text-lg font-bold">{stopFactorTitle}</div>
+                  {stopFactorState === "stop" ? (
+                    <div className="mt-3 space-y-2 text-sm leading-6">
+                      {procurement.ruleMatches.map((match) => {
+                        const matchingDocuments = findMatchingDocumentsForRule(
+                          match,
+                          procurement.sourceDocuments
+                        );
+
+                        return (
+                          <div key={match.id} className="rounded-2xl border border-rose-200/70 bg-white/70 p-3">
+                            <div className="font-semibold">Найдено: {match.rule.name}</div>
+                            {matchingDocuments.length > 0 ? (
+                              <div className="mt-3 space-y-3 text-sm">
+                                {matchingDocuments.map((document) => {
+                                  const href = buildSourceDocumentHref(
+                                    document.id,
+                                    extractStoredDocumentPath(document.note)
+                                  );
+                                  const excerpt = buildRuleDocumentExcerpt(match, document);
+                                  return (
+                                    <div
+                                      key={`${match.id}-${document.title}`}
+                                      className="rounded-2xl border border-rose-100 bg-rose-50/40 px-4 py-3"
+                                    >
+                                      <div className="text-xs font-semibold uppercase tracking-[0.12em] text-rose-600">
+                                        Где найдено
+                                      </div>
+                                      <div className="mt-1 font-medium text-rose-900">
+                                        {href ? (
+                                          <a
+                                            href={href}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-[#9f1239] underline decoration-rose-300 underline-offset-2 hover:text-[#881337]"
+                                          >
+                                            {document.title}
+                                          </a>
+                                        ) : (
+                                          <span>{document.title}</span>
+                                        )}
+                                      </div>
+                                      {excerpt ? (
+                                        <div className="mt-2 rounded-xl bg-white px-3 py-2 text-sm leading-6 text-rose-900">
+                                          {excerpt}
+                                        </div>
+                                      ) : (
+                                        <div className="mt-2 text-sm text-rose-700">
+                                          Не удалось показать точный фрагмент текста, но документ сохранён и доступен по ссылке выше.
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                      {procurement.stopFactorsSummary ? <div>{procurement.stopFactorsSummary}</div> : null}
+                    </div>
                   ) : (
-                    <span>Позиций: {procurement.itemsCount ?? "не определено"}</span>
+                    <div className="mt-3 text-sm leading-6">
+                      Система не увидела явных стоп-факторов в загруженной документации.
+                    </div>
                   )}
                 </div>
-                <div>Срок подачи: {formatDateTime(procurement.deadline)}</div>
-              </div>
-            </div>
-          </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="text-lg font-bold text-[#081a4b]">Документы закупки</div>
-              <div className="text-sm text-slate-500">
-                {finalSourceDocuments.length > 0
-                  ? `Файлов: ${finalSourceDocuments.length}`
-                  : "Файлы пока не определены"}
-              </div>
-            </div>
-            {finalSourceDocuments.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {finalSourceDocuments.map((item, index) => (
-                  <a
-                    key={`${item.fileLabel}-${index}`}
-                    href={item.href ?? "#documents-list"}
-                    target={item.href ? "_blank" : undefined}
-                    rel={item.href ? "noreferrer" : undefined}
-                    className="inline-flex max-w-full items-center rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-[#081a4b] hover:border-slate-300 hover:bg-slate-100"
-                  >
-                    <span className="truncate">{item.fileLabel}</span>
-                  </a>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-3 text-sm leading-6 text-slate-600">
-                Исходные документы пока не сохранены.
-              </div>
-            )}
-          </div>
-
-          <div id="equipment-list" className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-            <div className="text-lg font-bold text-[#081a4b]">Какое оборудование закупают</div>
-            {equipmentItems.length > 0 ? (
-              <div className="mt-3 space-y-2">
-                {equipmentItems.slice(0, 3).map((item) => (
-                  <div key={item} className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
-                    {item}
+                <div className="grid gap-3 xl:grid-cols-4">
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="text-base font-bold text-[#081a4b]">Номер закупки</div>
+                    <div className="mt-1 text-2xl font-bold text-[#081a4b]">
+                      {procurement.procurementNumber ?? "Не удалось определить"}
+                    </div>
                   </div>
-                ))}
-                {equipmentItems.length > 3 ? (
-                  <div className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="text-base font-bold text-[#081a4b]">Заказчик</div>
+                    <div className="mt-1 text-base font-semibold text-[#081a4b]">
+                      {procurement.customerName ?? "Не удалось определить"}
+                    </div>
+                    <div className="mt-2 text-sm text-slate-500">
+                      ИНН: {procurement.customerInn ?? "не определён"}
+                    </div>
+                  </div>
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="text-base font-bold text-[#081a4b]">Вид закупки</div>
+                    <div className="mt-1 text-base font-semibold text-[#081a4b]">
+                      {procurement.purchaseType ?? "не определён"}
+                    </div>
+                    <div className="mt-2 text-sm text-slate-500">
+                      Площадка: {procurement.platform ?? "не определена"}
+                    </div>
+                  </div>
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="text-base font-bold text-[#081a4b]">Срок подачи</div>
+                    <div className="mt-1 text-base font-semibold text-[#081a4b]">
+                      {formatDateTime(procurement.deadline)}
+                    </div>
+                    <div className="mt-2 text-sm text-slate-500">
+                      {equipmentCount > 0 ? (
+                        <Link
+                          href={`/procurements/recognition/${procurement.id}/equipment`}
+                          target="_blank"
+                          className="inline-flex items-center gap-1 font-semibold text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
+                        >
+                          <span>Позиций:</span>
+                          <span>{equipmentCount}</span>
+                        </Link>
+                      ) : (
+                        <span>Позиций: {procurement.itemsCount ?? "не определено"}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">Краткая выжимка</div>
+                  {renderReadableText(procurement.summary, "Не удалось определить автоматически", 4)}
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">Условия договора</div>
+                  <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Поставка:</span>{" "}
+                      {procurement.deliveryTerms ?? "не определено"}
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Оплата:</span>{" "}
+                      {procurement.paymentTerms ?? "не определено"}
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Срок договора:</span>{" "}
+                      {procurement.contractTerm ?? "не определено"}
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Неустойка:</span>{" "}
+                      {procurement.penaltyTerms ?? "не определено"}
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Основания расторжения:</span>{" "}
+                      {terminationReasons.length > 0 ? terminationReasons.join("; ") : "не определено"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+            pricing={
+              <div className="space-y-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-lg font-bold text-[#081a4b]">Цена и обеспечение</div>
+                  <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">НМЦ без НДС:</span>{" "}
+                      {formatCurrency(procurement.nmckWithoutVat)}
+                    </div>
+                    {nmckWithVat ? (
+                      <div className="rounded-2xl bg-white px-4 py-3">
+                        <span className="font-medium text-[#081a4b]">НМЦ с НДС:</span> {nmckWithVat}
+                      </div>
+                    ) : null}
+                    {priceTaxNote ? (
+                      <div className="rounded-2xl bg-white px-4 py-3">
+                        <span className="font-medium text-[#081a4b]">Налоги в цене:</span> {priceTaxNote}
+                      </div>
+                    ) : null}
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Обеспечение заявки:</span>{" "}
+                      {bidSecurity || "не указано или не определено"}
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Обеспечение договора:</span>{" "}
+                      {contractSecurity || "не указано или не определено"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">Критерии отбора</div>
+                  {renderReadableText(procurement.selectionCriteria, "Не удалось определить автоматически", 5)}
+                </div>
+              </div>
+            }
+            requirements={
+              <div className="space-y-4">
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">Нестандартные требования</div>
+                  {renderCompactList(
+                    nonstandardRequirements,
+                    "Явных нестандартных требований автоматически не найдено."
+                  )}
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">Требования РРЭП / РПП (2013)</div>
+                  <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                    {rrepRppRequirements || "не указано или не определено"}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">Условия договора</div>
+                  <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Поставка:</span>{" "}
+                      {procurement.deliveryTerms ?? "не определено"}
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Оплата:</span>{" "}
+                      {procurement.paymentTerms ?? "не определено"}
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Срок договора:</span>{" "}
+                      {procurement.contractTerm ?? "не определено"}
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Неустойка:</span>{" "}
+                      {procurement.penaltyTerms ?? "не определено"}
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Основания расторжения:</span>{" "}
+                      {terminationReasons.length > 0 ? terminationReasons.join("; ") : "не определено"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">Запрет по постановлению 1875</div>
+                  <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                    {decree1875Ban || "не указано или не определено"}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">Пуско-наладочные работы</div>
+                  <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                    {requiresCommissioning || "не указано или не определено"}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">Делимый лот / несколько победителей</div>
+                  <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                    {lotStructure || "не указано или не определено"}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">Военная приемка / РТ-Техприемка</div>
+                  <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                    {militaryAcceptance || "не указано или не определено"}
+                  </div>
+                </div>
+              </div>
+            }
+            documents={
+              <div className="space-y-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">Требуемая документация до подачи</div>
+                  {renderCompactList(requiredDocuments, "Не удалось определить автоматически.")}
+                </div>
+
+                <div id="documents-list" className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-base font-bold text-[#081a4b]">Исходные документы закупки</div>
+                    <div className="text-sm text-slate-500">
+                      {finalSourceDocuments.length > 0
+                        ? `Файлов: ${finalSourceDocuments.length}`
+                        : "Файлы пока не определены"}
+                    </div>
+                  </div>
+                  {finalSourceDocuments.length > 0 ? (
+                    <div className="mt-3 grid gap-3">
+                      {finalSourceDocuments.map((item, index) => (
+                        <div key={`${item.title}-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold text-[#081a4b]">{item.title}</div>
+                              <div className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-400">
+                                {item.fileLabel}
+                              </div>
+                            </div>
+                            <div
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                item.status.tone === "success"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : item.status.tone === "warning"
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {item.status.label}
+                            </div>
+                          </div>
+                          <div className="mt-2 text-sm leading-6 text-slate-600">{item.status.description}</div>
+                          {item.excerpt ? (
+                            <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">
+                              {item.excerpt}
+                            </div>
+                          ) : null}
+                          {item.href ? (
+                            <div className="mt-3">
+                              <a
+                                href={item.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="font-medium text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
+                              >
+                                Открыть файл
+                              </a>
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-3 text-sm leading-6 text-slate-600">
+                      Исходные документы пока не сохранены.
+                    </div>
+                  )}
+                </div>
+              </div>
+            }
+            goods={
+              <div className="space-y-4">
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-base font-bold text-[#081a4b]">Позиции и оборудование</div>
+                    <div className="text-sm text-slate-500">
+                      Всего позиций: {equipmentCount > 0 ? equipmentCount : "не определено"}
+                    </div>
+                  </div>
+                  {equipmentItems.length > 0 ? (
+                    <div className="mt-3 space-y-2">
+                      {equipmentItems.map((item, index) => (
+                        <div
+                          key={`${index + 1}-${item}`}
+                          className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700"
+                        >
+                          <span className="font-semibold text-[#081a4b]">{index + 1}.</span>{" "}
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-600">
+                      Система пока не смогла уверенно определить перечень оборудования.
+                    </div>
+                  )}
+
+                  <div className="mt-4">
                     <Link
                       href={`/procurements/recognition/${procurement.id}/equipment`}
                       target="_blank"
-                      className="font-medium text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
+                      className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#081a4b] hover:border-slate-300 hover:bg-slate-100"
                     >
-                      Открыть весь список из {procurement.itemsCount ?? equipmentItems.length} позиций
+                      Открыть таблицу товаров
                     </Link>
                   </div>
-                ) : null}
-              </div>
-            ) : (
-              <div className="mt-3 text-sm leading-6 text-slate-600">
-                Система пока не смогла уверенно определить перечень оборудования.
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-            <div className="text-lg font-bold text-[#081a4b]">Цена и обеспечение</div>
-            <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-              <div className="rounded-2xl bg-white px-4 py-3">
-                <span className="font-medium text-[#081a4b]">НМЦ без НДС:</span>{" "}
-                {formatCurrency(procurement.nmckWithoutVat)}
-              </div>
-              {nmckWithVat ? (
-                <div className="rounded-2xl bg-white px-4 py-3">
-                  <span className="font-medium text-[#081a4b]">НМЦ с НДС:</span> {nmckWithVat}
                 </div>
-              ) : null}
-              {priceTaxNote ? (
-                <div className="rounded-2xl bg-white px-4 py-3">
-                  <span className="font-medium text-[#081a4b]">Налоги в цене:</span> {priceTaxNote}
-                </div>
-              ) : null}
-              <div className="rounded-2xl bg-white px-4 py-3">
-                <span className="font-medium text-[#081a4b]">Обеспечение заявки:</span>{" "}
-                {bidSecurity || "не указано или не определено"}
-              </div>
-              <div className="rounded-2xl bg-white px-4 py-3">
-                <span className="font-medium text-[#081a4b]">Обеспечение договора:</span>{" "}
-                {contractSecurity || "не указано или не определено"}
-              </div>
-            </div>
-          </div>
 
-          <div id="stop-factors-result" className={`rounded-3xl border p-4 ${stopFactorTone}`}>
-            <div className="text-sm font-semibold uppercase tracking-[0.12em]">
-              Стоп-факторы
-            </div>
-            <div className="mt-2 text-lg font-bold">{stopFactorTitle}</div>
-            {stopFactorState === "stop" ? (
-              <div className="mt-3 space-y-2 text-sm leading-6">
-                {procurement.ruleMatches.map((match) => {
-                  const matchingDocuments = findMatchingDocumentsForRule(
-                    match,
-                    procurement.sourceDocuments
-                  );
-
-                  return (
-                    <div key={match.id} className="rounded-2xl border border-rose-200/70 bg-white/70 p-3">
-                      <div className="font-semibold">Найдено: {match.rule.name}</div>
-                      {matchingDocuments.length > 0 ? (
-                        <div className="mt-3 space-y-3 text-sm">
-                          {matchingDocuments.map((document) => {
-                            const href = buildSourceDocumentHref(
-                              document.id,
-                              extractStoredDocumentPath(document.note)
-                            );
-                            const excerpt = buildRuleDocumentExcerpt(match, document);
-                            return (
-                              <div
-                                key={`${match.id}-${document.title}`}
-                                className="rounded-2xl border border-rose-100 bg-rose-50/40 px-4 py-3"
-                              >
-                                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-rose-600">
-                                  Где найдено
-                                </div>
-                                <div className="mt-1 font-medium text-rose-900">
-                                  {href ? (
-                                  <a
-                                    href={href}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-[#9f1239] underline decoration-rose-300 underline-offset-2 hover:text-[#881337]"
-                                  >
-                                    {document.title}
-                                  </a>
-                                ) : (
-                                  <span>{document.title}</span>
-                                )}
-                                </div>
-                                {excerpt ? (
-                                  <div className="mt-2 rounded-xl bg-white px-3 py-2 text-sm leading-6 text-rose-900">
-                                    {excerpt}
-                                  </div>
-                                ) : (
-                                  <div className="mt-2 text-sm text-rose-700">
-                                    Не удалось показать точный фрагмент текста, но документ сохранён и доступен по ссылке выше.
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-                {procurement.stopFactorsSummary ? <div>{procurement.stopFactorsSummary}</div> : null}
-              </div>
-            ) : (
-              <div className="mt-3 text-sm leading-6">
-                Система не увидела явных стоп-факторов в загруженной документации.
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Обеспечение заявки и договора</div>
-              <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                <div className="rounded-2xl bg-white px-4 py-3">
-                  <span className="font-medium text-[#081a4b]">Обеспечение заявки:</span>{" "}
-                  {bidSecurity || "не указано или не определено"}
-                </div>
-                <div className="rounded-2xl bg-white px-4 py-3">
-                  <span className="font-medium text-[#081a4b]">Обеспечение исполнения договора:</span>{" "}
-                  {contractSecurity || "не указано или не определено"}
-                </div>
-                {priceTaxNote ? (
-                  <div className="rounded-2xl bg-white px-4 py-3">
-                    <span className="font-medium text-[#081a4b]">Как указаны налоги:</span>{" "}
-                    {priceTaxNote}
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">
+                    Что не удалось определить автоматически
                   </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Критерии отбора</div>
-              {renderReadableText(procurement.selectionCriteria, "Не удалось определить автоматически", 5)}
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Требуемая документация до подачи</div>
-              {renderCompactList(requiredDocuments, "Не удалось определить автоматически.")}
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Нестандартные требования</div>
-              {renderCompactList(
-                nonstandardRequirements,
-                "Явных нестандартных требований автоматически не найдено."
-              )}
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Требования РРЭП / РПП (2013)</div>
-              <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
-                {rrepRppRequirements || "не указано или не определено"}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Условия договора</div>
-              <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                <div className="rounded-2xl bg-white px-4 py-3">
-                  <span className="font-medium text-[#081a4b]">Поставка:</span>{" "}
-                  {procurement.deliveryTerms ?? "не определено"}
-                </div>
-                <div className="rounded-2xl bg-white px-4 py-3">
-                  <span className="font-medium text-[#081a4b]">Оплата:</span>{" "}
-                  {procurement.paymentTerms ?? "не определено"}
-                </div>
-                <div className="rounded-2xl bg-white px-4 py-3">
-                  <span className="font-medium text-[#081a4b]">Срок договора:</span>{" "}
-                  {procurement.contractTerm ?? "не определено"}
-                </div>
-                <div className="rounded-2xl bg-white px-4 py-3">
-                  <span className="font-medium text-[#081a4b]">Неустойка:</span>{" "}
-                  {procurement.penaltyTerms ?? "не определено"}
-                </div>
-                <div className="rounded-2xl bg-white px-4 py-3">
-                  <span className="font-medium text-[#081a4b]">Основания расторжения:</span>{" "}
-                  {terminationReasons.length > 0 ? terminationReasons.join("; ") : "не определено"}
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Запрет по постановлению 1875</div>
-              <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
-                {decree1875Ban || "не указано или не определено"}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Пуско-наладочные работы</div>
-              <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
-                {requiresCommissioning || "не указано или не определено"}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Делимый лот / несколько победителей</div>
-              <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
-                {lotStructure || "не указано или не определено"}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Военная приемка / РТ-Техприемка</div>
-              <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
-                {militaryAcceptance || "не указано или не определено"}
-              </div>
-            </div>
-
-            <div id="documents-list" className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Исходные документы закупки</div>
-              {finalSourceDocuments.length > 0 ? (
-                <div className="mt-3 grid gap-3">
-                  {finalSourceDocuments.map((item, index) => (
-                    <div key={`${item.title}-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <div className="text-sm font-semibold text-[#081a4b]">{item.title}</div>
-                          <div className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-400">
-                            {item.fileLabel}
-                          </div>
-                        </div>
+                  {missingFields.length > 0 ? (
+                    <div className="mt-3 grid gap-3 text-sm leading-6 text-slate-700">
+                      {missingFields.map((item, index) => (
                         <div
-                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                            item.status.tone === "success"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : item.status.tone === "warning"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-slate-100 text-slate-600"
+                          key={`${item.title}-${index}`}
+                          className={`rounded-2xl border px-4 py-3 ${
+                            item.status === "error"
+                              ? "border-rose-200 bg-white"
+                              : "border-emerald-200 bg-white"
                           }`}
                         >
-                          {item.status.label}
+                          <div className="font-semibold text-[#081a4b]">{item.title}</div>
+                          <div className="mt-1">{item.description}</div>
+                          {item.documentId ? (
+                            <div className="mt-2">
+                              <a
+                                href={
+                                  buildSourceDocumentHref(item.documentId, item.storagePath) ?? "#"
+                                }
+                                target="_blank"
+                                rel="noreferrer"
+                                className="font-medium text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
+                              >
+                                Открыть файл: {item.fileLabel ?? "документ"}
+                              </a>
+                            </div>
+                          ) : null}
                         </div>
-                      </div>
-                      <div className="mt-2 text-sm leading-6 text-slate-600">{item.status.description}</div>
-                      {item.excerpt ? (
-                        <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">
-                          {item.excerpt}
-                        </div>
-                      ) : null}
-                      {item.href ? (
-                        <div className="mt-3">
-                          <a
-                            href={item.href}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-medium text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
-                          >
-                            Открыть файл
-                          </a>
-                        </div>
-                      ) : null}
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <div className="mt-3 text-sm leading-6 text-slate-600">
+                      По базовым полям система сработала уверенно.
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="mt-3 text-sm leading-6 text-slate-600">
-                  Исходные документы пока не сохранены.
-                </div>
-              )}
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">
-                Что не удалось определить автоматически
               </div>
-              {missingFields.length > 0 ? (
-                <div className="mt-3 grid gap-3 text-sm leading-6 text-slate-700">
-                  {missingFields.map((item, index) => (
-                    <div
-                      key={`${item.title}-${index}`}
-                      className={`rounded-2xl border px-4 py-3 ${
-                        item.status === "error"
-                          ? "border-rose-200 bg-white"
-                          : "border-emerald-200 bg-white"
-                      }`}
-                    >
-                      <div className="font-semibold text-[#081a4b]">{item.title}</div>
-                      <div className="mt-1">{item.description}</div>
-                      {item.documentId ? (
-                        <div className="mt-2">
-                          <a
-                            href={
-                              buildSourceDocumentHref(item.documentId, item.storagePath) ?? "#"
-                            }
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-medium text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
-                          >
-                            Открыть файл: {item.fileLabel ?? "документ"}
-                          </a>
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-3 text-sm leading-6 text-slate-600">
-                  По базовым полям система сработала уверенно.
-                </div>
-              )}
-            </div>
-          </div>
+            }
+          />
         </div>
       </section>
     </main>

@@ -36,6 +36,11 @@ function extractStoredDocumentPath(note: string | null | undefined) {
   return match?.[1] ?? null;
 }
 
+function safeDocumentHref(path: string | null | undefined) {
+  if (!path) return null;
+  return encodeURI(path);
+}
+
 function extractHumanIssue(note: string | null | undefined) {
   const value = String(note ?? "").trim();
   if (!value) return null;
@@ -117,6 +122,50 @@ function findMatchingDocumentsForRule(
   });
 
   return ranked.length > 0 ? ranked.slice(0, 3) : sourceDocuments.slice(0, 3);
+}
+
+function buildRuleDocumentExcerpt(
+  match: {
+    rule: {
+      name: string;
+      keyword?: string | null;
+      brandName?: string | null;
+      manufacturerName?: string | null;
+      customerInn?: string | null;
+    };
+  },
+  document: {
+    contentSnippet: string | null;
+    note: string | null;
+  }
+) {
+  const source = String(document.contentSnippet ?? document.note ?? "").replace(/\s+/g, " ").trim();
+  if (!source) return null;
+
+  const terms = [
+    match.rule.keyword,
+    match.rule.brandName,
+    match.rule.manufacturerName,
+    match.rule.customerInn,
+    match.rule.name,
+  ]
+    .filter(Boolean)
+    .map((item) => String(item).toLowerCase().trim())
+    .filter((item) => item.length >= 3);
+
+  const lowered = source.toLowerCase();
+
+  for (const term of terms) {
+    const index = lowered.indexOf(term);
+    if (index >= 0) {
+      const start = Math.max(0, index - 120);
+      const end = Math.min(source.length, index + term.length + 180);
+      const excerpt = source.slice(start, end).trim();
+      return `${start > 0 ? "..." : ""}${excerpt}${end < source.length ? "..." : ""}`;
+    }
+  }
+
+  return source.length > 240 ? `${source.slice(0, 240).trim()}...` : source;
 }
 
 function splitReadableText(value: string | null | undefined) {
@@ -326,13 +375,13 @@ export default async function TenderRecognitionDetailPage({
         <div className="mt-5 space-y-4">
           <div className="grid gap-3 xl:grid-cols-4">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-500">Номер закупки</div>
+              <div className="text-base font-bold text-[#081a4b]">Номер закупки</div>
               <div className="mt-1 text-2xl font-bold text-[#081a4b]">
                 {procurement.procurementNumber ?? "Не удалось определить"}
               </div>
             </div>
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-500">Заказчик</div>
+              <div className="text-base font-bold text-[#081a4b]">Заказчик</div>
               <div className="mt-1 text-base font-semibold text-[#081a4b]">
                 {procurement.customerName ?? "Не удалось определить"}
               </div>
@@ -341,7 +390,7 @@ export default async function TenderRecognitionDetailPage({
               </div>
             </div>
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-500">НМЦ без НДС</div>
+              <div className="text-base font-bold text-[#081a4b]">НМЦ без НДС</div>
               <div className="mt-1 text-base font-semibold text-[#081a4b]">
                 {formatCurrency(procurement.nmckWithoutVat)}
               </div>
@@ -350,7 +399,7 @@ export default async function TenderRecognitionDetailPage({
               </div>
             </div>
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-500">Дополнительно</div>
+              <div className="text-base font-bold text-[#081a4b]">Дополнительно</div>
               <div className="mt-1 text-sm leading-6 text-slate-700">
                 <div>Площадка: {procurement.platform ?? "не определена"}</div>
                 <div>Позиций: {procurement.itemsCount ?? "не определено"}</div>
@@ -376,14 +425,23 @@ export default async function TenderRecognitionDetailPage({
                     <div key={match.id} className="rounded-2xl border border-rose-200/70 bg-white/70 p-3">
                       <div className="font-semibold">Найдено: {match.rule.name}</div>
                       {matchingDocuments.length > 0 ? (
-                        <div className="mt-2 space-y-1 text-sm">
+                        <div className="mt-3 space-y-3 text-sm">
                           {matchingDocuments.map((document) => {
                             const storedPath = extractStoredDocumentPath(document.note);
+                            const href = safeDocumentHref(storedPath);
+                            const excerpt = buildRuleDocumentExcerpt(match, document);
                             return (
-                              <div key={`${match.id}-${document.title}`}>
-                                {storedPath ? (
+                              <div
+                                key={`${match.id}-${document.title}`}
+                                className="rounded-2xl border border-rose-100 bg-rose-50/40 px-4 py-3"
+                              >
+                                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-rose-600">
+                                  Где найдено
+                                </div>
+                                <div className="mt-1 font-medium text-rose-900">
+                                  {href ? (
                                   <a
-                                    href={storedPath}
+                                    href={href}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="text-[#9f1239] underline decoration-rose-300 underline-offset-2 hover:text-[#881337]"
@@ -392,6 +450,16 @@ export default async function TenderRecognitionDetailPage({
                                   </a>
                                 ) : (
                                   <span>{document.title}</span>
+                                )}
+                                </div>
+                                {excerpt ? (
+                                  <div className="mt-2 rounded-xl bg-white px-3 py-2 text-sm leading-6 text-rose-900">
+                                    {excerpt}
+                                  </div>
+                                ) : (
+                                  <div className="mt-2 text-sm text-rose-700">
+                                    Не удалось показать точный фрагмент текста, но документ сохранён и доступен по ссылке выше.
+                                  </div>
                                 )}
                               </div>
                             );
@@ -412,7 +480,7 @@ export default async function TenderRecognitionDetailPage({
 
           <div className="space-y-4">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-500">Краткая выжимка</div>
+              <div className="text-base font-bold text-[#081a4b]">Краткая выжимка</div>
               {renderReadableText(
                 procurement.summary,
                 "Не удалось определить автоматически",
@@ -421,7 +489,7 @@ export default async function TenderRecognitionDetailPage({
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-500">Критерии отбора</div>
+              <div className="text-base font-bold text-[#081a4b]">Критерии отбора</div>
               {renderReadableText(
                 procurement.selectionCriteria,
                 "Не удалось определить автоматически",
@@ -430,7 +498,7 @@ export default async function TenderRecognitionDetailPage({
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-500">Требуемая документация</div>
+              <div className="text-base font-bold text-[#081a4b]">Требуемая документация</div>
               {requiredDocuments.length > 0 ? (
                 <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                   {requiredDocuments.map((item) => (
@@ -447,7 +515,7 @@ export default async function TenderRecognitionDetailPage({
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-500">Нестандартные требования</div>
+              <div className="text-base font-bold text-[#081a4b]">Нестандартные требования</div>
               {nonstandardRequirements.length > 0 ? (
                 <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                   {nonstandardRequirements.map((item) => (
@@ -464,7 +532,7 @@ export default async function TenderRecognitionDetailPage({
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-500">Условия договора</div>
+              <div className="text-base font-bold text-[#081a4b]">Условия договора</div>
               <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                 <div className="rounded-2xl bg-white px-4 py-3">
                   <span className="font-medium text-[#081a4b]">Поставка:</span>{" "}
@@ -486,7 +554,7 @@ export default async function TenderRecognitionDetailPage({
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-500">
+              <div className="text-base font-bold text-[#081a4b]">
                 Что не удалось определить автоматически
               </div>
               {missingFields.length > 0 ? (
@@ -505,7 +573,7 @@ export default async function TenderRecognitionDetailPage({
                       {item.storagePath ? (
                         <div className="mt-2">
                           <a
-                            href={item.storagePath}
+                            href={safeDocumentHref(item.storagePath) ?? "#"}
                             target="_blank"
                             rel="noreferrer"
                             className="font-medium text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"

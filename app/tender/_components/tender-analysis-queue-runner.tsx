@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type TenderAnalysisQueueRunnerProps = {
   procurementId: number;
@@ -11,9 +11,37 @@ export function TenderAnalysisQueueRunner({
   procurementId,
   view,
 }: TenderAnalysisQueueRunnerProps) {
+  const hasStartedRef = useRef(false);
+  const [statusLabel, setStatusLabel] = useState("Идёт первичный анализ...");
   const nextLink = useMemo(() => {
     return view ? `/procurements?view=${encodeURIComponent(view)}` : "/procurements";
   }, [view]);
+
+  useEffect(() => {
+    if (hasStartedRef.current) return;
+    hasStartedRef.current = true;
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/tender/process-queue", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ procurementId }),
+        });
+
+        if (!response.ok) {
+          setStatusLabel("Не удалось автоматически запустить анализ. Обновите список.");
+          return;
+        }
+
+        setStatusLabel("Анализ запущен. Можно переходить к следующей закупке.");
+      } catch {
+        setStatusLabel("Не удалось автоматически запустить анализ. Обновите список.");
+      }
+    })();
+  }, [procurementId]);
 
   return (
     <div className="rounded-[2rem] border border-[#0d5bd7]/15 bg-[linear-gradient(135deg,#eef5ff_0%,#ffffff_70%)] p-5 shadow-sm">
@@ -38,7 +66,7 @@ export function TenderAnalysisQueueRunner({
           href={nextLink}
           className="rounded-full bg-white px-4 py-2 text-sm text-slate-600 ring-1 ring-slate-200 transition hover:text-slate-900"
         >
-          Обновить список
+          {statusLabel}
         </a>
       </div>
     </div>

@@ -42,12 +42,7 @@ export function TenderIntakeUploadForm({
         }}
       />
 
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        disabled={isPending}
-        className="group flex min-h-[26rem] w-full flex-col rounded-[2.5rem] border-2 border-dashed border-[#0d5bd7]/30 bg-[radial-gradient(circle_at_top,#eef5ff_0%,#ffffff_55%)] px-8 py-8 text-center transition hover:border-[#0d5bd7]/60 hover:bg-[radial-gradient(circle_at_top,#e6f0ff_0%,#ffffff_60%)] disabled:cursor-wait disabled:opacity-80"
-      >
+      <div className="group flex min-h-[24rem] w-full flex-col rounded-[2.5rem] border-2 border-dashed border-[#0d5bd7]/30 bg-[radial-gradient(circle_at_top,#eef5ff_0%,#ffffff_55%)] px-8 py-6 text-center transition hover:border-[#0d5bd7]/60 hover:bg-[radial-gradient(circle_at_top,#e6f0ff_0%,#ffffff_60%)]">
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#0d5bd7] text-3xl text-white shadow-lg shadow-[#0d5bd7]/20">
           +
         </div>
@@ -66,18 +61,25 @@ export function TenderIntakeUploadForm({
           </p>
         </div>
 
-        <div className="mt-8 rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#0d5bd7] shadow-sm ring-1 ring-[#0d5bd7]/10 transition group-hover:ring-[#0d5bd7]/30">
-          {isPending ? "Пожалуйста, подожди..." : "Выбрать документы"}
+        <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isPending}
+            className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#0d5bd7] shadow-sm ring-1 ring-[#0d5bd7]/10 transition group-hover:ring-[#0d5bd7]/30 disabled:cursor-wait disabled:opacity-80"
+          >
+            {isPending ? "Пожалуйста, подожди..." : "Выбрать документы"}
+          </button>
         </div>
 
-        <div className="mt-6 text-sm leading-6 text-slate-500">
+        <div className="mt-4 text-sm leading-6 text-slate-500">
           Поддерживаются PDF, DOCX, XLSX, TXT и другие файлы закупки. Архивы и
           сложные форматы тоже сохранятся в карточке, даже если текст из них не
           получится извлечь сразу.
         </div>
 
         {selectedFiles.length > 0 ? (
-          <div className="mt-6 w-full rounded-[2rem] border border-slate-200 bg-white/90 p-4 text-left shadow-sm">
+          <div className="mt-4 w-full rounded-[2rem] border border-slate-200 bg-white/90 p-4 text-left shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
@@ -100,7 +102,7 @@ export function TenderIntakeUploadForm({
               ) : null}
             </div>
 
-            <div className="mt-3 max-h-48 overflow-y-auto rounded-[1.5rem] border border-slate-200 bg-slate-50 p-3">
+            <div className="mt-3 max-h-64 overflow-y-auto rounded-[1.5rem] border border-slate-200 bg-slate-50 p-3">
               <div className="grid gap-2">
                 {selectedFiles.map((fileName, index) => (
                   <div
@@ -138,7 +140,7 @@ export function TenderIntakeUploadForm({
             </div>
           </div>
         ) : null}
-      </button>
+      </div>
 
       {selectedFiles.length > 0 ? (
         <div className="rounded-[2rem] border border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-6 text-slate-500">

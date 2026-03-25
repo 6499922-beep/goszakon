@@ -13,6 +13,7 @@ export function proxy(request: NextRequest) {
   const isPublicAsset =
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
+    pathname.startsWith("/docs") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/robots.txt") ||
     pathname.startsWith("/sitemap.xml");

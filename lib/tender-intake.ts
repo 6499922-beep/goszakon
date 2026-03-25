@@ -1,7 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import mammoth from "mammoth";
-import { PDFParse } from "pdf-parse";
 import * as XLSX from "xlsx";
 
 export type TenderUploadedFile = {
@@ -83,17 +82,10 @@ export async function extractTextFromTenderUpload(file: TenderUploadedFile) {
     }
 
     if (name.endsWith(".pdf")) {
-      const parser = new PDFParse({ data: buffer });
-      const pdfResult = await parser.getText();
-      await parser.destroy();
-      const extractedText = pdfResult.text.trim();
-
       return {
-        extractedText: extractedText.length > 0 ? extractedText : null,
+        extractedText: null,
         extractionNote:
-          extractedText.length > 0
-            ? "Текст из PDF удалось извлечь автоматически."
-            : "PDF загружен, но текст для анализа извлечь не удалось.",
+          "PDF сохранён в системе, но текст из него пока не удалось извлечь автоматически. Его можно проверить вручную или загрузить версию в DOCX/XLSX, если она есть.",
       };
     }
 

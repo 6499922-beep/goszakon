@@ -190,6 +190,36 @@ export default function PracticeThemesPage() {
         <div className="mx-auto max-w-7xl px-6 py-20">
           <div className="max-w-3xl">
             <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+              Новый формат
+            </div>
+
+            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
+              Глубокие обзоры по ключевым темам практики ФАС
+            </h2>
+
+            <p className="mt-5 text-lg leading-9 text-slate-700">
+              Если нужен не просто список кейсов, а короткий рабочий обзор по
+              теме, переходите в новый раздел с тематическими страницами:
+              товарный знак, национальный режим, отклонение заявки, условия
+              оплаты, неустойка, сроки поставки и ограничения конкуренции.
+            </p>
+          </div>
+
+          <div className="mt-8">
+            <Link
+              href="/praktika-fas"
+              className="inline-flex rounded-2xl bg-[#081a4b] px-7 py-4 text-base font-semibold text-white transition hover:bg-[#0d2568]"
+            >
+              Открыть обзоры по темам
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-slate-50">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="max-w-3xl">
+            <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
               Что мы видим в практике
             </div>
 

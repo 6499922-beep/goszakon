@@ -422,30 +422,39 @@ export default async function TenderRecognitionDetailPage({
               </div>
             </div>
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">НМЦ без НДС</div>
+              <div className="text-base font-bold text-[#081a4b]">Цена договора</div>
               <div className="mt-1 text-base font-semibold text-[#081a4b]">
-                {formatCurrency(procurement.nmckWithoutVat)}
+                Без НДС: {formatCurrency(procurement.nmckWithoutVat)}
               </div>
               <div className="mt-2 text-sm text-slate-500">
-                НМЦ: {formatCurrency(procurement.nmck)}
+                С НДС: {nmckWithVat || formatCurrency(procurement.nmck)}
               </div>
-              {nmckWithVat ? (
-                <div className="mt-2 text-sm text-slate-500">НМЦ с НДС: {nmckWithVat}</div>
-              ) : null}
             </div>
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Дополнительно</div>
+              <div className="text-base font-bold text-[#081a4b]">Позиции и вид закупки</div>
               <div className="mt-1 text-sm leading-6 text-slate-700">
                 <div>Вид закупки: {procurement.purchaseType ?? "не определён"}</div>
                 <div>Площадка: {procurement.platform ?? "не определена"}</div>
-                <div>Позиций: {procurement.itemsCount ?? "не определено"}</div>
+                <div>
+                  Позиций:{" "}
+                  {equipmentItems.length > 0 ? (
+                    <a
+                      href="#equipment-list"
+                      className="font-semibold text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
+                    >
+                      {procurement.itemsCount ?? equipmentItems.length}
+                    </a>
+                  ) : (
+                    <span>{procurement.itemsCount ?? "не определено"}</span>
+                  )}
+                </div>
                 <div>Срок подачи: {formatDateTime(procurement.deadline)}</div>
               </div>
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-            <div className="text-lg font-bold text-[#081a4b]">Что закупают</div>
+          <div id="equipment-list" className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-lg font-bold text-[#081a4b]">Какое оборудование закупают</div>
             {equipmentItems.length > 0 ? (
               <div className="mt-3 space-y-2">
                 {equipmentItems.slice(0, 3).map((item) => (
@@ -575,25 +584,32 @@ export default async function TenderRecognitionDetailPage({
 
           <div className="space-y-4">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Краткая выжимка</div>
-              {renderReadableText(
-                procurement.summary,
-                "Не удалось определить автоматически",
-                3
-              )}
+              <div className="text-base font-bold text-[#081a4b]">Обеспечение заявки и договора</div>
+              <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                <div className="rounded-2xl bg-white px-4 py-3">
+                  <span className="font-medium text-[#081a4b]">Обеспечение заявки:</span>{" "}
+                  {bidSecurity || "не указано или не определено"}
+                </div>
+                <div className="rounded-2xl bg-white px-4 py-3">
+                  <span className="font-medium text-[#081a4b]">Обеспечение исполнения договора:</span>{" "}
+                  {contractSecurity || "не указано или не определено"}
+                </div>
+                {priceTaxNote ? (
+                  <div className="rounded-2xl bg-white px-4 py-3">
+                    <span className="font-medium text-[#081a4b]">Как указаны налоги:</span>{" "}
+                    {priceTaxNote}
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-base font-bold text-[#081a4b]">Критерии отбора</div>
-              {renderReadableText(
-                procurement.selectionCriteria,
-                "Не удалось определить автоматически",
-                4
-              )}
+              {renderReadableText(procurement.selectionCriteria, "Не удалось определить автоматически", 5)}
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Требуемая документация</div>
+              <div className="text-base font-bold text-[#081a4b]">Требуемая документация до подачи</div>
               {requiredDocuments.length > 0 ? (
                 <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                   {requiredDocuments.map((item) => (
@@ -627,28 +643,9 @@ export default async function TenderRecognitionDetailPage({
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-base font-bold text-[#081a4b]">Регуляторные требования и условия</div>
-              <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                <div className="rounded-2xl bg-white px-4 py-3">
-                  <span className="font-medium text-[#081a4b]">РРЭП / РПП (2013):</span>{" "}
-                  {rrepRppRequirements || "не указано или не определено"}
-                </div>
-                <div className="rounded-2xl bg-white px-4 py-3">
-                  <span className="font-medium text-[#081a4b]">Запрет по 1875:</span>{" "}
-                  {decree1875Ban || "не указано или не определено"}
-                </div>
-                <div className="rounded-2xl bg-white px-4 py-3">
-                  <span className="font-medium text-[#081a4b]">Пуско-наладочные работы:</span>{" "}
-                  {requiresCommissioning || "не указано или не определено"}
-                </div>
-                <div className="rounded-2xl bg-white px-4 py-3">
-                  <span className="font-medium text-[#081a4b]">Делимость лота / победители:</span>{" "}
-                  {lotStructure || "не указано или не определено"}
-                </div>
-                <div className="rounded-2xl bg-white px-4 py-3">
-                  <span className="font-medium text-[#081a4b]">Военная приёмка / РТ-Техприёмка:</span>{" "}
-                  {militaryAcceptance || "не указано или не определено"}
-                </div>
+              <div className="text-base font-bold text-[#081a4b]">Требования РРЭП / РПП (2013)</div>
+              <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                {rrepRppRequirements || "не указано или не определено"}
               </div>
             </div>
 
@@ -675,6 +672,34 @@ export default async function TenderRecognitionDetailPage({
                   <span className="font-medium text-[#081a4b]">Основания расторжения:</span>{" "}
                   {terminationReasons.length > 0 ? terminationReasons.join("; ") : "не определено"}
                 </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-base font-bold text-[#081a4b]">Запрет по постановлению 1875</div>
+              <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                {decree1875Ban || "не указано или не определено"}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-base font-bold text-[#081a4b]">Пуско-наладочные работы</div>
+              <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                {requiresCommissioning || "не указано или не определено"}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-base font-bold text-[#081a4b]">Делимый лот / несколько победителей</div>
+              <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                {lotStructure || "не указано или не определено"}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-base font-bold text-[#081a4b]">Военная приемка / РТ-Техприемка</div>
+              <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                {militaryAcceptance || "не указано или не определено"}
               </div>
             </div>
 

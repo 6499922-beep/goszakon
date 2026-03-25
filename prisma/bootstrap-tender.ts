@@ -53,7 +53,7 @@ async function main() {
       kind: "PROCUREMENT",
       keyword: "закрыт",
       sortOrder: 30,
-      isActive: true,
+      isActive: false,
       isToggleable: true,
       requiresManualReview: false,
     },
@@ -136,7 +136,7 @@ async function main() {
   await prisma.tenderStopRule.updateMany({
     where: {
       code: {
-        in: ["PAPER_APPLICATION", "KSO_EQUIPMENT"],
+        in: ["PAPER_APPLICATION", "KSO_EQUIPMENT", "CLOSED_PROCUREMENT"],
       },
     },
     data: {

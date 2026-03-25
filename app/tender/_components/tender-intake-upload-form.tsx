@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 
 type TenderIntakeUploadFormProps = {
   actorName: string;
+  compact?: boolean;
 };
 
 export function TenderIntakeUploadForm({
   actorName,
+  compact = false,
 }: TenderIntakeUploadFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -131,7 +133,7 @@ export function TenderIntakeUploadForm({
             return;
           }
 
-          router.push(`/procurements/new?uploaded=${procurementId}`);
+          router.push(`/procurements/new?uploaded=${procurementId}&selected=${procurementId}`);
           router.refresh();
         } catch (error) {
           setErrorMessage(
@@ -161,16 +163,24 @@ export function TenderIntakeUploadForm({
         }}
       />
 
-      <div className="group flex w-full flex-col rounded-[2rem] border-2 border-dashed border-[#0d5bd7]/30 bg-[radial-gradient(circle_at_top,#eef5ff_0%,#ffffff_55%)] px-5 py-4 text-center transition hover:border-[#0d5bd7]/60 hover:bg-[radial-gradient(circle_at_top,#e6f0ff_0%,#ffffff_60%)]">
+      <div className={`group flex w-full flex-col rounded-[2rem] border-2 border-dashed border-[#0d5bd7]/30 bg-[radial-gradient(circle_at_top,#eef5ff_0%,#ffffff_55%)] text-center transition hover:border-[#0d5bd7]/60 hover:bg-[radial-gradient(circle_at_top,#e6f0ff_0%,#ffffff_60%)] ${compact ? "px-4 py-4" : "px-5 py-4"}`}>
         <div className="max-w-3xl self-center">
-          <div className="text-2xl font-bold tracking-tight text-[#081a4b]">
+          <div className={`${compact ? "text-xl" : "text-2xl"} font-bold tracking-tight text-[#081a4b]`}>
             {isPending
               ? "Загружаем документы и запускаем анализ..."
-              : "Загрузить всю документацию по закупке"}
+              : compact
+                ? "Добавить ещё одну закупку"
+                : "Загрузить всю документацию по закупке"}
           </div>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Только один шаг: загрузи весь пакет документов. Система сама создаст карточку, распознает базовые поля и проверит стоп-факторы.
-          </p>
+          {!compact ? (
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Только один шаг: загрузи весь пакет документов. Система сама создаст карточку, распознает базовые поля и проверит стоп-факторы.
+            </p>
+          ) : (
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Можно сразу загрузить следующий пакет документов, пока предыдущие закупки уже стоят в таблице ниже.
+            </p>
+          )}
         </div>
 
         <div className="mt-4 flex justify-center">
@@ -184,9 +194,11 @@ export function TenderIntakeUploadForm({
           </button>
         </div>
 
-        <div className="mt-2 text-xs leading-5 text-slate-500">
-          PDF, DOCX, XLSX, TXT и архивы тоже сохраняются. Если часть текста не получится извлечь, система прямо покажет это справа.
-        </div>
+        {!compact ? (
+          <div className="mt-2 text-xs leading-5 text-slate-500">
+            PDF, DOCX, XLSX, TXT и архивы тоже сохраняются. Если часть текста не получится извлечь, система прямо покажет это справа.
+          </div>
+        ) : null}
 
         {selectedFiles.length > 0 ? (
           <div className="mt-4 w-full rounded-[1.75rem] border border-slate-200 bg-white/95 p-4 text-left shadow-sm">
@@ -208,7 +220,7 @@ export function TenderIntakeUploadForm({
             </div>
 
             <div className="mt-3 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-3">
-              <div className="grid max-h-[14rem] gap-2 overflow-y-auto pr-1">
+              <div className={`grid gap-2 overflow-y-auto pr-1 ${compact ? "max-h-[10rem]" : "max-h-[14rem]"}`}>
                 {selectedFiles.map((file, index) => (
                   <div
                     key={`${file.name}-${index}`}
@@ -237,7 +249,9 @@ export function TenderIntakeUploadForm({
               >
                 {isPending
                   ? "Загружаем документы и запускаем анализ..."
-                  : "Запустить анализ"}
+                  : compact
+                    ? "Загрузить и распознать"
+                    : "Запустить анализ"}
               </button>
               {!isPending ? (
                 <button

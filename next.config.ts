@@ -2,8 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
+    middlewareClientMaxBodySize: "512mb",
     serverActions: {
-      bodySizeLimit: "200mb",
+      bodySizeLimit: "512mb",
       allowedOrigins: [
         "tender.goszakon.ru",
         "82.147.71.45",

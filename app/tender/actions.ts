@@ -1325,49 +1325,70 @@ export async function createTenderProcurementAction(formData: FormData) {
         uploadedFiles: uploadedFiles.map((file) => file.name),
       },
     });
-
-    setImmediate(async () => {
-      const backgroundPrisma = getPrisma();
-
-      try {
-        await runTenderPrimaryAnalysis(backgroundPrisma, {
-          procurementId: record.id,
-          sourceText: combinedSourceText,
-        });
-
-        revalidatePath(`/procurements/${record.id}`);
-        revalidatePath("/procurements");
-        revalidatePath("/tender");
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Не удалось выполнить первичный AI-анализ";
-
-        await backgroundPrisma.tenderProcurement.update({
-          where: { id: record.id },
-          data: {
-            sourceText: combinedSourceText,
-            aiAnalysisStatus: "failed",
-            aiAnalysisError: message,
-          },
-        });
-
-        await logTenderEvent({
-          procurementId: record.id,
-          actionType: TenderActionType.NOTE_ADDED,
-          title: "Первичный анализ не завершён",
-          description: message,
-          actorName: "AI",
-          metadata: {
-            warnings: extractionWarnings,
-          },
-        });
-      }
-    });
   }
 
   revalidatePath("/");
   revalidatePath("/procurements");
-  redirect(`/procurements/${record.id}`);
+  redirect(`/procurements?view=analysis&queued=${record.id}`);
+}
+
+export async function processQueuedTenderAnalysisAction(procurementId: number) {
+  await requireTenderCapability("procurement_initial");
+  const prisma = getPrisma();
+
+  if (!Number.isInteger(procurementId) || procurementId <= 0) {
+    throw new Error("Invalid procurement id");
+  }
+
+  const procurement = await prisma.tenderProcurement.findUnique({
+    where: { id: procurementId },
+    select: {
+      id: true,
+      sourceText: true,
+      aiAnalysisStatus: true,
+    },
+  });
+
+  if (!procurement?.sourceText?.trim()) {
+    return;
+  }
+
+  if (
+    procurement.aiAnalysisStatus === "running" ||
+    procurement.aiAnalysisStatus === "completed"
+  ) {
+    return;
+  }
+
+  try {
+    await runTenderPrimaryAnalysis(prisma, {
+      procurementId,
+      sourceText: procurement.sourceText,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Не удалось выполнить первичный AI-анализ";
+
+    await prisma.tenderProcurement.update({
+      where: { id: procurementId },
+      data: {
+        aiAnalysisStatus: "failed",
+        aiAnalysisError: message,
+      },
+    });
+
+    await logTenderEvent({
+      procurementId,
+      actionType: TenderActionType.NOTE_ADDED,
+      title: "Первичный анализ не завершён",
+      description: message,
+      actorName: "AI",
+    });
+  }
+
+  revalidatePath(`/procurements/${procurementId}`);
+  revalidatePath("/procurements");
+  revalidatePath("/tender");
 }
 
 export async function analyzeTenderProcurementAction(formData: FormData) {

@@ -10,6 +10,7 @@ import {
 } from "@/lib/tender-format";
 import { tenderUserRoleLabels } from "@/lib/tender-users";
 import Link from "next/link";
+import { TenderAnalysisQueueRunner } from "@/app/tender/_components/tender-analysis-queue-runner";
 
 export const dynamic = "force-dynamic";
 
@@ -144,10 +145,13 @@ export default async function TenderProcurementsPage({
   }
   const resolvedSearchParams = (await searchParams) ?? {};
   const selectedQueueRaw = resolvedSearchParams.view;
+  const queuedRaw = resolvedSearchParams.queued;
   const selectedQueue =
     typeof selectedQueueRaw === "string"
       ? (selectedQueueRaw as QueueKey)
       : getDefaultQueue(currentUser.role);
+  const queuedProcurementId =
+    typeof queuedRaw === "string" ? Number(queuedRaw) : null;
 
   const prisma = getPrisma();
   const procurements = await prisma.tenderProcurement.findMany({
@@ -284,6 +288,13 @@ export default async function TenderProcurementsPage({
 
   return (
     <main className="space-y-8">
+      {queuedProcurementId && Number.isInteger(queuedProcurementId) && queuedProcurementId > 0 ? (
+        <TenderAnalysisQueueRunner
+          procurementId={queuedProcurementId}
+          view={selectedQueue}
+        />
+      ) : null}
+
       <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
         <div className="bg-[linear-gradient(135deg,#081a4b_0%,#143b8f_55%,#2f78ff_100%)] px-8 py-8 text-white">
           <div className="flex flex-wrap items-start justify-between gap-6">

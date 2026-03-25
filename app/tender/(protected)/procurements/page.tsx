@@ -13,6 +13,7 @@ import Link from "next/link";
 import { TenderAnalysisQueueRunner } from "@/app/tender/_components/tender-analysis-queue-runner";
 import { TENDER_INTAKE_ONLY_MODE } from "@/lib/tender-stage-mode";
 import { redirect } from "next/navigation";
+import { buildTenderCustomerHref } from "@/lib/tender-customers";
 
 export const dynamic = "force-dynamic";
 
@@ -462,7 +463,16 @@ export default async function TenderProcurementsPage({
                         </Link>
                       </td>
                       <td className="px-4 py-4 text-slate-600">
-                        {item.customerName ?? "—"}
+                        {item.customerName ? (
+                          <Link
+                            href={buildTenderCustomerHref(item.customerName, item.customerInn)}
+                            className="font-medium transition hover:text-[#0d5bd7]"
+                          >
+                            {item.customerName}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="px-4 py-4 text-slate-600">
                         <span

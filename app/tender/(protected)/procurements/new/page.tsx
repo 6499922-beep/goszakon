@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { tenderHasCapability } from "@/lib/tender-permissions";
@@ -6,6 +7,7 @@ import { TenderIntakeUploadForm } from "@/app/tender/_components/tender-intake-u
 import { getPrisma } from "@/lib/prisma";
 import { deleteTenderRecognitionAction } from "@/app/tender/actions";
 import { formatTenderMoscowShortDateTime } from "@/lib/tender-format";
+import { buildTenderCustomerHref } from "@/lib/tender-customers";
 
 export const dynamic = "force-dynamic";
 
@@ -125,6 +127,7 @@ export default async function NewTenderProcurementPage({
       title: true,
       procurementNumber: true,
       customerName: true,
+      customerInn: true,
       status: true,
       aiAnalysisStatus: true,
       aiAnalysisError: true,
@@ -144,22 +147,6 @@ export default async function NewTenderProcurementPage({
       {queueRunnerProcurementId ? (
         <TenderAnalysisQueueRunner procurementId={queueRunnerProcurementId} />
       ) : null}
-
-      <section className="rounded-[1.5rem] border border-slate-200 bg-white px-5 py-3 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
-              Шаг 1
-            </div>
-            <h1 className="mt-1 text-xl font-bold tracking-tight text-[#081a4b]">
-              Загрузка документов и первичное распознавание
-            </h1>
-          </div>
-          <div className="rounded-2xl bg-slate-100 px-4 py-2 text-sm text-slate-600">
-            Сейчас настраиваем только первый этап
-          </div>
-        </div>
-      </section>
 
       <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -260,9 +247,12 @@ export default async function NewTenderProcurementPage({
                         </a>
                       </td>
                       <td className="px-4 py-4 text-slate-600">
-                        <a href={rowHref} className="block -mx-4 -my-4 px-4 py-4">
+                        <Link
+                          href={buildTenderCustomerHref(item.customerName, item.customerInn)}
+                          className="block -mx-4 -my-4 px-4 py-4 font-medium transition hover:text-[#0d5bd7]"
+                        >
                           {item.customerName ?? "Не определён"}
-                        </a>
+                        </Link>
                       </td>
                       <td className="px-4 py-4">
                         <a href={rowHref} className="block -mx-4 -my-4 px-4 py-4">

@@ -5,6 +5,7 @@ import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
 import { formatTenderMoscowFullDateTime } from "@/lib/tender-format";
+import { buildTenderCustomerHref } from "@/lib/tender-customers";
 
 function formatDateTime(value: Date | null | undefined) {
   return formatTenderMoscowFullDateTime(value);
@@ -661,9 +662,21 @@ export default async function TenderRecognitionDetailPage({
                         Пункт 1
                       </div>
                       <div className="mt-2 text-sm font-semibold text-slate-500">Заказчик</div>
-                      <div className="mt-1 text-lg font-bold leading-7 text-[#081a4b]">
-                        {procurement.customerName ?? "Не удалось определить"}
-                      </div>
+                      {procurement.customerName ? (
+                        <Link
+                          href={buildTenderCustomerHref(
+                            procurement.customerName,
+                            procurement.customerInn
+                          )}
+                          className="mt-1 block text-lg font-bold leading-7 text-[#081a4b] underline decoration-slate-300 underline-offset-4 transition hover:text-[#0d5bd7]"
+                        >
+                          {procurement.customerName}
+                        </Link>
+                      ) : (
+                        <div className="mt-1 text-lg font-bold leading-7 text-[#081a4b]">
+                          Не удалось определить
+                        </div>
+                      )}
                     </div>
                     <div className="rounded-2xl border border-[#0d5bd7]/15 bg-white px-4 py-4 shadow-sm">
                       <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">

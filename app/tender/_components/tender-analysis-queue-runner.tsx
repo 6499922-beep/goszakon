@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { processQueuedTenderAnalysisAction } from "@/app/tender/actions";
 
 type TenderAnalysisQueueRunnerProps = {
   procurementId: number;
@@ -22,7 +21,13 @@ export function TenderAnalysisQueueRunner({
     hasStartedRef.current = true;
 
     startTransition(async () => {
-      await processQueuedTenderAnalysisAction(procurementId);
+      await fetch("/api/tender/process-queue", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ procurementId }),
+      });
       const nextQuery = view ? `?view=${encodeURIComponent(view)}` : "";
       router.replace(`/procurements${nextQuery}`);
       router.refresh();

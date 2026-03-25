@@ -4,9 +4,19 @@ import { SITE_CONTACTS } from "@/lib/site-config";
 export default function ServicesPage() {
   const services = [
     {
+      title: "Что делать, если...",
+      text: "Серия быстрых страниц по самым частым ситуациям поставщика: неоплата, отклонение заявки, риск РНП, удержание неустойки и отказ ФАС.",
+      href: "/chto-delat-esli",
+    },
+    {
       title: "Риски поставщика: тематическая серия",
       text: "Отдельный блок по ключевым рискам поставщика: жалобы в ФАС, отклонение заявки, РНП, неоплата, неустойка, формальные документы и продолжение спора в суде.",
       href: "/postavshikam/riski",
+    },
+    {
+      title: "Отклонение заявки",
+      text: "Большой раздел по незаконному отклонению заявки, формальным основаниям, характеристикам товара и спорам по реестровым записям.",
+      href: "/otklonenie-zayavki",
     },
     {
       title: "Подготовка жалобы в ФАС",
@@ -37,6 +47,11 @@ export default function ServicesPage() {
       title: "Судебное продолжение спора",
       text: "При необходимости сопровождаем спор после ФАС: готовим позицию, защищаем интересы клиента и ведём дело дальше.",
       href: "/sudebnaya-zashita-v-zakupkah",
+    },
+    {
+      title: "ФАС или суд",
+      text: "Отдельный раздел о том, где спор решается жалобой, а где нужно сразу готовить судебное продолжение или идти туда после отказа ФАС.",
+      href: "/fas-ili-sud",
     },
   ];
 
@@ -196,6 +211,17 @@ export default function ServicesPage() {
               </div>
               <p className="mt-2 text-sm leading-7 text-slate-600">
                 Когда административной жалобы недостаточно и спор нужно продолжать в арбитражном суде.
+              </p>
+            </Link>
+            <Link
+              href="/chto-delat-esli"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
+            >
+              <div className="text-lg font-semibold text-[#081a4b]">
+                Что делать, если...
+              </div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Быстрые входы по самой понятной боли поставщика: неоплата, отклонение, РНП, удержание и отказ ФАС.
               </p>
             </Link>
           </div>

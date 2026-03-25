@@ -107,6 +107,44 @@ export default function SupplierRiskHubPage() {
                 </span>
               </Link>
             ))}
+
+            <Link
+              href="/chto-delat-esli"
+              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
+                Для поставщиков
+              </div>
+              <h3 className="mt-4 text-2xl font-semibold leading-8 text-[#081a4b]">
+                Что делать, если...
+              </h3>
+              <p className="mt-4 text-base leading-8 text-slate-700">
+                Отдельная серия коротких страниц для горячих ситуаций: неоплата,
+                отклонение заявки, риск РНП, удержание неустойки и отказ ФАС.
+              </p>
+              <span className="mt-5 inline-flex text-sm font-semibold text-[#081a4b]">
+                Открыть серию →
+              </span>
+            </Link>
+
+            <Link
+              href="/otklonenie-zayavki"
+              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
+                Для поставщиков
+              </div>
+              <h3 className="mt-4 text-2xl font-semibold leading-8 text-[#081a4b]">
+                Отклонение заявки
+              </h3>
+              <p className="mt-4 text-base leading-8 text-slate-700">
+                Большой раздел по незаконному отклонению заявки, формальным
+                основаниям, характеристикам товара и реестровым записям.
+              </p>
+              <span className="mt-5 inline-flex text-sm font-semibold text-[#081a4b]">
+                Открыть раздел →
+              </span>
+            </Link>
           </div>
         </div>
       </section>

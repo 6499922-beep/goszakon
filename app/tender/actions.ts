@@ -1303,35 +1303,66 @@ export async function createTenderProcurementAction(formData: FormData) {
       },
     });
   } else {
-    try {
-      await runTenderPrimaryAnalysis(prisma, {
-        procurementId: record.id,
+    await prisma.tenderProcurement.update({
+      where: { id: record.id },
+      data: {
         sourceText: combinedSourceText,
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Не удалось выполнить первичный AI-анализ";
+        aiAnalysisStatus: "queued",
+        aiAnalysisError: null,
+        status: TenderProcurementStatus.ANALYSIS,
+      },
+    });
 
-      await prisma.tenderProcurement.update({
-        where: { id: record.id },
-        data: {
+    await logTenderEvent({
+      procurementId: record.id,
+      actionType: TenderActionType.NOTE_ADDED,
+      title: "Закупка поставлена в очередь анализа",
+      description:
+        "Система приняла пакет документов и запускает первичный AI-анализ в фоне. Можно переходить к следующей закупке.",
+      actorName: "AI",
+      metadata: {
+        warnings: extractionWarnings,
+        uploadedFiles: uploadedFiles.map((file) => file.name),
+      },
+    });
+
+    setImmediate(async () => {
+      const backgroundPrisma = getPrisma();
+
+      try {
+        await runTenderPrimaryAnalysis(backgroundPrisma, {
+          procurementId: record.id,
           sourceText: combinedSourceText,
-          aiAnalysisStatus: "failed",
-          aiAnalysisError: message,
-        },
-      });
+        });
 
-      await logTenderEvent({
-        procurementId: record.id,
-        actionType: TenderActionType.NOTE_ADDED,
-        title: "Первичный анализ не завершён",
-        description: message,
-        actorName: "AI",
-        metadata: {
-          warnings: extractionWarnings,
-        },
-      });
-    }
+        revalidatePath(`/procurements/${record.id}`);
+        revalidatePath("/procurements");
+        revalidatePath("/tender");
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Не удалось выполнить первичный AI-анализ";
+
+        await backgroundPrisma.tenderProcurement.update({
+          where: { id: record.id },
+          data: {
+            sourceText: combinedSourceText,
+            aiAnalysisStatus: "failed",
+            aiAnalysisError: message,
+          },
+        });
+
+        await logTenderEvent({
+          procurementId: record.id,
+          actionType: TenderActionType.NOTE_ADDED,
+          title: "Первичный анализ не завершён",
+          description: message,
+          actorName: "AI",
+          metadata: {
+            warnings: extractionWarnings,
+          },
+        });
+      }
+    });
   }
 
   revalidatePath("/");

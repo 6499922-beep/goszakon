@@ -14,11 +14,19 @@ export function TenderIntakeUploadForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
+  const estimatedSeconds =
+    selectedFiles.length === 0
+      ? null
+      : Math.min(180, Math.max(20, selectedFiles.length * 12));
 
   return (
     <form
       ref={formRef}
-      action={createTenderProcurementAction}
+      action={(formData) => {
+        startTransition(() => {
+          createTenderProcurementAction(formData);
+        });
+      }}
       className="space-y-6"
     >
       <input type="hidden" name="actorName" value={actorName} />
@@ -33,14 +41,6 @@ export function TenderIntakeUploadForm({
         onChange={(event) => {
           const files = Array.from(event.target.files ?? []);
           setSelectedFiles(files.map((file) => file.name));
-
-          if (!files.length) {
-            return;
-          }
-
-          startTransition(() => {
-            formRef.current?.requestSubmit();
-          });
         }}
       />
 
@@ -57,13 +57,14 @@ export function TenderIntakeUploadForm({
         <div className="mt-8 max-w-3xl">
           <div className="text-3xl font-bold tracking-tight text-[#081a4b]">
             {isPending
-              ? "Загружаем документы и запускаем первичный анализ..."
+              ? "Загружаем документы и ставим закупку в очередь анализа..."
               : "Загрузить всю документацию по закупке"}
           </div>
           <p className="mt-4 text-base leading-7 text-slate-600">
             Нажми на это поле и выбери весь пакет файлов: извещение, ТЗ, проект
             договора, приложения, формы заказчика, расчёт НМЦК, таблицы и другие
-            материалы. После выбора система сама создаст закупку и начнёт анализ.
+            материалы. После загрузки закупка сама уйдёт в фоновый анализ, а ты
+            сможешь сразу перейти к следующей.
           </p>
         </div>
 
@@ -80,21 +81,71 @@ export function TenderIntakeUploadForm({
 
       {selectedFiles.length > 0 ? (
         <div className="rounded-[2rem] border border-slate-200 bg-slate-50 p-5">
-          <div className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Выбранные файлы
-          </div>
-          <div className="mt-4 grid gap-2">
-            {selectedFiles.map((fileName) => (
-              <div
-                key={fileName}
-                className="rounded-2xl border border-white bg-white px-4 py-3 text-sm text-slate-700"
-              >
-                {fileName}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
+                Подготовлено к загрузке
               </div>
-            ))}
+              <div className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
+                {selectedFiles.length} {selectedFiles.length === 1 ? "файл" : selectedFiles.length < 5 ? "файла" : "файлов"}
+              </div>
+            </div>
+
+            {estimatedSeconds ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-slate-700">
+                Ориентир по первичному анализу: около {estimatedSeconds} сек.
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-4 max-h-72 overflow-y-auto rounded-[1.5rem] border border-slate-200 bg-white p-3">
+            <div className="grid gap-2">
+              {selectedFiles.map((fileName, index) => (
+                <div
+                  key={`${fileName}-${index}`}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700"
+                >
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#081a4b] text-xs font-semibold text-white">
+                    {index + 1}
+                  </div>
+                  <span className="truncate">{fileName}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              disabled={isPending}
+              className="inline-flex items-center justify-center rounded-full bg-[#0d5bd7] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0a4db7] disabled:cursor-wait disabled:opacity-80"
+            >
+              {isPending
+                ? "Загружаем и ставим в очередь..."
+                : "Загрузить документы и запустить анализ"}
+            </button>
+
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center justify-center rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:opacity-60"
+            >
+              Добавить или заменить файлы
+            </button>
+          </div>
+
+          <div className="mt-4 text-sm leading-6 text-slate-500">
+            После отправки закупка сама уйдёт в обработку. Не нужно ждать в этой
+            форме: можно будет сразу вернуться и загрузить следующую закупку.
           </div>
         </div>
-      ) : null}
+      ) : (
+        <div className="rounded-[2rem] border border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-6 text-slate-500">
+          Выбери весь пакет документов по закупке. После выбора ты увидишь полный
+          список файлов и сможешь отправить его в анализ одним действием.
+        </div>
+      )}
     </form>
   );
 }

@@ -124,15 +124,6 @@ export function TenderIntakeUploadForm({
                   ? "Загружаем документы и запускаем анализ..."
                   : "Запустить анализ"}
               </button>
-
-              <button
-                type="button"
-                disabled={isPending}
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center justify-center rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:opacity-60"
-              >
-                Добавить или заменить файлы
-              </button>
             </div>
           </div>
         ) : (

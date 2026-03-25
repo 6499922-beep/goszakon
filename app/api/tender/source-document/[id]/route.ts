@@ -6,8 +6,8 @@ import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
 
 function extractStoredDocumentPath(note: string | null | undefined) {
-  const match = note?.match(/Файл сохранён:\s*(\/[^\s]+)/);
-  return match?.[1] ?? null;
+  const match = note?.match(/Файл сохранён:\s*(.+)$/m);
+  return match?.[1]?.trim() ?? null;
 }
 
 function guessContentType(fileName: string) {

@@ -31,6 +31,57 @@ function jsonListToStrings(value: unknown) {
   return value.map(String).map((item) => item.trim()).filter(Boolean);
 }
 
+function extractStoredDocumentPath(note: string | null | undefined) {
+  const match = note?.match(/Файл сохранён:\s*(\/[^\s]+)/);
+  return match?.[1] ?? null;
+}
+
+function normalizeSearchText(value: string | null | undefined) {
+  return String(value ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function findMatchingDocumentsForRule(
+  match: {
+    rule: {
+      name: string;
+      keyword?: string | null;
+      brandName?: string | null;
+      manufacturerName?: string | null;
+      customerInn?: string | null;
+    };
+  },
+  sourceDocuments: Array<{
+    title: string;
+    fileName: string | null;
+    note: string | null;
+    contentSnippet: string | null;
+  }>
+) {
+  const terms = [
+    match.rule.keyword,
+    match.rule.brandName,
+    match.rule.manufacturerName,
+    match.rule.customerInn,
+    match.rule.name,
+  ]
+    .filter(Boolean)
+    .map((item) => String(item).toLowerCase().trim())
+    .filter((item) => item.length >= 3);
+
+  if (terms.length === 0) {
+    return sourceDocuments.slice(0, 3);
+  }
+
+  const ranked = sourceDocuments.filter((document) => {
+    const haystack = normalizeSearchText(
+      `${document.title} ${document.fileName ?? ""} ${document.contentSnippet ?? ""} ${document.note ?? ""}`
+    );
+    return terms.some((term) => haystack.includes(term));
+  });
+
+  return ranked.length > 0 ? ranked.slice(0, 3) : sourceDocuments.slice(0, 3);
+}
+
 function buildMissingFields(procurement: {
   procurementNumber: string | null;
   customerName: string | null;
@@ -106,7 +157,9 @@ export default async function NewTenderProcurementPage({
               orderBy: { id: "asc" },
               select: {
                 title: true,
+                fileName: true,
                 note: true,
+                contentSnippet: true,
               },
             },
             ruleMatches: {
@@ -114,6 +167,10 @@ export default async function NewTenderProcurementPage({
                 rule: {
                   select: {
                     name: true,
+                    keyword: true,
+                    brandName: true,
+                    manufacturerName: true,
+                    customerInn: true,
                   },
                 },
               },
@@ -208,13 +265,12 @@ export default async function NewTenderProcurementPage({
                 <th className="px-4 py-3 font-medium">Заказчик</th>
                 <th className="px-4 py-3 font-medium">Распознавание</th>
                 <th className="px-4 py-3 font-medium">Стоп-факторы</th>
-                <th className="px-4 py-3 font-medium">Открыть</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
               {recentProcurements.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-500">
+                  <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
                     Пока ещё нет загруженных закупок.
                   </td>
                 </tr>
@@ -251,39 +307,52 @@ export default async function NewTenderProcurementPage({
                       : item.stopFactorsSummary?.toLowerCase().includes("не выявлены")
                         ? "Не выявлены"
                         : "Проверить";
+                  const rowHref = `/procurements/new?selected=${item.id}#recognition-result`;
+                  const stopHref =
+                    item.status === "STOPPED"
+                      ? `/procurements/new?selected=${item.id}#stop-factors-result`
+                      : rowHref;
 
                   return (
-                    <tr key={item.id} className={isSelected ? "bg-blue-50/50" : "hover:bg-slate-50/80"}>
+                    <tr
+                      key={item.id}
+                      className={`${isSelected ? "bg-blue-50/50" : "hover:bg-slate-50/80"} cursor-pointer`}
+                    >
                       <td className="px-4 py-4 text-slate-600">
-                        {new Intl.DateTimeFormat("ru-RU", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }).format(item.createdAt)}
+                        <a href={rowHref} className="block -mx-4 -my-4 px-4 py-4">
+                          {new Intl.DateTimeFormat("ru-RU", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }).format(item.createdAt)}
+                        </a>
                       </td>
                       <td className="px-4 py-4 font-semibold text-[#081a4b]">
-                        {item.procurementNumber ?? "Не определён"}
+                        <a href={rowHref} className="block -mx-4 -my-4 px-4 py-4">
+                          {item.procurementNumber ?? "Не определён"}
+                        </a>
                       </td>
                       <td className="px-4 py-4 text-slate-600">
-                        {item.customerName ?? "Не определён"}
+                        <a href={rowHref} className="block -mx-4 -my-4 px-4 py-4">
+                          {item.customerName ?? "Не определён"}
+                        </a>
                       </td>
                       <td className="px-4 py-4">
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${recognitionTone}`}>
-                          {recognitionLabel}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${stopTone}`}>
-                          {stopLabel}
-                        </span>
+                        <a href={rowHref} className="block -mx-4 -my-4 px-4 py-4">
+                          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${recognitionTone}`}>
+                            {recognitionLabel}
+                          </span>
+                        </a>
                       </td>
                       <td className="px-4 py-4">
                         <a
-                          href={`/procurements/new?selected=${item.id}`}
-                          className="inline-flex rounded-xl px-3 py-2 font-medium text-[#081a4b] transition hover:bg-slate-100 hover:text-[#0d5bd7]"
+                          href={stopHref}
+                          className="block -mx-4 -my-4 px-4 py-4"
                         >
-                          Посмотреть
+                          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${stopTone}`}>
+                            {stopLabel}
+                          </span>
                         </a>
                       </td>
                     </tr>
@@ -295,15 +364,7 @@ export default async function NewTenderProcurementPage({
         </div>
       </section>
 
-      <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
-          Результат распознавания
-        </div>
-        <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
-          {uploadedProcurement
-            ? `Закупка: ${uploadedProcurement.procurementNumber ?? "номер не определён"}`
-            : "Выбери закупку в таблице выше"}
-        </h2>
+      <section id="recognition-result" className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
 
         {!uploadedProcurement ? (
           <div className="mt-5 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm leading-7 text-slate-500">
@@ -312,6 +373,11 @@ export default async function NewTenderProcurementPage({
           </div>
         ) : (
           <div className="mt-5 space-y-4">
+            <div className="text-2xl font-bold tracking-tight text-[#081a4b]">
+              {uploadedProcurement.procurementNumber
+                ? `Закупка № ${uploadedProcurement.procurementNumber}`
+                : "Закупка без определённого номера"}
+            </div>
             <div className="grid gap-3 xl:grid-cols-4">
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                 <div className="text-sm font-semibold text-slate-500">Номер закупки</div>
@@ -347,16 +413,48 @@ export default async function NewTenderProcurementPage({
               </div>
             </div>
 
-            <div className={`rounded-3xl border p-4 ${stopFactorTone}`}>
+            <div id="stop-factors-result" className={`rounded-3xl border p-4 ${stopFactorTone}`}>
               <div className="text-sm font-semibold uppercase tracking-[0.12em]">
                 Стоп-факторы
               </div>
               <div className="mt-2 text-lg font-bold">{stopFactorTitle}</div>
               {stopFactorState === "stop" ? (
                 <div className="mt-3 space-y-2 text-sm leading-6">
-                  {uploadedProcurement.ruleMatches.map((match) => (
-                    <div key={match.id}>Найдено: {match.rule.name}</div>
-                  ))}
+                  {uploadedProcurement.ruleMatches.map((match) => {
+                    const matchingDocuments = findMatchingDocumentsForRule(
+                      match,
+                      uploadedProcurement.sourceDocuments
+                    );
+
+                    return (
+                      <div key={match.id} className="rounded-2xl border border-rose-200/70 bg-white/70 p-3">
+                        <div className="font-semibold">Найдено: {match.rule.name}</div>
+                        {matchingDocuments.length > 0 ? (
+                          <div className="mt-2 space-y-1 text-sm">
+                            {matchingDocuments.map((document) => {
+                              const storedPath = extractStoredDocumentPath(document.note);
+                              return (
+                                <div key={`${match.id}-${document.title}`}>
+                                  {storedPath ? (
+                                    <a
+                                      href={storedPath}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[#9f1239] underline decoration-rose-300 underline-offset-2 hover:text-[#881337]"
+                                    >
+                                      {document.title}
+                                    </a>
+                                  ) : (
+                                    <span>{document.title}</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
                   {uploadedProcurement.stopFactorsSummary ? (
                     <div>{uploadedProcurement.stopFactorsSummary}</div>
                   ) : null}

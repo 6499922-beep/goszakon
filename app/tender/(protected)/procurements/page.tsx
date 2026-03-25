@@ -11,6 +11,8 @@ import {
 import { tenderUserRoleLabels } from "@/lib/tender-users";
 import Link from "next/link";
 import { TenderAnalysisQueueRunner } from "@/app/tender/_components/tender-analysis-queue-runner";
+import { TENDER_INTAKE_ONLY_MODE } from "@/lib/tender-stage-mode";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -139,6 +141,9 @@ export default async function TenderProcurementsPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  if (TENDER_INTAKE_ONLY_MODE) {
+    redirect("/procurements/new");
+  }
   const currentUser = await getCurrentTenderUser();
   if (!currentUser || !tenderHasCapability(currentUser.role, "procurements_list")) {
     return null;

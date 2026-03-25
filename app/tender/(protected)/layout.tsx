@@ -11,6 +11,7 @@ import { isTenderHost } from "@/lib/tender-host";
 import { TenderUserRole } from "@prisma/client";
 import { tenderUserRoleLabels } from "@/lib/tender-users";
 import { tenderHasCapability } from "@/lib/tender-permissions";
+import { TENDER_INTAKE_ONLY_MODE } from "@/lib/tender-stage-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -37,26 +38,28 @@ export default async function TenderProtectedLayout({
   const currentUser = await getCurrentTenderUser();
   const role = currentUser?.role;
 
-  const links = [
-    ...(tenderHasCapability(role, "overview")
-      ? [{ title: "Обзор", href: "/" }]
-      : []),
-    ...(tenderHasCapability(role, "procurements_list")
-      ? [{ title: "Закупки", href: "/procurements" }]
-      : []),
-    ...(tenderHasCapability(role, "companies_manage")
-      ? [{ title: "Компании", href: "/companies" }]
-      : []),
-    ...(tenderHasCapability(role, "rules_manage")
-      ? [{ title: "Стоп-факторы", href: "/rules" }]
-      : []),
-    ...(tenderHasCapability(role, "fas_access")
-      ? [{ title: "Жалобы в ФАС", href: "/fas" }]
-      : []),
-    ...(tenderHasCapability(role, "users_manage")
-      ? [{ title: "Пользователи", href: "/users" }]
-      : []),
-  ];
+  const links = TENDER_INTAKE_ONLY_MODE
+    ? [{ title: "Загрузка и распознавание", href: "/procurements/new" }]
+    : [
+        ...(tenderHasCapability(role, "overview")
+          ? [{ title: "Обзор", href: "/" }]
+          : []),
+        ...(tenderHasCapability(role, "procurements_list")
+          ? [{ title: "Закупки", href: "/procurements" }]
+          : []),
+        ...(tenderHasCapability(role, "companies_manage")
+          ? [{ title: "Компании", href: "/companies" }]
+          : []),
+        ...(tenderHasCapability(role, "rules_manage")
+          ? [{ title: "Стоп-факторы", href: "/rules" }]
+          : []),
+        ...(tenderHasCapability(role, "fas_access")
+          ? [{ title: "Жалобы в ФАС", href: "/fas" }]
+          : []),
+        ...(tenderHasCapability(role, "users_manage")
+          ? [{ title: "Пользователи", href: "/users" }]
+          : []),
+      ];
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -94,7 +97,9 @@ export default async function TenderProtectedLayout({
         <section className="mb-5 rounded-[1.75rem] border border-slate-200 bg-white px-5 py-4 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
             <div className="rounded-2xl bg-[#081a4b] px-4 py-2 text-sm text-white">
-              Основной сценарий: загрузить закупку, проверить стоп-факторы, передать на предпросчёт и собрать комплект документов.
+              {TENDER_INTAKE_ONLY_MODE
+                ? "Сейчас работаем только с первым шагом: загрузка документов и запуск распознавания."
+                : "Основной сценарий: загрузить закупку, проверить стоп-факторы, передать на предпросчёт и собрать комплект документов."}
             </div>
             <nav className="flex flex-1 flex-wrap gap-2">
               {links.map((item) => (

@@ -8,10 +8,14 @@ import {
   tenderUserRoleDescriptions,
   tenderUserRoleLabels,
 } from "@/lib/tender-users";
+import { TENDER_INTAKE_ONLY_MODE } from "@/lib/tender-stage-mode";
 
 export const dynamic = "force-dynamic";
 
 export default async function TenderUsersPage() {
+  if (TENDER_INTAKE_ONLY_MODE) {
+    redirect("/procurements/new");
+  }
   const currentUser = await getCurrentTenderUser();
 
   if (!currentUser || !tenderHasCapability(currentUser.role, "users_manage")) {

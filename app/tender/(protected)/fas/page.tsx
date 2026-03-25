@@ -1,5 +1,6 @@
 import { TenderPromptConfigKey, TenderUserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
+import { TENDER_INTAKE_ONLY_MODE } from "@/lib/tender-stage-mode";
 import { saveTenderFasPromptAction } from "@/app/tender/actions";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { tenderHasCapability } from "@/lib/tender-permissions";
@@ -9,6 +10,9 @@ import { tenderUserRoleLabels } from "@/lib/tender-users";
 export const dynamic = "force-dynamic";
 
 export default async function TenderFasPage() {
+  if (TENDER_INTAKE_ONLY_MODE) {
+    redirect("/procurements/new");
+  }
   const currentUser = await getCurrentTenderUser();
   const prisma = getPrisma();
   if (!currentUser || !tenderHasCapability(currentUser.role, "fas_access")) {

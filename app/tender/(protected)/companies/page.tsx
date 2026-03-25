@@ -7,6 +7,7 @@ import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { tenderHasCapability } from "@/lib/tender-permissions";
 import { getPrisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { TENDER_INTAKE_ONLY_MODE } from "@/lib/tender-stage-mode";
 
 const documentTypeLabels = {
   COMPANY_CARD: "Карточка компании",
@@ -274,6 +275,9 @@ function CompanyForm() {
 }
 
 export default async function TenderCompaniesPage() {
+  if (TENDER_INTAKE_ONLY_MODE) {
+    redirect("/procurements/new");
+  }
   const currentUser = await getCurrentTenderUser();
   if (!currentUser || !tenderHasCapability(currentUser.role, "companies_manage")) {
     redirect("/procurements");

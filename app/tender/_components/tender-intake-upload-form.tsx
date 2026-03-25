@@ -131,7 +131,7 @@ export function TenderIntakeUploadForm({
             return;
           }
 
-          router.push(`/procurements?view=analysis&uploaded=${procurementId}`);
+          router.push(`/procurements/new?uploaded=${procurementId}`);
           router.refresh();
         } catch (error) {
           setErrorMessage(

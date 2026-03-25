@@ -320,6 +320,11 @@ export async function runTenderPrimaryAnalysis(input: {
         price_tax_note: result.price_tax_note?.trim() || priceFallback.note || "",
         bid_security: result.bid_security?.trim() || bidSecurityFallback || "",
         contract_security: result.contract_security?.trim() || contractSecurityFallback || "",
+        responsibility_terms:
+          result.responsibility_terms?.trim() ||
+          result.penalty_terms?.trim() ||
+          penaltyFallback ||
+          "",
       },
       aiAnalysisStatus: "completed",
       aiAnalysisError: null,

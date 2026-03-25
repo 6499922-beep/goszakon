@@ -583,6 +583,7 @@ export default async function TenderRecognitionDetailPage({
   const requiresCommissioning = getAiAnalysisString(aiAnalysis, "requires_commissioning");
   const lotStructure = getAiAnalysisString(aiAnalysis, "lot_structure");
   const militaryAcceptance = getAiAnalysisString(aiAnalysis, "military_acceptance");
+  const responsibilityTerms = getAiAnalysisString(aiAnalysis, "responsibility_terms");
   const terminationReasons = getAiAnalysisList(aiAnalysis, "termination_reasons");
   const missingFields = buildMissingFields(procurement);
   const sourceDocuments = procurement.sourceDocuments.map((item) => {
@@ -834,6 +835,10 @@ export default async function TenderRecognitionDetailPage({
                     <div className="rounded-2xl bg-white px-4 py-3">
                       <span className="font-medium text-[#081a4b]">Срок договора:</span>{" "}
                       {procurement.contractTerm ?? "не определено"}
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <span className="font-medium text-[#081a4b]">Ответственность по договору:</span>{" "}
+                      {responsibilityTerms || procurement.penaltyTerms || "не определено"}
                     </div>
                     <div className="rounded-2xl bg-white px-4 py-3">
                       <span className="font-medium text-[#081a4b]">Неустойка:</span>{" "}

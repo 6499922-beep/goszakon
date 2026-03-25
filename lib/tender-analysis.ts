@@ -32,6 +32,7 @@ export const tenderAnalysisSchema = {
       "delivery_terms",
       "payment_terms",
       "contract_term",
+      "responsibility_terms",
       "penalty_terms",
       "termination_reasons",
       "stop_factor_findings",
@@ -70,6 +71,7 @@ export const tenderAnalysisSchema = {
       delivery_terms: { type: "string" },
       payment_terms: { type: "string" },
       contract_term: { type: "string" },
+      responsibility_terms: { type: "string" },
       penalty_terms: { type: "string" },
       termination_reasons: {
         type: "array",
@@ -118,6 +120,7 @@ export const tenderSourceDossierSchema = {
       "delivery_terms",
       "payment_terms",
       "contract_term",
+      "responsibility_terms",
       "penalty_terms",
       "termination_reasons",
       "stop_factor_findings",
@@ -162,6 +165,7 @@ export const tenderSourceDossierSchema = {
       delivery_terms: { type: "string" },
       payment_terms: { type: "string" },
       contract_term: { type: "string" },
+      responsibility_terms: { type: "string" },
       penalty_terms: { type: "string" },
       termination_reasons: {
         type: "array",
@@ -231,6 +235,7 @@ type TenderAnalysisResult = {
   delivery_terms: string;
   payment_terms: string;
   contract_term: string;
+  responsibility_terms: string;
   penalty_terms: string;
   termination_reasons: string[];
   stop_factor_findings: Array<{
@@ -267,6 +272,7 @@ type TenderSourceDossier = {
   delivery_terms: string;
   payment_terms: string;
   contract_term: string;
+  responsibility_terms: string;
   penalty_terms: string;
   termination_reasons: string[];
   stop_factor_findings: Array<{
@@ -537,6 +543,7 @@ const tenderContractAnalysisSchema = {
       "delivery_terms",
       "payment_terms",
       "contract_term",
+      "responsibility_terms",
       "penalty_terms",
       "termination_reasons",
       "requires_commissioning",
@@ -545,6 +552,7 @@ const tenderContractAnalysisSchema = {
       delivery_terms: { type: "string" },
       payment_terms: { type: "string" },
       contract_term: { type: "string" },
+      responsibility_terms: { type: "string" },
       penalty_terms: { type: "string" },
       termination_reasons: {
         type: "array",
@@ -607,6 +615,7 @@ type TenderContractAnalysis = {
   delivery_terms: string;
   payment_terms: string;
   contract_term: string;
+  responsibility_terms: string;
   penalty_terms: string;
   termination_reasons: string[];
   requires_commissioning: string;
@@ -788,6 +797,14 @@ function normalizeTenderAnalysisResult(input: {
       result.contract_term,
       contractAnalysis.contract_term,
       dossier.contract_term
+    ),
+    responsibility_terms: pickFirstNonEmptyString(
+      result.responsibility_terms,
+      contractAnalysis.responsibility_terms,
+      dossier.responsibility_terms,
+      result.penalty_terms,
+      contractAnalysis.penalty_terms,
+      dossier.penalty_terms
     ),
     penalty_terms: pickFirstNonEmptyString(
       result.penalty_terms,
@@ -1141,6 +1158,7 @@ ${requirementsSourceText}
 - сроки и место поставки
 - сроки оплаты
 - срок действия договора
+- ответственность по договору
 - штрафы / пени / неустойки
 - основания одностороннего расторжения
 - требуются ли пуско-наладочные работы

@@ -1,16 +1,18 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type TenderIntakeUploadFormProps = {
   actorName: string;
   compact?: boolean;
+  resetToken?: string;
 };
 
 export function TenderIntakeUploadForm({
   actorName,
   compact = false,
+  resetToken,
 }: TenderIntakeUploadFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -28,6 +30,16 @@ export function TenderIntakeUploadForm({
       : selectedFiles.length < 5
         ? "файла"
         : "файлов";
+
+  useEffect(() => {
+    setSelectedFiles([]);
+    setIsPending(false);
+    setErrorMessage(null);
+    setProgressLabel(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, [resetToken]);
 
   return (
     <form
@@ -131,6 +143,12 @@ export function TenderIntakeUploadForm({
             );
             setIsPending(false);
             return;
+          }
+
+          setSelectedFiles([]);
+          setProgressLabel(null);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = "";
           }
 
           router.push(`/procurements/new?uploaded=${procurementId}`);

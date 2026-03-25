@@ -76,6 +76,7 @@ export default async function NewTenderProcurementPage({
           <TenderIntakeUploadForm
             actorName={actorName}
             compact={Boolean(uploadedProcurementId || recentProcurements.length > 0)}
+            resetToken={uploadedProcurementId ? String(uploadedProcurementId) : "empty"}
           />
         </div>
       </section>

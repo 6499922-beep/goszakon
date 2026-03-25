@@ -25,7 +25,7 @@ export function TenderIntakeUploadForm({
           createTenderProcurementAction(formData);
         });
       }}
-      className="space-y-6"
+      className="space-y-4"
     >
       <input type="hidden" name="actorName" value={actorName} />
 
@@ -42,22 +42,18 @@ export function TenderIntakeUploadForm({
         }}
       />
 
-      <div className="group flex min-h-[24rem] w-full flex-col rounded-[2.5rem] border-2 border-dashed border-[#0d5bd7]/30 bg-[radial-gradient(circle_at_top,#eef5ff_0%,#ffffff_55%)] px-8 py-6 text-center transition hover:border-[#0d5bd7]/60 hover:bg-[radial-gradient(circle_at_top,#e6f0ff_0%,#ffffff_60%)]">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#0d5bd7] text-3xl text-white shadow-lg shadow-[#0d5bd7]/20">
-          +
-        </div>
-
-        <div className="mt-8 max-w-3xl self-center">
+      <div className="group flex w-full flex-col rounded-[2.5rem] border-2 border-dashed border-[#0d5bd7]/30 bg-[radial-gradient(circle_at_top,#eef5ff_0%,#ffffff_55%)] px-8 py-6 text-center transition hover:border-[#0d5bd7]/60 hover:bg-[radial-gradient(circle_at_top,#e6f0ff_0%,#ffffff_60%)]">
+        <div className="max-w-3xl self-center">
           <div className="text-3xl font-bold tracking-tight text-[#081a4b]">
             {isPending
-              ? "Загружаем документы и ставим закупку в очередь анализа..."
+              ? "Загружаем документы и запускаем анализ..."
               : "Загрузить всю документацию по закупке"}
           </div>
           <p className="mt-4 text-base leading-7 text-slate-600">
             Нажми на это поле и выбери весь пакет файлов: извещение, ТЗ, проект
             договора, приложения, формы заказчика, расчёт НМЦК, таблицы и другие
-            материалы. После загрузки закупка сама уйдёт в фоновый анализ, а ты
-            сможешь сразу перейти к следующей.
+            материалы. После загрузки система сама начнёт первичный анализ и
+            переведёт тебя в реестр закупок.
           </p>
         </div>
 
@@ -79,7 +75,7 @@ export function TenderIntakeUploadForm({
         </div>
 
         {selectedFiles.length > 0 ? (
-          <div className="mt-4 w-full rounded-[2rem] border border-slate-200 bg-white/90 p-4 text-left shadow-sm">
+          <div className="mt-5 w-full rounded-[2rem] border border-slate-200 bg-white/90 p-4 text-left shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
@@ -102,7 +98,7 @@ export function TenderIntakeUploadForm({
               ) : null}
             </div>
 
-            <div className="mt-3 max-h-64 overflow-y-auto rounded-[1.5rem] border border-slate-200 bg-slate-50 p-3">
+            <div className="mt-3 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-3">
               <div className="grid gap-2">
                 {selectedFiles.map((fileName, index) => (
                   <div
@@ -125,8 +121,8 @@ export function TenderIntakeUploadForm({
                 className="inline-flex items-center justify-center rounded-full bg-[#0d5bd7] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0a4db7] disabled:cursor-wait disabled:opacity-80"
               >
                 {isPending
-                  ? "Загружаем и запускаем анализ..."
-                  : "Загрузить документы и запустить анализ"}
+                  ? "Загружаем документы и запускаем анализ..."
+                  : "Запустить анализ"}
               </button>
 
               <button
@@ -139,20 +135,23 @@ export function TenderIntakeUploadForm({
               </button>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="mt-5 rounded-[2rem] border border-slate-200 bg-white/80 px-5 py-4 text-sm leading-6 text-slate-500">
+            Выбери весь пакет документов по закупке. После выбора список сразу
+            появится в этом же окне без прокрутки страницы.
+          </div>
+        )}
       </div>
 
       {selectedFiles.length > 0 ? (
         <div className="rounded-[2rem] border border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-6 text-slate-500">
-          <div>
-            После отправки закупка сама уйдёт в обработку. Не нужно ждать в этой
-            форме: можно будет сразу вернуться и загрузить следующую закупку.
-          </div>
+          После отправки система перейдёт в реестр закупок и покажет, что
+          первичный анализ запущен.
         </div>
       ) : (
         <div className="rounded-[2rem] border border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-6 text-slate-500">
-          Выбери весь пакет документов по закупке. После выбора ты увидишь полный
-          список файлов и сможешь отправить его в анализ одним действием.
+          На первом этапе сотрудник делает только одно действие: загружает
+          документы для анализа.
         </div>
       )}
     </form>

@@ -29,9 +29,57 @@ export function formatTenderDate(value: Date | string | null | undefined) {
   if (Number.isNaN(date.getTime())) return "—";
 
   return new Intl.DateTimeFormat("ru-RU", {
+    timeZone: "Europe/Moscow",
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function formatMoscowDateParts(
+  value: Date | string | null | undefined,
+  options: Intl.DateTimeFormatOptions
+) {
+  if (!value) return null;
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const parts = new Intl.DateTimeFormat("ru-RU", {
+    timeZone: "Europe/Moscow",
+    ...options,
+  }).formatToParts(date);
+
+  return parts.reduce<Record<string, string>>((acc, part) => {
+    if (part.type !== "literal") {
+      acc[part.type] = part.value;
+    }
+    return acc;
+  }, {});
+}
+
+export function formatTenderMoscowShortDateTime(value: Date | string | null | undefined) {
+  const parts = formatMoscowDateParts(value, {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (!parts) return "—";
+  return `${parts.day}.${parts.month}, ${parts.hour}:${parts.minute}`;
+}
+
+export function formatTenderMoscowFullDateTime(value: Date | string | null | undefined) {
+  const parts = formatMoscowDateParts(value, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (!parts) return "Не удалось определить";
+  return `${parts.day}.${parts.month}.${parts.year}, ${parts.hour}:${parts.minute}`;
 }
 
 export const tenderStatusLabels: Record<TenderProcurementStatus, string> = {

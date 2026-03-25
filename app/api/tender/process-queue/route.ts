@@ -6,6 +6,13 @@ import { tenderHasCapability } from "@/lib/tender-permissions";
 import { runTenderPrimaryAnalysis } from "@/lib/tender-primary-analysis";
 import { logTenderEvent } from "@/lib/tender-workflow";
 
+function truncateErrorMessage(value: string | null | undefined, limit = 1200) {
+  const normalized = String(value ?? "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "Не удалось выполнить первичный AI-анализ";
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, limit - 3).trim()}...`;
+}
+
 export async function POST(request: Request) {
   const currentUser = await getCurrentTenderUser();
 
@@ -70,8 +77,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Не удалось выполнить первичный AI-анализ";
+    const message = truncateErrorMessage(
+      error instanceof Error ? error.message : "Не удалось выполнить первичный AI-анализ"
+    );
 
     await prisma.tenderProcurement.update({
       where: { id: procurementId },

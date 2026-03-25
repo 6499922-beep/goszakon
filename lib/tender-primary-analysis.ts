@@ -12,6 +12,42 @@ import {
 } from "@/lib/tender-analysis";
 import { logTenderEvent } from "@/lib/tender-workflow";
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function truncateErrorMessage(value: string | null | undefined, limit = 1200) {
+  const normalized = String(value ?? "").replace(/\s+/g, " ").trim();
+  if (!normalized) return null;
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, limit - 3).trim()}...`;
+}
+
+async function withAnalysisRetry<T>(
+  taskName: string,
+  factory: () => Promise<T>,
+  attempts = 3
+) {
+  let lastError: unknown = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await factory();
+    } catch (error) {
+      lastError = error;
+      if (attempt >= attempts) {
+        break;
+      }
+
+      await delay(attempt * 1500);
+    }
+  }
+
+  const message =
+    lastError instanceof Error ? lastError.message : `Не удалось выполнить ${taskName}`;
+  throw new Error(truncateErrorMessage(message, 400) || `Не удалось выполнить ${taskName}`);
+}
+
 function extractRelevantParagraphs(sourceText: string, patterns: RegExp[], limit = 3) {
   const blocks = sourceText
     .split(/\n{2,}/)
@@ -55,6 +91,51 @@ function extractFirstMoneyValue(value: string | null | undefined) {
     .find((item) => /^\d+(?:\.\d{1,2})?$/.test(item));
 
   return candidate ?? null;
+}
+
+function normalizeDecimalForDb(value: string | null | undefined) {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+
+  const directCandidate = text
+    .replace(/[^\d.,-]/g, "")
+    .replace(/\s+/g, "")
+    .trim();
+
+  const candidate = extractFirstMoneyValue(directCandidate || text);
+  if (!candidate) return null;
+
+  const normalized = candidate.replace(/\s+/g, "").replace(",", ".").trim();
+  return /^\d+(?:\.\d{1,2})?$/.test(normalized) ? normalized : null;
+}
+
+async function updateProcurementAnalysisSafely(
+  prisma: ReturnType<typeof getPrisma>,
+  procurementId: number,
+  data: Parameters<typeof prisma.tenderProcurement.update>[0]["data"]
+) {
+  try {
+    await prisma.tenderProcurement.update({
+      where: { id: procurementId },
+      data,
+    });
+    return;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!/nmckWithoutVat/i.test(message)) {
+      throw error;
+    }
+
+    const fallbackData = {
+      ...data,
+      nmckWithoutVat: undefined,
+    };
+
+    await prisma.tenderProcurement.update({
+      where: { id: procurementId },
+      data: fallbackData,
+    });
+  }
 }
 
 function buildPriceFallbackFromMentions(
@@ -152,16 +233,18 @@ export async function runTenderPrimaryAnalysis(input: {
     throw new Error("Procurement not found");
   }
 
-  const { model, result, dossier } = await runTenderAiAnalysis({
-    title: procurement.title,
-    customerName: procurement.customerName,
-    customerInn: procurement.customerInn,
-    procurementNumber: procurement.procurementNumber,
-    platform: procurement.platform,
-    itemsCount: procurement.itemsCount,
-    nmckWithoutVat: procurement.nmckWithoutVat?.toString() ?? null,
-    sourceText,
-  });
+  const { model, result, dossier } = await withAnalysisRetry("основной AI-анализ", () =>
+    runTenderAiAnalysis({
+      title: procurement.title,
+      customerName: procurement.customerName,
+      customerInn: procurement.customerInn,
+      procurementNumber: procurement.procurementNumber,
+      platform: procurement.platform,
+      itemsCount: procurement.itemsCount,
+      nmckWithoutVat: procurement.nmckWithoutVat?.toString() ?? null,
+      sourceText,
+    })
+  );
 
   const fasPromptConfig = await prisma.tenderPromptConfig.findUnique({
     where: { key: TenderPromptConfigKey.FAS_POTENTIAL_COMPLAINT },
@@ -178,15 +261,41 @@ export async function runTenderPrimaryAnalysis(input: {
       "давать теорию без привязки к конкретному пункту документации.",
     ].join("\n");
 
-  const { result: fasResult } = await runTenderFasAiAnalysis({
-    title: procurement.title,
-    customerName: procurement.customerName,
-    customerInn: procurement.customerInn,
-    procurementNumber: procurement.procurementNumber,
-    platform: procurement.platform,
-    sourceText,
-    promptBody: fasPromptBody,
-  });
+  let fasResult:
+    | {
+        status: "NO_VIOLATION" | "POTENTIAL_COMPLAINT" | "MANUAL_REVIEW";
+        finding_title: string;
+        finding_basis: string;
+        confidence_note: string;
+      }
+    | null = null;
+
+  try {
+    const fasResponse = await withAnalysisRetry("ФАС-аналитика", () =>
+      runTenderFasAiAnalysis({
+        title: procurement.title,
+        customerName: procurement.customerName,
+        customerInn: procurement.customerInn,
+        procurementNumber: procurement.procurementNumber,
+        platform: procurement.platform,
+        sourceText,
+        promptBody: fasPromptBody,
+      })
+    );
+
+    fasResult = fasResponse.result;
+  } catch (error) {
+    fasResult = {
+      status: "MANUAL_REVIEW",
+      finding_title: "",
+      finding_basis: "",
+      confidence_note:
+        truncateErrorMessage(
+          error instanceof Error ? error.message : "Не удалось автоматически проверить ФАС-ветку.",
+          300
+        ) || "Не удалось автоматически проверить ФАС-ветку.",
+    };
+  }
 
   const penaltyFallback = buildPenaltyFallback(sourceText);
   const terminationFallback = buildTerminationFallback(sourceText);
@@ -198,10 +307,11 @@ export async function runTenderPrimaryAnalysis(input: {
   const bidSecurityFallback = buildSecurityFallback(dossier.security_mentions, "заявк");
   const contractSecurityFallback = buildSecurityFallback(dossier.security_mentions, "исполн");
   const procurementNumberFallback = buildProcurementNumberFallback(sourceText);
+  const nmckWithoutVatValue = normalizeDecimalForDb(
+    result.nmck_without_vat?.trim() || priceFallback.withoutVat
+  );
 
-  await prisma.tenderProcurement.update({
-    where: { id: procurementId },
-    data: {
+  await updateProcurementAnalysisSafely(prisma, procurementId, {
       sourceText,
       aiAnalysis: {
         ...result,
@@ -227,12 +337,7 @@ export async function runTenderPrimaryAnalysis(input: {
         Number.isFinite(result.items_count) && result.items_count > 0
           ? result.items_count
           : procurement.itemsCount,
-      nmckWithoutVat:
-        result.nmck_without_vat?.trim() || priceFallback.withoutVat
-          ? String(result.nmck_without_vat?.trim() || priceFallback.withoutVat)
-              .replace(/\s+/g, "")
-              .replace(",", ".")
-          : procurement.nmckWithoutVat,
+      nmckWithoutVat: nmckWithoutVatValue ?? procurement.nmckWithoutVat,
       purchaseType: result.procurement_type?.trim() || procurement.purchaseType || null,
       title:
         procurement.title.startsWith("Закупка по файлам:") &&
@@ -274,7 +379,6 @@ export async function runTenderPrimaryAnalysis(input: {
       stopFactorsSummary: result.stop_factor_findings.length
         ? result.stop_factor_findings.map((item) => `${item.name}: ${item.reason}`).join("\n")
         : "Стоп-факторы в тексте не обнаружены",
-    },
   });
 
   await prisma.tenderFasReview.upsert({
@@ -306,7 +410,21 @@ export async function runTenderPrimaryAnalysis(input: {
     },
   });
 
-  await evaluateTenderStopRules(procurementId);
+  try {
+    await evaluateTenderStopRules(procurementId);
+  } catch (error) {
+    await logTenderEvent({
+      procurementId,
+      actionType: TenderActionType.NOTE_ADDED,
+      title: "Проверка стоп-факторов не завершена",
+      description:
+        truncateErrorMessage(
+          error instanceof Error ? error.message : "Не удалось автоматически проверить стоп-факторы.",
+          300
+        ) || "Не удалось автоматически проверить стоп-факторы.",
+      actorName: "AI",
+    });
+  }
 
   await logTenderEvent({
     procurementId,

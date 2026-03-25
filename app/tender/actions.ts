@@ -1,9 +1,13 @@
 "use server";
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
+import WordExtractor from "word-extractor";
 import * as XLSX from "xlsx";
 import {
   TenderFasReviewStatus,
@@ -29,10 +33,13 @@ import {
   runTenderAiAnalysis,
   runTenderFasAiAnalysis,
 } from "@/lib/tender-analysis";
+import { runTenderPrimaryAnalysis as runTenderPrimaryAnalysisPipeline } from "@/lib/tender-primary-analysis";
 import {
   getDecisionStatus,
   logTenderEvent,
 } from "@/lib/tender-workflow";
+
+const execFileAsync = promisify(execFile);
 
 function extractRelevantParagraphs(sourceText: string, patterns: RegExp[], limit = 3) {
   const blocks = sourceText
@@ -108,6 +115,12 @@ function slugifyTenderFileName(value: string) {
     .toLowerCase();
 }
 
+function extractStoredPathsFromNote(note: string | null | undefined) {
+  const value = String(note ?? "");
+  const matches = [...value.matchAll(/Файл сохранён:\s*(\/[^\s]+)/g)];
+  return matches.map((match) => match[1]).filter(Boolean);
+}
+
 function buildTenderIntakeTitle(input: {
   sourceUrl: string | null;
   uploadedNames: string[];
@@ -175,6 +188,53 @@ async function extractTextFromTenderUpload(file: File) {
             ? "Текст из DOCX удалось извлечь автоматически."
             : "DOCX загружен, но текст для анализа извлечь не удалось.",
       };
+    }
+
+    if (name.endsWith(".doc")) {
+      try {
+        try {
+          const extractor = new WordExtractor();
+          const extractedDocument = await extractor.extract(buffer);
+          const extractedText = extractedDocument.getBody().trim();
+
+          if (extractedText.length > 0) {
+            return {
+              extractedText,
+              extractionNote: "Текст из DOC удалось извлечь автоматически.",
+            };
+          }
+        } catch {
+          // fallback below
+        }
+
+        const tempDir = path.join(os.tmpdir(), `tender-doc-${Date.now()}`);
+        const absolutePath = path.join(tempDir, file.name || "document.doc");
+
+        try {
+          await mkdir(tempDir, { recursive: true });
+          await writeFile(absolutePath, buffer);
+          const { stdout } = await execFileAsync("antiword", [absolutePath], {
+            maxBuffer: 20 * 1024 * 1024,
+          });
+          const extractedText = String(stdout ?? "").replace(/\u0000/g, "").trim();
+
+          return {
+            extractedText: extractedText.length > 0 ? extractedText : null,
+            extractionNote:
+              extractedText.length > 0
+                ? "Текст из DOC удалось извлечь автоматически."
+                : "DOC загружен, но текст для анализа извлечь не удалось.",
+          };
+        } finally {
+          await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+        }
+      } catch {
+        return {
+          extractedText: null,
+          extractionNote:
+            "Файл DOC сохранён, но его не удалось автоматически разобрать. Нужна ручная проверка или версия в DOCX.",
+        };
+      }
     }
 
     if (name.endsWith(".pdf")) {
@@ -1400,7 +1460,7 @@ export async function createTenderProcurementAction(formData: FormData) {
     });
 
     try {
-      await runTenderPrimaryAnalysis(prisma, {
+      await runTenderPrimaryAnalysisPipeline({
         procurementId: record.id,
         sourceText: combinedSourceText,
       });
@@ -1433,6 +1493,57 @@ export async function createTenderProcurementAction(formData: FormData) {
   redirect(`/procurements?view=analysis&queued=${record.id}`);
 }
 
+export async function deleteTenderRecognitionAction(formData: FormData) {
+  await requireTenderCapability("procurement_create");
+  const prisma = getPrisma();
+  const procurementId = Number(formData.get("procurementId"));
+
+  if (!Number.isInteger(procurementId) || procurementId <= 0) {
+    throw new Error("Некорректный идентификатор закупки.");
+  }
+
+  const procurement = await prisma.tenderProcurement.findUnique({
+    where: { id: procurementId },
+    select: {
+      id: true,
+      sourceDocuments: {
+        select: {
+          note: true,
+        },
+      },
+    },
+  });
+
+  if (!procurement) {
+    revalidatePath("/procurements/new");
+    return;
+  }
+
+  const filePaths = procurement.sourceDocuments.flatMap((item) =>
+    extractStoredPathsFromNote(item.note)
+  );
+
+  await prisma.tenderProcurement.delete({
+    where: { id: procurementId },
+  });
+
+  const publicRoot = path.join(process.cwd(), "public");
+  for (const filePath of filePaths) {
+    const normalized = filePath.replace(/^\/+/, "");
+    const absolutePath = path.join(publicRoot, normalized);
+    if (!absolutePath.startsWith(publicRoot)) continue;
+
+    try {
+      await rm(absolutePath, { force: true });
+    } catch {
+      // Игнорируем ошибки очистки файлов: главное удалить закупку из интерфейса.
+    }
+  }
+
+  revalidatePath("/procurements/new");
+  revalidatePath("/procurements");
+}
+
 export async function processQueuedTenderAnalysisAction(procurementId: number) {
   await requireTenderCapability("procurement_initial");
   const prisma = getPrisma();
@@ -1462,7 +1573,7 @@ export async function processQueuedTenderAnalysisAction(procurementId: number) {
   }
 
   try {
-    await runTenderPrimaryAnalysis(prisma, {
+    await runTenderPrimaryAnalysisPipeline({
       procurementId,
       sourceText: procurement.sourceText,
     });
@@ -1503,7 +1614,7 @@ export async function analyzeTenderProcurementAction(formData: FormData) {
   }
 
   try {
-    await runTenderPrimaryAnalysis(prisma, {
+    await runTenderPrimaryAnalysisPipeline({
       procurementId,
       sourceText,
     });

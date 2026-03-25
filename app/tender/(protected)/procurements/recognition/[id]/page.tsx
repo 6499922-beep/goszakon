@@ -3,16 +3,10 @@ import { redirect } from "next/navigation";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
+import { formatTenderMoscowFullDateTime } from "@/lib/tender-format";
 
 function formatDateTime(value: Date | null | undefined) {
-  if (!value) return "Не удалось определить";
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(value);
+  return formatTenderMoscowFullDateTime(value);
 }
 
 function formatCurrency(value: { toString(): string } | null | undefined) {
@@ -54,9 +48,13 @@ function extractStoredDocumentPath(note: string | null | undefined) {
   return match?.[1] ?? null;
 }
 
-function safeDocumentHref(path: string | null | undefined) {
-  if (!path) return null;
-  return encodeURI(path);
+function buildSourceDocumentHref(
+  documentId: number | null | undefined,
+  storedPath?: string | null
+) {
+  if (storedPath) return storedPath;
+  if (!documentId) return null;
+  return `/api/tender/source-document/${documentId}`;
 }
 
 function isArchiveFileName(value: string | null | undefined) {
@@ -189,6 +187,7 @@ function findMatchingDocumentsForRule(
     };
   },
   sourceDocuments: Array<{
+    id: number;
     title: string;
     fileName: string | null;
     note: string | null;
@@ -347,6 +346,7 @@ function buildMissingFields(procurement: {
   customerInn: string | null;
   nmckWithoutVat: { toString(): string } | null;
   sourceDocuments: Array<{
+    id: number;
     title: string;
     fileName: string | null;
     note: string | null;
@@ -356,6 +356,7 @@ function buildMissingFields(procurement: {
     title: string;
     description: string;
     storagePath?: string | null;
+    documentId?: number | null;
     fileLabel?: string | null;
     status: "error" | "ok";
   }> = [];
@@ -403,14 +404,15 @@ function buildMissingFields(procurement: {
       issue.includes("нужно открыть файл");
 
     if (isError) {
-      missing.push({
-        title: item.title || item.fileName || "Документ",
-        description: issue,
-        storagePath,
-        fileLabel: item.fileName || item.title,
-        status: "error",
-      });
-    }
+    missing.push({
+      title: item.title || item.fileName || "Документ",
+      description: issue,
+      storagePath,
+      documentId: item.id,
+      fileLabel: item.fileName || item.title,
+      status: "error",
+    });
+  }
   }
 
   return missing.slice(0, 12);
@@ -443,6 +445,7 @@ export default async function TenderRecognitionDetailPage({
       sourceDocuments: {
         orderBy: { id: "asc" },
         select: {
+          id: true,
           title: true,
           fileName: true,
           note: true,
@@ -487,9 +490,10 @@ export default async function TenderRecognitionDetailPage({
   const sourceDocuments = procurement.sourceDocuments.map((item) => {
     const storagePath = extractStoredDocumentPath(item.note);
     return {
+      id: item.id,
       title: item.title || item.fileName || "Документ",
       fileLabel: item.fileName || item.title || "Документ",
-      href: safeDocumentHref(storagePath),
+      href: buildSourceDocumentHref(item.id, storagePath),
       excerpt: item.contentSnippet ? buildRuleDocumentExcerpt(
         {
           rule: {
@@ -694,8 +698,10 @@ export default async function TenderRecognitionDetailPage({
                       {matchingDocuments.length > 0 ? (
                         <div className="mt-3 space-y-3 text-sm">
                           {matchingDocuments.map((document) => {
-                            const storedPath = extractStoredDocumentPath(document.note);
-                            const href = safeDocumentHref(storedPath);
+                            const href = buildSourceDocumentHref(
+                              document.id,
+                              extractStoredDocumentPath(document.note)
+                            );
                             const excerpt = buildRuleDocumentExcerpt(match, document);
                             return (
                               <div
@@ -915,10 +921,12 @@ export default async function TenderRecognitionDetailPage({
                     >
                       <div className="font-semibold text-[#081a4b]">{item.title}</div>
                       <div className="mt-1">{item.description}</div>
-                      {item.storagePath ? (
+                      {item.documentId ? (
                         <div className="mt-2">
                           <a
-                            href={safeDocumentHref(item.storagePath) ?? "#"}
+                            href={
+                              buildSourceDocumentHref(item.documentId, item.storagePath) ?? "#"
+                            }
                             target="_blank"
                             rel="noreferrer"
                             className="font-medium text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"

@@ -1,9 +1,16 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import AdmZip from "adm-zip";
 import mammoth from "mammoth";
 import { createExtractorFromData } from "node-unrar-js";
+import { PDFParse } from "pdf-parse";
+import WordExtractor from "word-extractor";
 import * as XLSX from "xlsx";
+
+const execFileAsync = promisify(execFile);
 
 export type TenderUploadedFile = {
   name: string;
@@ -20,6 +27,103 @@ export type TenderPreparedSourceDocument = {
   extractionNote: string;
   file: TenderUploadedFile;
 };
+
+async function withTemporaryFile<T>(
+  file: TenderUploadedFile,
+  callback: (absolutePath: string) => Promise<T>
+) {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "tender-intake-"));
+  const absolutePath = path.join(tempDir, file.name || "document.bin");
+
+  try {
+    await writeFile(absolutePath, file.buffer);
+    return await callback(absolutePath);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+async function extractLegacyDocText(file: TenderUploadedFile) {
+  try {
+    const extractor = new WordExtractor();
+    const extractedDocument = await extractor.extract(file.buffer);
+    const extractedText = extractedDocument.getBody().trim();
+
+    if (extractedText.length > 0) {
+      return {
+        extractedText,
+        extractionNote: "Текст из DOC удалось извлечь автоматически.",
+      };
+    }
+  } catch {
+    // fallback below
+  }
+
+  try {
+    return await withTemporaryFile(file, async (absolutePath) => {
+      const { stdout } = await execFileAsync("antiword", [absolutePath], {
+        maxBuffer: 20 * 1024 * 1024,
+      });
+      const extractedText = String(stdout ?? "").replace(/\u0000/g, "").trim();
+
+      return {
+        extractedText: extractedText.length > 0 ? extractedText : null,
+        extractionNote:
+          extractedText.length > 0
+            ? "Текст из DOC удалось извлечь автоматически."
+            : "DOC загружен, но текст для анализа извлечь не удалось.",
+      };
+    });
+  } catch {
+    return {
+      extractedText: null,
+      extractionNote:
+        "Файл DOC сохранён, но его не удалось автоматически разобрать. Нужна ручная проверка или версия в DOCX.",
+    };
+  }
+}
+
+async function extractPdfText(file: TenderUploadedFile) {
+  try {
+    const parser = new PDFParse({ data: file.buffer });
+    const pdfResult = await parser.getText();
+    await parser.destroy();
+    const extractedText = pdfResult.text.trim();
+
+    if (extractedText.length > 0) {
+      return {
+        extractedText,
+        extractionNote: "Текст из PDF удалось извлечь автоматически.",
+      };
+    }
+  } catch {
+    // fallback below
+  }
+
+  try {
+    return await withTemporaryFile(file, async (absolutePath) => {
+      const textPath = `${absolutePath}.txt`;
+      await execFileAsync("pdftotext", ["-layout", absolutePath, textPath], {
+        maxBuffer: 20 * 1024 * 1024,
+      });
+      const extractedText = (await readFile(textPath, "utf-8")).trim();
+
+      return {
+        extractedText: extractedText.length > 0 ? extractedText : null,
+        extractionNote:
+          extractedText.length > 0
+            ? "Текст из PDF удалось извлечь автоматически."
+            : "PDF сохранён в системе, но текст из него пока не удалось извлечь автоматически. Его можно проверить вручную или загрузить версию в DOCX/XLSX, если она есть.",
+      };
+    });
+  } catch {
+    return {
+      extractedText: null,
+      extractionNote:
+        "PDF сохранён в системе, но текст из него пока не удалось извлечь автоматически. Его можно проверить вручную или загрузить версию в DOCX/XLSX, если она есть.",
+    };
+  }
+}
 
 function isZipArchiveFile(file: TenderUploadedFile) {
   const normalizedName = (file.name || "").toLowerCase().trim();
@@ -189,6 +293,45 @@ function mergeHeaderRows(headerRows: string[][]) {
   });
 }
 
+function collectWorkbookPositionLines(headers: string[], rows: string[][]) {
+  const headerHaystack = headers.join(" | ").toLowerCase();
+  const likelyPositionTable =
+    /наимен|товар|продукц|оборуд|материал|позици|ед\.? ?изм|колич|цена|стоим|сумм/i.test(
+      headerHaystack
+    );
+
+  if (!likelyPositionTable) return [];
+
+  const interestingColumns = headers.map((header, index) => {
+    const normalized = header.toLowerCase();
+    const isInteresting =
+      /п\/п|№|наимен|товар|продукц|оборуд|материал|характер|марк|модел|артикул|ед\.? ?изм|колич|цена|стоим|сумм/i.test(
+        normalized
+      );
+
+    return isInteresting ? index : -1;
+  }).filter((index) => index >= 0);
+
+  const lines: string[] = [];
+
+  rows.forEach((row, rowIndex) => {
+    const parts = interestingColumns
+      .map((columnIndex) => {
+        const header = headers[columnIndex];
+        const value = row[columnIndex] ?? "";
+        if (!value) return null;
+        return `${header}: ${value}`;
+      })
+      .filter(Boolean);
+
+    if (parts.length > 0) {
+      lines.push(`Позиция ${rowIndex + 1}. ${parts.join(" | ")}`);
+    }
+  });
+
+  return lines.slice(0, 120);
+}
+
 function extractStructuredTextFromWorkbook(buffer: Buffer) {
   const workbook = XLSX.read(buffer, { type: "buffer" });
 
@@ -225,6 +368,8 @@ function extractStructuredTextFromWorkbook(buffer: Buffer) {
       `Колонки: ${headers.join(" | ")}`,
     ];
 
+    const positionLines = collectWorkbookPositionLines(headers, dataRows);
+
     if (dataRows.length > 0) {
       summaryLines.push("Строки таблицы:");
       dataRows.forEach((row, rowIndex) => {
@@ -241,6 +386,11 @@ function extractStructuredTextFromWorkbook(buffer: Buffer) {
       });
     } else {
       summaryLines.push("Строки таблицы автоматически не выделены.");
+    }
+
+    if (positionLines.length > 0) {
+      summaryLines.push("Позиции для анализа:");
+      summaryLines.push(...positionLines);
     }
 
     return summaryLines.join("\n");
@@ -278,12 +428,12 @@ export async function extractTextFromTenderUpload(file: TenderUploadedFile) {
       };
     }
 
+    if (name.endsWith(".doc")) {
+      return extractLegacyDocText(file);
+    }
+
     if (name.endsWith(".pdf")) {
-      return {
-        extractedText: null,
-        extractionNote:
-          "PDF сохранён в системе, но текст из него пока не удалось извлечь автоматически. Его можно проверить вручную или загрузить версию в DOCX/XLSX, если она есть.",
-      };
+      return extractPdfText(file);
     }
 
     if (name.endsWith(".xlsx") || name.endsWith(".xls")) {

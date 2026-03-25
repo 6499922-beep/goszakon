@@ -351,6 +351,64 @@ async function runTenderPrimaryAnalysis(prisma: ReturnType<typeof getPrisma>, in
   });
 }
 
+function launchTenderPrimaryAnalysisInBackground(input: {
+  procurementId: number;
+  sourceText: string;
+}) {
+  const procurementId = input.procurementId;
+  const sourceText = input.sourceText;
+
+  void (async () => {
+    const prisma = getPrisma();
+
+    try {
+      const latest = await prisma.tenderProcurement.findUnique({
+        where: { id: procurementId },
+        select: {
+          id: true,
+          sourceText: true,
+          aiAnalysisStatus: true,
+        },
+      });
+
+      if (!latest?.sourceText?.trim()) return;
+
+      if (
+        latest.aiAnalysisStatus === "running" ||
+        latest.aiAnalysisStatus === "completed"
+      ) {
+        return;
+      }
+
+      await runTenderPrimaryAnalysis(prisma, {
+        procurementId,
+        sourceText: latest.sourceText || sourceText,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Не удалось выполнить первичный AI-анализ";
+
+      await prisma.tenderProcurement.update({
+        where: { id: procurementId },
+        data: {
+          aiAnalysisStatus: "failed",
+          aiAnalysisError: message,
+        },
+      });
+
+      await logTenderEvent({
+        procurementId,
+        actionType: TenderActionType.NOTE_ADDED,
+        title: "Первичный анализ не завершён",
+        description: message,
+        actorName: "AI",
+      });
+    }
+  })();
+}
+
 function inferSourceDocumentKind(fileName: string) {
   const normalized = fileName.toLowerCase();
 
@@ -1324,6 +1382,11 @@ export async function createTenderProcurementAction(formData: FormData) {
         warnings: extractionWarnings,
         uploadedFiles: uploadedFiles.map((file) => file.name),
       },
+    });
+
+    launchTenderPrimaryAnalysisInBackground({
+      procurementId: record.id,
+      sourceText: combinedSourceText,
     });
   }
 

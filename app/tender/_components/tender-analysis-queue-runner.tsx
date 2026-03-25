@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo } from "react";
 
 type TenderAnalysisQueueRunnerProps = {
   procurementId: number;
@@ -12,27 +11,9 @@ export function TenderAnalysisQueueRunner({
   procurementId,
   view,
 }: TenderAnalysisQueueRunnerProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const hasStartedRef = useRef(false);
-
-  useEffect(() => {
-    if (hasStartedRef.current) return;
-    hasStartedRef.current = true;
-
-    startTransition(async () => {
-      await fetch("/api/tender/process-queue", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ procurementId }),
-      });
-      const nextQuery = view ? `?view=${encodeURIComponent(view)}` : "";
-      router.replace(`/procurements${nextQuery}`);
-      router.refresh();
-    });
-  }, [procurementId, router, view]);
+  const nextLink = useMemo(() => {
+    return view ? `/procurements?view=${encodeURIComponent(view)}` : "/procurements";
+  }, [view]);
 
   return (
     <div className="rounded-[2rem] border border-[#0d5bd7]/15 bg-[linear-gradient(135deg,#eef5ff_0%,#ffffff_70%)] p-5 shadow-sm">
@@ -43,7 +24,7 @@ export function TenderAnalysisQueueRunner({
         Закупка принята в работу
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-600">
-        Система уже запускает первичный анализ по загруженным документам. Можно
+        Система уже запустила первичный анализ по загруженным документам. Можно
         сразу открыть следующую закупку и загрузить ещё один пакет файлов.
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -53,9 +34,12 @@ export function TenderAnalysisQueueRunner({
         >
           Добавить ещё одну закупку
         </a>
-        <div className="rounded-full bg-white px-4 py-2 text-sm text-slate-600 ring-1 ring-slate-200">
-          {isPending ? "Идёт первичный анализ..." : "Ожидаем обновления списка"}
-        </div>
+        <a
+          href={nextLink}
+          className="rounded-full bg-white px-4 py-2 text-sm text-slate-600 ring-1 ring-slate-200 transition hover:text-slate-900"
+        >
+          Обновить список
+        </a>
       </div>
     </div>
   );

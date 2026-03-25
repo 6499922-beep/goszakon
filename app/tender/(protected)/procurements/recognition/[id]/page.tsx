@@ -141,7 +141,11 @@ function splitReadableText(value: string | null | undefined) {
     .filter(Boolean);
 }
 
-function renderReadableText(value: string | null | undefined, fallback: string) {
+function renderReadableText(
+  value: string | null | undefined,
+  fallback: string,
+  maxItems = 4
+) {
   const blocks = splitReadableText(value);
 
   if (blocks.length === 0) {
@@ -150,7 +154,7 @@ function renderReadableText(value: string | null | undefined, fallback: string) 
 
   return (
     <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-      {blocks.map((item, index) => (
+      {blocks.slice(0, maxItems).map((item, index) => (
         <div key={`${item}-${index}`} className="rounded-2xl bg-white px-4 py-3">
           {item}
         </div>
@@ -288,20 +292,15 @@ export default async function TenderRecognitionDetailPage({
   const requiredDocuments = jsonListToStrings(procurement.requiredDocuments);
   const nonstandardRequirements = jsonListToStrings(procurement.nonstandardRequirements);
   const missingFields = buildMissingFields(procurement);
-  const stopFactorState =
-    procurement.ruleMatches.length > 0 ? "stop" : missingFields.length > 0 ? "review" : "ok";
+  const stopFactorState = procurement.ruleMatches.length > 0 ? "stop" : "ok";
   const stopFactorTitle =
     stopFactorState === "stop"
       ? "Выявлены стоп-факторы"
-      : stopFactorState === "review"
-        ? "Нужна ручная проверка"
-        : "Стоп-факторы не выявлены";
+      : "Стоп-факторы не выявлены";
   const stopFactorTone =
     stopFactorState === "stop"
       ? "border-rose-200 bg-rose-50 text-rose-800"
-      : stopFactorState === "review"
-        ? "border-amber-200 bg-amber-50 text-amber-800"
-        : "border-emerald-200 bg-emerald-50 text-emerald-800";
+      : "border-emerald-200 bg-emerald-50 text-emerald-800";
 
   return (
     <main className="space-y-4">
@@ -404,34 +403,6 @@ export default async function TenderRecognitionDetailPage({
                 })}
                 {procurement.stopFactorsSummary ? <div>{procurement.stopFactorsSummary}</div> : null}
               </div>
-            ) : stopFactorState === "review" ? (
-              <div className="mt-3 grid gap-3">
-                {missingFields.map((item, index) => (
-                  <div
-                    key={`${item.title}-${index}`}
-                    className={`rounded-2xl border px-4 py-3 ${
-                      item.status === "error"
-                        ? "border-amber-200 bg-white/80"
-                        : "border-emerald-200 bg-white/80"
-                    }`}
-                  >
-                    <div className="font-semibold">{item.title}</div>
-                    <div className="mt-1 text-sm leading-6">{item.description}</div>
-                    {item.storagePath ? (
-                      <div className="mt-2">
-                        <a
-                          href={item.storagePath}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-sm font-medium underline decoration-amber-300 underline-offset-2 hover:text-amber-900"
-                        >
-                          Открыть файл: {item.fileLabel ?? "документ"}
-                        </a>
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
             ) : (
               <div className="mt-3 text-sm leading-6">
                 Система не увидела явных стоп-факторов в загруженной документации.
@@ -439,24 +410,33 @@ export default async function TenderRecognitionDetailPage({
             )}
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="space-y-4">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-500">Краткая суть закупки</div>
-              {renderReadableText(procurement.summary, "Не удалось определить автоматически")}
+              <div className="text-sm font-semibold text-slate-500">Краткая выжимка</div>
+              {renderReadableText(
+                procurement.summary,
+                "Не удалось определить автоматически",
+                3
+              )}
             </div>
+
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-sm font-semibold text-slate-500">Критерии отбора</div>
               {renderReadableText(
                 procurement.selectionCriteria,
-                "Не удалось определить автоматически"
+                "Не удалось определить автоматически",
+                4
               )}
             </div>
+
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-sm font-semibold text-slate-500">Требуемая документация</div>
               {requiredDocuments.length > 0 ? (
                 <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                   {requiredDocuments.map((item) => (
-                    <div key={item}>{item}</div>
+                    <div key={item} className="rounded-2xl bg-white px-4 py-3">
+                      {item}
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -465,12 +445,15 @@ export default async function TenderRecognitionDetailPage({
                 </div>
               )}
             </div>
+
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-sm font-semibold text-slate-500">Нестандартные требования</div>
               {nonstandardRequirements.length > 0 ? (
                 <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                   {nonstandardRequirements.map((item) => (
-                    <div key={item}>{item}</div>
+                    <div key={item} className="rounded-2xl bg-white px-4 py-3">
+                      {item}
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -479,9 +462,10 @@ export default async function TenderRecognitionDetailPage({
                 </div>
               )}
             </div>
+
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-sm font-semibold text-slate-500">Условия договора</div>
-              <div className="mt-3 grid gap-2 text-sm leading-6 text-slate-700">
+              <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                 <div className="rounded-2xl bg-white px-4 py-3">
                   <span className="font-medium text-[#081a4b]">Поставка:</span>{" "}
                   {procurement.deliveryTerms ?? "не определено"}
@@ -500,6 +484,7 @@ export default async function TenderRecognitionDetailPage({
                 </div>
               </div>
             </div>
+
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-sm font-semibold text-slate-500">
                 Что не удалось определить автоматически

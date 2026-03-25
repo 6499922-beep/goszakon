@@ -623,55 +623,67 @@ export default async function TenderRecognitionDetailPage({
                   )}
                 </div>
 
-                <div className="grid gap-3 xl:grid-cols-4">
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="text-base font-bold text-[#081a4b]">Номер закупки</div>
-                    <div className="mt-1 text-2xl font-bold text-[#081a4b]">
-                      {procurement.procurementNumber ?? "Не удалось определить"}
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <div className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
+                        Номер закупки
+                      </div>
+                      <div className="mt-2 text-3xl font-bold tracking-tight text-[#081a4b]">
+                        {procurement.procurementNumber ?? "Не удалось определить"}
+                      </div>
                     </div>
-                  </div>
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="text-base font-bold text-[#081a4b]">Заказчик</div>
-                    <div className="mt-1 text-base font-semibold text-[#081a4b]">
-                      {procurement.customerName ?? "Не удалось определить"}
-                    </div>
-                    <div className="mt-2 text-sm text-slate-500">
-                      ИНН: {procurement.customerInn ?? "не определён"}
-                    </div>
-                  </div>
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="text-base font-bold text-[#081a4b]">Вид закупки</div>
-                    <div className="mt-1 text-base font-semibold text-[#081a4b]">
-                      {procurement.purchaseType ?? "не определён"}
-                    </div>
-                    <div className="mt-2 text-sm text-slate-500">
-                      Площадка: {procurement.platform ?? "не определена"}
-                    </div>
-                  </div>
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="text-base font-bold text-[#081a4b]">Срок подачи</div>
-                    <div className="mt-1 text-base font-semibold text-[#081a4b]">
-                      {formatDateTime(procurement.deadline)}
-                    </div>
-                    <div className="mt-2 text-sm text-slate-500">
-                      {equipmentCount > 0 ? (
-                        <Link
-                          href={`/procurements/recognition/${procurement.id}/equipment`}
-                          target="_blank"
-                          className="inline-flex items-center gap-1 font-semibold text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
-                        >
-                          <span>Позиций:</span>
-                          <span>{equipmentCount}</span>
-                        </Link>
-                      ) : (
-                        <span>Позиций: {procurement.itemsCount ?? "не определено"}</span>
-                      )}
+                    <div className="text-right text-sm text-slate-500">
+                      <div>Площадка: {procurement.platform ?? "не определена"}</div>
+                      <div className="mt-2">
+                        {equipmentCount > 0 ? (
+                          <Link
+                            href={`/procurements/recognition/${procurement.id}/equipment`}
+                            target="_blank"
+                            className="inline-flex items-center gap-1 font-semibold text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
+                          >
+                            <span>Позиций:</span>
+                            <span>{equipmentCount}</span>
+                          </Link>
+                        ) : (
+                          <span>Позиций: {procurement.itemsCount ?? "не определено"}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <div className="text-base font-bold text-[#081a4b]">Краткая выжимка</div>
+                  <div className="mt-3 grid gap-3 xl:grid-cols-3">
+                    <div className="rounded-2xl border border-[#0d5bd7]/15 bg-white px-4 py-4 shadow-sm">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">
+                        Пункт 1
+                      </div>
+                      <div className="mt-2 text-sm font-semibold text-slate-500">Заказчик</div>
+                      <div className="mt-1 text-lg font-bold leading-7 text-[#081a4b]">
+                        {procurement.customerName ?? "Не удалось определить"}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-[#0d5bd7]/15 bg-white px-4 py-4 shadow-sm">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">
+                        Пункт 2
+                      </div>
+                      <div className="mt-2 text-sm font-semibold text-slate-500">Вид закупки</div>
+                      <div className="mt-1 text-lg font-bold leading-7 text-[#081a4b]">
+                        {procurement.purchaseType ?? "Не удалось определить"}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-[#0d5bd7]/15 bg-white px-4 py-4 shadow-sm">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">
+                        Пункт 3
+                      </div>
+                      <div className="mt-2 text-sm font-semibold text-slate-500">Срок подачи</div>
+                      <div className="mt-1 text-lg font-bold leading-7 text-[#081a4b]">
+                        {formatDateTime(procurement.deadline)}
+                      </div>
+                    </div>
+                  </div>
                   {renderReadableText(
                     [
                       procurement.summary?.trim(),

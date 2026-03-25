@@ -61,12 +61,12 @@ export default async function TenderProtectedLayout({
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-5">
+        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-6 px-6 py-4">
           <div>
             <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
               GOSZAKON Tender Desk
             </div>
-            <div className="mt-1 text-2xl font-bold tracking-tight text-[#081a4b]">
+            <div className="mt-1 text-xl font-bold tracking-tight text-[#081a4b]">
               Кабинет подготовки заявок
             </div>
           </div>
@@ -90,25 +90,25 @@ export default async function TenderProtectedLayout({
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-8 px-6 py-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-4 rounded-2xl bg-[#081a4b] px-4 py-4 text-sm text-white">
-            Основной сценарий: загрузить закупку, проверить стоп-факторы,
-            передать на предпросчет и собрать комплект документов.
+      <div className="mx-auto max-w-[1500px] px-6 py-5">
+        <section className="mb-5 rounded-[1.75rem] border border-slate-200 bg-white px-5 py-4 shadow-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="rounded-2xl bg-[#081a4b] px-4 py-2 text-sm text-white">
+              Основной сценарий: загрузить закупку, проверить стоп-факторы, передать на предпросчёт и собрать комплект документов.
+            </div>
+            <nav className="flex flex-1 flex-wrap gap-2">
+              {links.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="inline-flex rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-[#0d5bd7] hover:bg-white hover:text-[#0d5bd7]"
+                >
+                  {item.title}
+                </Link>
+              ))}
+            </nav>
           </div>
-
-          <nav className="space-y-2">
-            {links.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                {item.title}
-              </Link>
-            ))}
-          </nav>
-        </aside>
+        </section>
 
         <section>{children}</section>
       </div>

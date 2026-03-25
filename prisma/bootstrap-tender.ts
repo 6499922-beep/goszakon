@@ -42,7 +42,7 @@ async function main() {
       description: "Если в закупке меньше двух позиций, это стоп-фактор.",
       kind: "PROCUREMENT",
       sortOrder: 10,
-      isActive: true,
+      isActive: false,
       isToggleable: true,
       requiresManualReview: false,
     },
@@ -136,7 +136,12 @@ async function main() {
   await prisma.tenderStopRule.updateMany({
     where: {
       code: {
-        in: ["PAPER_APPLICATION", "KSO_EQUIPMENT", "CLOSED_PROCUREMENT"],
+        in: [
+          "LESS_THAN_TWO_POSITIONS",
+          "PAPER_APPLICATION",
+          "KSO_EQUIPMENT",
+          "CLOSED_PROCUREMENT",
+        ],
       },
     },
     data: {

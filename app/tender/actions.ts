@@ -1916,6 +1916,61 @@ export async function toggleTenderRuleAction(formData: FormData) {
   revalidatePath("/rules");
 }
 
+export async function updateTenderRuleAction(formData: FormData) {
+  await requireTenderCapability("rules_manage");
+  const prisma = getPrisma();
+  const ruleId = Number(formData.get("ruleId"));
+  const name = String(formData.get("name") ?? "").trim();
+
+  if (!ruleId || !name) {
+    throw new Error("Rule id and name are required");
+  }
+
+  const code =
+    String(formData.get("code") ?? "")
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9_]+/g, "_") || `RULE_${ruleId}`;
+
+  await prisma.tenderStopRule.update({
+    where: { id: ruleId },
+    data: {
+      code,
+      name,
+      description: normalizeString(formData.get("description")),
+      kind: (String(formData.get("kind") ?? "OTHER").trim() as TenderRuleKind) || "OTHER",
+      sortOrder: normalizeNumber(formData.get("sortOrder")) ?? 100,
+      isActive: String(formData.get("isActive") ?? "") === "on",
+      isToggleable: String(formData.get("isToggleable") ?? "") === "on",
+      requiresManualReview:
+        String(formData.get("requiresManualReview") ?? "") === "on",
+      customerInn: normalizeString(formData.get("customerInn")),
+      manufacturerName: normalizeString(formData.get("manufacturerName")),
+      brandName: normalizeString(formData.get("brandName")),
+      keyword: normalizeString(formData.get("keyword")),
+      thresholdPercent: normalizeNumber(formData.get("thresholdPercent")),
+    },
+  });
+
+  revalidatePath("/rules");
+}
+
+export async function deleteTenderRuleAction(formData: FormData) {
+  await requireTenderCapability("rules_manage");
+  const prisma = getPrisma();
+  const ruleId = Number(formData.get("ruleId"));
+
+  if (!ruleId) {
+    throw new Error("Rule id is required");
+  }
+
+  await prisma.tenderStopRule.delete({
+    where: { id: ruleId },
+  });
+
+  revalidatePath("/rules");
+}
+
 export async function saveTenderCompanyProfileAction(formData: FormData) {
   await requireTenderCapability("companies_manage");
   const prisma = getPrisma();

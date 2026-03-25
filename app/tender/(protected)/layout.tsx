@@ -39,7 +39,12 @@ export default async function TenderProtectedLayout({
   const role = currentUser?.role;
 
   const links = TENDER_INTAKE_ONLY_MODE
-    ? [{ title: "Загрузка и распознавание", href: "/procurements/new" }]
+    ? [
+        { title: "Загрузка и распознавание", href: "/procurements/new" },
+        ...(tenderHasCapability(role, "rules_manage")
+          ? [{ title: "Стоп-факторы", href: "/rules" }]
+          : []),
+      ]
     : [
         ...(tenderHasCapability(role, "overview")
           ? [{ title: "Обзор", href: "/" }]

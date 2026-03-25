@@ -6,7 +6,8 @@ type TenderRecognitionTabsProps = {
   about: React.ReactNode;
   pricing: React.ReactNode;
   requirements: React.ReactNode;
-  documents: React.ReactNode;
+  sourceDocuments: React.ReactNode;
+  submissionDocuments: React.ReactNode;
   goods: React.ReactNode;
 };
 
@@ -14,18 +15,25 @@ export function TenderRecognitionTabs({
   about,
   pricing,
   requirements,
-  documents,
+  sourceDocuments,
+  submissionDocuments,
   goods,
 }: TenderRecognitionTabsProps) {
   const [activeTab, setActiveTab] = useState<
-    "about" | "pricing" | "requirements" | "documents" | "goods"
+    | "about"
+    | "pricing"
+    | "requirements"
+    | "sourceDocuments"
+    | "submissionDocuments"
+    | "goods"
   >("about");
 
   const tabs = [
     { key: "about" as const, label: "О закупке" },
     { key: "pricing" as const, label: "Обеспечение и отбор" },
     { key: "requirements" as const, label: "Нестандартные требования" },
-    { key: "documents" as const, label: "Документация" },
+    { key: "sourceDocuments" as const, label: "Файлы закупки" },
+    { key: "submissionDocuments" as const, label: "Документы до подачи" },
     { key: "goods" as const, label: "Позиции по заказу" },
   ];
 
@@ -38,7 +46,7 @@ export function TenderRecognitionTabs({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-6">
         {tabs.map((tab) => (
           <button
             key={tab.key}
@@ -54,7 +62,8 @@ export function TenderRecognitionTabs({
       <div hidden={activeTab !== "about"}>{about}</div>
       <div hidden={activeTab !== "pricing"}>{pricing}</div>
       <div hidden={activeTab !== "requirements"}>{requirements}</div>
-      <div hidden={activeTab !== "documents"}>{documents}</div>
+      <div hidden={activeTab !== "sourceDocuments"}>{sourceDocuments}</div>
+      <div hidden={activeTab !== "submissionDocuments"}>{submissionDocuments}</div>
       <div hidden={activeTab !== "goods"}>{goods}</div>
     </div>
   );

@@ -848,16 +848,11 @@ export default async function TenderRecognitionDetailPage({
                 </div>
               </div>
             }
-            documents={
+            sourceDocuments={
               <div className="space-y-4">
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-base font-bold text-[#081a4b]">Требуемая документация до подачи</div>
-                  {renderCompactList(requiredDocuments, "Не удалось определить автоматически.")}
-                </div>
-
                 <div id="documents-list" className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="text-base font-bold text-[#081a4b]">Исходные документы закупки</div>
+                    <div className="text-base font-bold text-[#081a4b]">Документы, которые система анализировала</div>
                     <div className="text-sm text-slate-500">
                       {finalSourceDocuments.length > 0
                         ? `Файлов: ${finalSourceDocuments.length}`
@@ -910,9 +905,20 @@ export default async function TenderRecognitionDetailPage({
                     </div>
                   ) : (
                     <div className="mt-3 text-sm leading-6 text-slate-600">
-                      Исходные документы пока не сохранены.
+                      Документы, которые участвовали в распознавании, пока не сохранены.
                     </div>
                   )}
+                </div>
+              </div>
+            }
+            submissionDocuments={
+              <div className="space-y-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">Требуемая документация до подачи</div>
+                  <div className="mt-2 text-sm leading-6 text-slate-500">
+                    Здесь только тот комплект, который система увидела как обязательный для участия в закупке.
+                  </div>
+                  {renderCompactList(requiredDocuments, "Не удалось определить автоматически.")}
                 </div>
               </div>
             }

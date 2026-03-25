@@ -59,6 +59,54 @@ function buildSourceDocumentHref(
   return `/api/tender/source-document/${documentId}`;
 }
 
+function extractLastPathSegment(value: string | null | undefined) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return "";
+  const parts = normalized.split("/").filter(Boolean);
+  return parts[parts.length - 1] ?? normalized;
+}
+
+function buildCompactDocumentName(
+  title: string | null | undefined,
+  fileLabel: string | null | undefined,
+  note: string | null | undefined
+) {
+  const storedPath = extractStoredDocumentPath(note);
+  const storedName = extractLastPathSegment(storedPath);
+  const label = extractLastPathSegment(fileLabel);
+  const display = storedName || label || String(title ?? "").trim() || "Документ";
+
+  return display
+    .replace(/\.(docx|doc|xlsx|xls|pdf|txt)$/i, (match) => match.toLowerCase())
+    .replace(/^[^/]+\.zip\s*\/\s*/i, "")
+    .replace(/^[^/]+\.rar\s*\/\s*/i, "")
+    .trim();
+}
+
+function inferDocumentKind(
+  title: string | null | undefined,
+  fileLabel: string | null | undefined,
+  note: string | null | undefined
+) {
+  const haystack = normalizeSearchText(
+    `${title ?? ""} ${fileLabel ?? ""} ${extractStoredDocumentPath(note) ?? ""}`
+  );
+
+  if (haystack.includes("извещ")) return "Извещение";
+  if (haystack.includes("техническ") || haystack.includes("тз")) return "ТЗ";
+  if (haystack.includes("договор")) return "Договор";
+  if (haystack.includes("коммерчес")) return "Коммерческая часть";
+  if (haystack.includes("ценов")) return "Ценовая форма";
+  if (haystack.includes("заявк")) return "Форма заявки";
+  if (haystack.includes("нмц") || haystack.includes("обоснован")) return "НМЦК";
+  if (haystack.includes("специфик")) return "Спецификация";
+  if (haystack.includes("приложен")) return "Приложение";
+  if (haystack.includes(".xlsx") || haystack.includes(".xls")) return "Таблица";
+  if (haystack.includes(".pdf")) return "PDF";
+  if (haystack.includes(".docx") || haystack.includes(".doc")) return "Документ";
+  return "Файл";
+}
+
 function isArchiveFileName(value: string | null | undefined) {
   const normalized = String(value ?? "").toLowerCase().trim();
   return normalized.endsWith(".zip") || normalized.endsWith(".rar") || normalized.endsWith(".7z");
@@ -493,8 +541,9 @@ export default async function TenderRecognitionDetailPage({
     const storagePath = extractStoredDocumentPath(item.note);
     return {
       id: item.id,
-      title: item.title || item.fileName || "Документ",
+      title: buildCompactDocumentName(item.title, item.fileName, item.note),
       fileLabel: item.fileName || item.title || "Документ",
+      kindLabel: inferDocumentKind(item.title, item.fileName, item.note),
       href: buildSourceDocumentHref(item.id, storagePath),
       excerpt: item.contentSnippet ? buildRuleDocumentExcerpt(
         {
@@ -860,26 +909,30 @@ export default async function TenderRecognitionDetailPage({
                     </div>
                   </div>
                   {finalSourceDocuments.length > 0 ? (
-                    <div className="mt-3 grid gap-3">
+                    <div className="mt-3 grid gap-3 xl:grid-cols-2">
                       {finalSourceDocuments.map((item, index) => (
-                        <div key={`${item.title}-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                        <div key={`${item.title}-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
                           <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                              <div className="text-sm font-semibold text-[#081a4b]">{item.title}</div>
-                              <div className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-400">
-                                {item.fileLabel}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="rounded-full bg-[#081a4b]/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#081a4b]">
+                                  {item.kindLabel}
+                                </span>
+                                <span
+                                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                    item.status.tone === "success"
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : item.status.tone === "warning"
+                                        ? "bg-amber-100 text-amber-700"
+                                        : "bg-slate-100 text-slate-600"
+                                  }`}
+                                >
+                                  {item.status.label}
+                                </span>
                               </div>
-                            </div>
-                            <div
-                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                item.status.tone === "success"
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : item.status.tone === "warning"
-                                    ? "bg-amber-100 text-amber-700"
-                                    : "bg-slate-100 text-slate-600"
-                              }`}
-                            >
-                              {item.status.label}
+                              <div className="mt-3 truncate text-sm font-semibold text-[#081a4b]" title={item.title}>
+                                {item.title}
+                              </div>
                             </div>
                           </div>
                           <div className="mt-2 text-sm leading-6 text-slate-600">{item.status.description}</div>

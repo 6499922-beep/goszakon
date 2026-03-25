@@ -31,6 +31,24 @@ function jsonListToStrings(value: unknown) {
   return value.map(String).map((item) => item.trim()).filter(Boolean);
 }
 
+function getAiAnalysisObject(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function getAiAnalysisString(value: Record<string, unknown> | null, key: string) {
+  const raw = value?.[key];
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
+function getAiAnalysisList(value: Record<string, unknown> | null, key: string) {
+  const raw = value?.[key];
+  return jsonListToStrings(raw);
+}
+
 function extractStoredDocumentPath(note: string | null | undefined) {
   const match = note?.match(/Файл сохранён:\s*(\/[^\s]+)/);
   return match?.[1] ?? null;
@@ -342,6 +360,18 @@ export default async function TenderRecognitionDetailPage({
 
   const requiredDocuments = jsonListToStrings(procurement.requiredDocuments);
   const nonstandardRequirements = jsonListToStrings(procurement.nonstandardRequirements);
+  const aiAnalysis = getAiAnalysisObject(procurement.aiAnalysis);
+  const equipmentItems = getAiAnalysisList(aiAnalysis, "equipment_items");
+  const bidSecurity = getAiAnalysisString(aiAnalysis, "bid_security");
+  const contractSecurity = getAiAnalysisString(aiAnalysis, "contract_security");
+  const nmckWithVat = getAiAnalysisString(aiAnalysis, "nmck_with_vat");
+  const priceTaxNote = getAiAnalysisString(aiAnalysis, "price_tax_note");
+  const rrepRppRequirements = getAiAnalysisString(aiAnalysis, "rrep_rpp_requirements");
+  const decree1875Ban = getAiAnalysisString(aiAnalysis, "decree_1875_ban");
+  const requiresCommissioning = getAiAnalysisString(aiAnalysis, "requires_commissioning");
+  const lotStructure = getAiAnalysisString(aiAnalysis, "lot_structure");
+  const militaryAcceptance = getAiAnalysisString(aiAnalysis, "military_acceptance");
+  const terminationReasons = getAiAnalysisList(aiAnalysis, "termination_reasons");
   const missingFields = buildMissingFields(procurement);
   const stopFactorState = procurement.ruleMatches.length > 0 ? "stop" : "ok";
   const stopFactorTitle =
@@ -399,13 +429,76 @@ export default async function TenderRecognitionDetailPage({
               <div className="mt-2 text-sm text-slate-500">
                 НМЦ: {formatCurrency(procurement.nmck)}
               </div>
+              {nmckWithVat ? (
+                <div className="mt-2 text-sm text-slate-500">НМЦ с НДС: {nmckWithVat}</div>
+              ) : null}
             </div>
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-base font-bold text-[#081a4b]">Дополнительно</div>
               <div className="mt-1 text-sm leading-6 text-slate-700">
+                <div>Вид закупки: {procurement.purchaseType ?? "не определён"}</div>
                 <div>Площадка: {procurement.platform ?? "не определена"}</div>
                 <div>Позиций: {procurement.itemsCount ?? "не определено"}</div>
                 <div>Срок подачи: {formatDateTime(procurement.deadline)}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-lg font-bold text-[#081a4b]">Что закупают</div>
+            {equipmentItems.length > 0 ? (
+              <div className="mt-3 space-y-2">
+                {equipmentItems.slice(0, 3).map((item) => (
+                  <div key={item} className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                    {item}
+                  </div>
+                ))}
+                {equipmentItems.length > 3 ? (
+                  <details className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                    <summary className="cursor-pointer font-medium text-[#081a4b]">
+                      Показать ещё {equipmentItems.length - 3}
+                    </summary>
+                    <div className="mt-3 space-y-2">
+                      {equipmentItems.slice(3).map((item) => (
+                        <div key={item} className="rounded-2xl bg-slate-50 px-4 py-3">
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                ) : null}
+              </div>
+            ) : (
+              <div className="mt-3 text-sm leading-6 text-slate-600">
+                Система пока не смогла уверенно определить перечень оборудования.
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-lg font-bold text-[#081a4b]">Цена и обеспечение</div>
+            <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+              <div className="rounded-2xl bg-white px-4 py-3">
+                <span className="font-medium text-[#081a4b]">НМЦ без НДС:</span>{" "}
+                {formatCurrency(procurement.nmckWithoutVat)}
+              </div>
+              {nmckWithVat ? (
+                <div className="rounded-2xl bg-white px-4 py-3">
+                  <span className="font-medium text-[#081a4b]">НМЦ с НДС:</span> {nmckWithVat}
+                </div>
+              ) : null}
+              {priceTaxNote ? (
+                <div className="rounded-2xl bg-white px-4 py-3">
+                  <span className="font-medium text-[#081a4b]">Налоги в цене:</span> {priceTaxNote}
+                </div>
+              ) : null}
+              <div className="rounded-2xl bg-white px-4 py-3">
+                <span className="font-medium text-[#081a4b]">Обеспечение заявки:</span>{" "}
+                {bidSecurity || "не указано или не определено"}
+              </div>
+              <div className="rounded-2xl bg-white px-4 py-3">
+                <span className="font-medium text-[#081a4b]">Обеспечение договора:</span>{" "}
+                {contractSecurity || "не указано или не определено"}
               </div>
             </div>
           </div>
@@ -534,6 +627,32 @@ export default async function TenderRecognitionDetailPage({
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-base font-bold text-[#081a4b]">Регуляторные требования и условия</div>
+              <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                <div className="rounded-2xl bg-white px-4 py-3">
+                  <span className="font-medium text-[#081a4b]">РРЭП / РПП (2013):</span>{" "}
+                  {rrepRppRequirements || "не указано или не определено"}
+                </div>
+                <div className="rounded-2xl bg-white px-4 py-3">
+                  <span className="font-medium text-[#081a4b]">Запрет по 1875:</span>{" "}
+                  {decree1875Ban || "не указано или не определено"}
+                </div>
+                <div className="rounded-2xl bg-white px-4 py-3">
+                  <span className="font-medium text-[#081a4b]">Пуско-наладочные работы:</span>{" "}
+                  {requiresCommissioning || "не указано или не определено"}
+                </div>
+                <div className="rounded-2xl bg-white px-4 py-3">
+                  <span className="font-medium text-[#081a4b]">Делимость лота / победители:</span>{" "}
+                  {lotStructure || "не указано или не определено"}
+                </div>
+                <div className="rounded-2xl bg-white px-4 py-3">
+                  <span className="font-medium text-[#081a4b]">Военная приёмка / РТ-Техприёмка:</span>{" "}
+                  {militaryAcceptance || "не указано или не определено"}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-base font-bold text-[#081a4b]">Условия договора</div>
               <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                 <div className="rounded-2xl bg-white px-4 py-3">
@@ -551,6 +670,10 @@ export default async function TenderRecognitionDetailPage({
                 <div className="rounded-2xl bg-white px-4 py-3">
                   <span className="font-medium text-[#081a4b]">Неустойка:</span>{" "}
                   {procurement.penaltyTerms ?? "не определено"}
+                </div>
+                <div className="rounded-2xl bg-white px-4 py-3">
+                  <span className="font-medium text-[#081a4b]">Основания расторжения:</span>{" "}
+                  {terminationReasons.length > 0 ? terminationReasons.join("; ") : "не определено"}
                 </div>
               </div>
             </div>

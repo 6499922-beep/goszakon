@@ -279,6 +279,7 @@ async function runTenderPrimaryAnalysis(prisma: ReturnType<typeof getPrisma>, in
         result.nmck_without_vat?.trim()
           ? result.nmck_without_vat.trim().replace(/\s+/g, "").replace(",", ".")
           : procurement.nmckWithoutVat,
+      purchaseType: result.procurement_type?.trim() || procurement.purchaseType || null,
       title:
         procurement.title.startsWith("Закупка по файлам:") &&
         (result.procurement_number?.trim() || result.summary?.trim())
@@ -298,6 +299,22 @@ async function runTenderPrimaryAnalysis(prisma: ReturnType<typeof getPrisma>, in
       paymentTerms: result.payment_terms || null,
       contractTerm: result.contract_term || null,
       penaltyTerms: result.penalty_terms || null,
+      terminationTerms: result.termination_reasons.length
+        ? result.termination_reasons
+        : undefined,
+      regulatoryRequirements:
+        [
+          result.rrep_rpp_requirements?.trim(),
+          result.decree_1875_ban?.trim(),
+          result.military_acceptance?.trim(),
+        ].filter(Boolean).length > 0
+          ? [
+              result.rrep_rpp_requirements?.trim(),
+              result.decree_1875_ban?.trim(),
+              result.military_acceptance?.trim(),
+            ].filter(Boolean)
+          : undefined,
+      requiresCommissioning: /^да\b/i.test(result.requires_commissioning?.trim() || ""),
       stopFactorsSummary: result.stop_factor_findings.length
         ? result.stop_factor_findings.map((item) => `${item.name}: ${item.reason}`).join("\n")
         : "Стоп-факторы в тексте не обнаружены",

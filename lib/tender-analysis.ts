@@ -13,15 +13,27 @@ export const tenderAnalysisSchema = {
       "customer_inn",
       "platform",
       "items_count",
+      "procurement_type",
       "nmck_without_vat",
+      "nmck_with_vat",
+      "price_tax_note",
+      "bid_security",
+      "contract_security",
       "summary",
       "selection_criteria",
       "required_documents",
       "nonstandard_requirements",
+      "rrep_rpp_requirements",
+      "decree_1875_ban",
+      "requires_commissioning",
+      "lot_structure",
+      "military_acceptance",
+      "equipment_items",
       "delivery_terms",
       "payment_terms",
       "contract_term",
       "penalty_terms",
+      "termination_reasons",
       "stop_factor_findings",
     ],
     properties: {
@@ -30,7 +42,12 @@ export const tenderAnalysisSchema = {
       customer_inn: { type: "string" },
       platform: { type: "string" },
       items_count: { type: "number" },
+      procurement_type: { type: "string" },
       nmck_without_vat: { type: "string" },
+      nmck_with_vat: { type: "string" },
+      price_tax_note: { type: "string" },
+      bid_security: { type: "string" },
+      contract_security: { type: "string" },
       summary: { type: "string" },
       selection_criteria: { type: "string" },
       required_documents: {
@@ -41,10 +58,23 @@ export const tenderAnalysisSchema = {
         type: "array",
         items: { type: "string" },
       },
+      rrep_rpp_requirements: { type: "string" },
+      decree_1875_ban: { type: "string" },
+      requires_commissioning: { type: "string" },
+      lot_structure: { type: "string" },
+      military_acceptance: { type: "string" },
+      equipment_items: {
+        type: "array",
+        items: { type: "string" },
+      },
       delivery_terms: { type: "string" },
       payment_terms: { type: "string" },
       contract_term: { type: "string" },
       penalty_terms: { type: "string" },
+      termination_reasons: {
+        type: "array",
+        items: { type: "string" },
+      },
       stop_factor_findings: {
         type: "array",
         items: {
@@ -86,15 +116,27 @@ type TenderAnalysisResult = {
   customer_inn: string;
   platform: string;
   items_count: number;
+  procurement_type: string;
   nmck_without_vat: string;
+  nmck_with_vat: string;
+  price_tax_note: string;
+  bid_security: string;
+  contract_security: string;
   summary: string;
   selection_criteria: string;
   required_documents: string[];
   nonstandard_requirements: string[];
+  rrep_rpp_requirements: string;
+  decree_1875_ban: string;
+  requires_commissioning: string;
+  lot_structure: string;
+  military_acceptance: string;
+  equipment_items: string[];
   delivery_terms: string;
   payment_terms: string;
   contract_term: string;
   penalty_terms: string;
+  termination_reasons: string[];
   stop_factor_findings: Array<{
     name: string;
     reason: string;
@@ -147,9 +189,16 @@ export async function runTenderAiAnalysis(input: {
 Ты анализируешь документацию закупки по 223-ФЗ для внутреннего тендерного кабинета поставщика.
 
 Верни только структурированный JSON по схеме.
-Нужно быть очень приземленным и деловым.
 Не придумывай факты, которых нет в тексте.
 Если данных не хватает, верни пустую строку или пустой массив.
+Ответ должен быть кратким, деловым и пригодным для дальнейшего отображения в CRM.
+
+Дополнительные правила анализа:
+- НДС = 22%, если в документации явно не указано иное.
+- Внимательно проверяй цену: смотри, указано ли, что в цену входят налоги или нет.
+- Для пунктов про обеспечение, ответственность и расторжение фиксируй конкретные проценты, суммы, штрафы, пени и основания, если они указаны.
+- Не пиши ссылки на документы.
+- Если есть перечень оборудования, товаров или позиций, верни его в equipment_items краткими строками.
 
 Карточка закупки:
 - Название: ${input.title}
@@ -160,17 +209,34 @@ export async function runTenderAiAnalysis(input: {
 - Количество позиций: ${input.itemsCount ?? ""}
 - НМЦ без НДС: ${input.nmckWithoutVat ?? ""}
 
-Нужно извлечь:
-0. Номер закупки, заказчика, ИНН заказчика, площадку, количество позиций и НМЦ без НДС, если они явно читаются в документации.
-1. Краткую выжимку сути закупки.
-2. Критерии отбора.
-3. Требуемую документацию до подачи.
-4. Нестандартные требования.
-5. Сроки и место поставки.
-6. Сроки оплаты.
-7. Срок действия договора.
-8. Штрафы, неустойку и чувствительные условия по ответственности.
-9. Явно перечисленные в тексте признаки стоп-факторов.
+Нужно извлечь и вернуть в JSON:
+1. procurement_number: номер закупки.
+2. customer_name: заказчик.
+3. customer_inn: ИНН заказчика.
+4. platform: площадка.
+5. items_count: количество позиций.
+6. procurement_type: вид закупки.
+7. nmck_without_vat: НМЦ без НДС.
+8. nmck_with_vat: НМЦ с НДС.
+9. price_tax_note: коротко поясни, как в документации указана цена и налоги.
+10. bid_security: есть ли обеспечение заявки, в каком размере или проценте.
+11. contract_security: есть ли обеспечение исполнения договора, в каком размере или проценте.
+12. summary: краткая выжимка сути закупки.
+13. selection_criteria: критерии отбора в сжатом виде.
+14. required_documents: документация, требуемая до подачи.
+15. nonstandard_requirements: нестандартные требования.
+16. rrep_rpp_requirements: есть ли требования РРЭП/РПП (постановление 2013).
+17. decree_1875_ban: есть ли запрет по постановлению 1875.
+18. requires_commissioning: требуются ли пуско-наладочные работы.
+19. lot_structure: делимый лот, попозиционная закупка, несколько победителей или нет.
+20. military_acceptance: есть ли военная приемка (приемка номер 5) или РТ-Техприемка.
+21. equipment_items: какое оборудование/товары закупаются, коротким списком.
+22. delivery_terms: сроки и место поставки.
+23. payment_terms: сроки оплаты.
+24. contract_term: срок действия договора.
+25. penalty_terms: ответственность за просрочку поставки и оплаты, штрафы и пени.
+26. termination_reasons: основания одностороннего расторжения договора.
+27. stop_factor_findings: только явные стоп-факторы, из-за которых закупку не берём.
 
 Текст документации:
 ${input.sourceText}

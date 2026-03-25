@@ -672,7 +672,24 @@ export default async function TenderRecognitionDetailPage({
 
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <div className="text-base font-bold text-[#081a4b]">Краткая выжимка</div>
-                  {renderReadableText(procurement.summary, "Не удалось определить автоматически", 4)}
+                  {renderReadableText(
+                    [
+                      procurement.summary?.trim(),
+                      procurement.deliveryTerms?.trim()
+                        ? `Место и условия поставки: ${procurement.deliveryTerms.trim()}`
+                        : null,
+                      procurement.penaltyTerms?.trim()
+                        ? `Неустойка: ${procurement.penaltyTerms.trim()}`
+                        : null,
+                      terminationReasons.length > 0
+                        ? `Основания расторжения: ${terminationReasons.join("; ")}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join("\n\n"),
+                    "Не удалось определить автоматически",
+                    6
+                  )}
                 </div>
 
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
@@ -689,14 +706,6 @@ export default async function TenderRecognitionDetailPage({
                     <div className="rounded-2xl bg-white px-4 py-3">
                       <span className="font-medium text-[#081a4b]">Срок договора:</span>{" "}
                       {procurement.contractTerm ?? "не определено"}
-                    </div>
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Неустойка:</span>{" "}
-                      {procurement.penaltyTerms ?? "не определено"}
-                    </div>
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Основания расторжения:</span>{" "}
-                      {terminationReasons.length > 0 ? terminationReasons.join("; ") : "не определено"}
                     </div>
                   </div>
                 </div>

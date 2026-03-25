@@ -145,6 +145,15 @@ export function TenderIntakeUploadForm({
             return;
           }
 
+          setProgressLabel("Ставим закупку в обработку...");
+          await fetch("/api/tender/process-queue", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ procurementId }),
+          }).catch(() => null);
+
           setSelectedFiles([]);
           setProgressLabel(null);
           if (fileInputRef.current) {

@@ -132,11 +132,17 @@ export default async function NewTenderProcurementPage({
       createdAt: true,
     },
   });
+  const firstQueuedProcurement =
+    recentProcurements.find((item) => item.aiAnalysisStatus === "queued") ?? null;
+  const queueRunnerProcurementId =
+    uploadedProcurementId && Number.isInteger(uploadedProcurementId) && uploadedProcurementId > 0
+      ? uploadedProcurementId
+      : firstQueuedProcurement?.id ?? null;
 
   return (
     <main className="space-y-4">
-      {uploadedProcurementId && Number.isInteger(uploadedProcurementId) && uploadedProcurementId > 0 ? (
-        <TenderAnalysisQueueRunner procurementId={uploadedProcurementId} />
+      {queueRunnerProcurementId ? (
+        <TenderAnalysisQueueRunner procurementId={queueRunnerProcurementId} />
       ) : null}
 
       <section className="rounded-[1.5rem] border border-slate-200 bg-white px-5 py-3 shadow-sm">

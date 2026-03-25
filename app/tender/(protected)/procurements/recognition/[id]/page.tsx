@@ -82,18 +82,91 @@ function extractHumanIssue(note: string | null | undefined) {
   }
 
   if (withoutPath.includes("Текст из DOCX удалось извлечь автоматически")) {
-    return "Текст из DOCX извлечён, файл успешно сохранён в систему.";
+    return null;
   }
 
   if (withoutPath.includes("Текст из PDF удалось извлечь автоматически")) {
-    return "Текст из PDF извлечён, файл успешно сохранён в систему.";
+    return null;
   }
 
   if (withoutPath.includes("Текст из Excel удалось извлечь автоматически")) {
-    return "Текст из Excel извлечён, файл успешно сохранён в систему.";
+    return null;
   }
 
   return withoutPath;
+}
+
+function describeSourceDocument(note: string | null | undefined) {
+  const value = String(note ?? "").trim();
+  if (!value) {
+    return {
+      tone: "neutral" as const,
+      label: "Файл сохранён",
+      description: "Документ загружен в закупку и доступен для открытия.",
+    };
+  }
+
+  if (value.includes("не удалось разобрать автоматически")) {
+    return {
+      tone: "warning" as const,
+      label: "Нужна ручная проверка",
+      description: "Формат пока не удалось разобрать автоматически. Файл сохранён и доступен для открытия.",
+    };
+  }
+
+  if (value.includes("Текст из PDF не удалось извлечь автоматически")) {
+    return {
+      tone: "warning" as const,
+      label: "Нужна ручная проверка",
+      description: "PDF сохранён, но текст из него не удалось извлечь автоматически.",
+    };
+  }
+
+  if (value.includes("Текст из DOCX не удалось извлечь автоматически")) {
+    return {
+      tone: "warning" as const,
+      label: "Нужна ручная проверка",
+      description: "DOCX сохранён, но текст из него не удалось извлечь автоматически.",
+    };
+  }
+
+  if (value.includes("Текст из Excel не удалось извлечь автоматически")) {
+    return {
+      tone: "warning" as const,
+      label: "Нужна ручная проверка",
+      description: "Таблица Excel сохранена, но текст/данные не удалось извлечь автоматически.",
+    };
+  }
+
+  if (value.includes("Текст из DOCX удалось извлечь автоматически")) {
+    return {
+      tone: "success" as const,
+      label: "Распознан",
+      description: "Текст из DOCX извлечён, файл сохранён в закупке.",
+    };
+  }
+
+  if (value.includes("Текст из PDF удалось извлечь автоматически")) {
+    return {
+      tone: "success" as const,
+      label: "Распознан",
+      description: "Текст из PDF извлечён, файл сохранён в закупке.",
+    };
+  }
+
+  if (value.includes("Текст из Excel удалось извлечь автоматически")) {
+    return {
+      tone: "success" as const,
+      label: "Распознан",
+      description: "Текст из Excel извлечён, файл сохранён в закупке.",
+    };
+  }
+
+  return {
+    tone: "neutral" as const,
+    label: "Файл сохранён",
+    description: value.replace(/\s*Файл сохранён:\s*\/[^\s]+/g, "").trim() || "Документ сохранён в закупке.",
+  };
 }
 
 function normalizeSearchText(value: string | null | undefined) {
@@ -373,6 +446,26 @@ export default async function TenderRecognitionDetailPage({
   const militaryAcceptance = getAiAnalysisString(aiAnalysis, "military_acceptance");
   const terminationReasons = getAiAnalysisList(aiAnalysis, "termination_reasons");
   const missingFields = buildMissingFields(procurement);
+  const sourceDocuments = procurement.sourceDocuments.map((item) => {
+    const storagePath = extractStoredDocumentPath(item.note);
+    return {
+      title: item.title || item.fileName || "Документ",
+      fileLabel: item.fileName || item.title || "Документ",
+      href: safeDocumentHref(storagePath),
+      excerpt: item.contentSnippet ? buildRuleDocumentExcerpt(
+        {
+          rule: {
+            name: item.title || item.fileName || "Документ",
+          },
+        },
+        {
+          contentSnippet: item.contentSnippet,
+          note: item.note,
+        }
+      ) : null,
+      status: describeSourceDocument(item.note),
+    };
+  });
   const stopFactorState = procurement.ruleMatches.length > 0 ? "stop" : "ok";
   const stopFactorTitle =
     stopFactorState === "stop"
@@ -699,6 +792,59 @@ export default async function TenderRecognitionDetailPage({
               <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
                 {militaryAcceptance || "не указано или не определено"}
               </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-base font-bold text-[#081a4b]">Исходные документы закупки</div>
+              {sourceDocuments.length > 0 ? (
+                <div className="mt-3 grid gap-3">
+                  {sourceDocuments.map((item, index) => (
+                    <div key={`${item.title}-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-semibold text-[#081a4b]">{item.title}</div>
+                          <div className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-400">
+                            {item.fileLabel}
+                          </div>
+                        </div>
+                        <div
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            item.status.tone === "success"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : item.status.tone === "warning"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {item.status.label}
+                        </div>
+                      </div>
+                      <div className="mt-2 text-sm leading-6 text-slate-600">{item.status.description}</div>
+                      {item.excerpt ? (
+                        <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">
+                          {item.excerpt}
+                        </div>
+                      ) : null}
+                      {item.href ? (
+                        <div className="mt-3">
+                          <a
+                            href={item.href}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-medium text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
+                          >
+                            Открыть файл
+                          </a>
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-3 text-sm leading-6 text-slate-600">
+                  Исходные документы пока не сохранены.
+                </div>
+              )}
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">

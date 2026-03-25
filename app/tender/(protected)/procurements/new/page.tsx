@@ -11,6 +11,17 @@ import { buildTenderCustomerHref } from "@/lib/tender-customers";
 
 export const dynamic = "force-dynamic";
 
+function formatCurrency(value: { toString(): string } | null | undefined) {
+  if (value == null) return "Не определена";
+  const parsed = Number(String(value).replace(",", "."));
+  if (!Number.isFinite(parsed)) return String(value);
+  return new Intl.NumberFormat("ru-RU", {
+    style: "currency",
+    currency: "RUB",
+    maximumFractionDigits: 2,
+  }).format(parsed);
+}
+
 function getRecognitionStatusMeta(
   status: string | null,
   error: string | null,
@@ -122,15 +133,17 @@ export default async function NewTenderProcurementPage({
   const recentProcurements = await prisma.tenderProcurement.findMany({
     orderBy: [{ createdAt: "desc" }],
     take: 20,
-    select: {
-      id: true,
-      title: true,
-      procurementNumber: true,
-      customerName: true,
-      customerInn: true,
-      status: true,
-      aiAnalysisStatus: true,
-      aiAnalysisError: true,
+      select: {
+        id: true,
+        title: true,
+        procurementNumber: true,
+        customerName: true,
+        customerInn: true,
+        nmck: true,
+        nmckWithoutVat: true,
+        status: true,
+        aiAnalysisStatus: true,
+        aiAnalysisError: true,
       stopFactorsSummary: true,
       createdAt: true,
     },
@@ -185,11 +198,11 @@ export default async function NewTenderProcurementPage({
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-slate-500">
               <tr>
-                <th className="px-4 py-3 font-medium">№</th>
+                <th className="px-4 py-3 font-medium">Статус</th>
                 <th className="px-4 py-3 font-medium">Добавлена</th>
                 <th className="px-4 py-3 font-medium">Номер закупки</th>
                 <th className="px-4 py-3 font-medium">Заказчик</th>
-                <th className="px-4 py-3 font-medium">Распознавание</th>
+                <th className="px-4 py-3 font-medium">НМЦК</th>
                 <th className="px-4 py-3 font-medium">Стоп-факторы</th>
                 <th className="px-4 py-3 text-right font-medium">Удалить</th>
               </tr>
@@ -202,7 +215,7 @@ export default async function NewTenderProcurementPage({
                   </td>
                 </tr>
               ) : (
-                recentProcurements.map((item, index) => {
+                recentProcurements.map((item) => {
                   const recognitionMeta = getRecognitionStatusMeta(
                     item.aiAnalysisStatus,
                     item.aiAnalysisError,
@@ -231,9 +244,11 @@ export default async function NewTenderProcurementPage({
                       key={item.id}
                       className="cursor-pointer hover:bg-slate-50/80"
                     >
-                      <td className="px-4 py-4 font-semibold text-slate-500">
+                      <td className="px-4 py-4">
                         <a href={rowHref} className="block -mx-4 -my-4 px-4 py-4">
-                          {index + 1}
+                          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${recognitionMeta.tone}`}>
+                            {recognitionMeta.label}
+                          </span>
                         </a>
                       </td>
                       <td className="px-4 py-4 text-slate-600">
@@ -256,11 +271,15 @@ export default async function NewTenderProcurementPage({
                       </td>
                       <td className="px-4 py-4">
                         <a href={rowHref} className="block -mx-4 -my-4 px-4 py-4">
-                          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${recognitionMeta.tone}`}>
-                            {recognitionMeta.label}
-                          </span>
+                          <div className="font-semibold text-[#081a4b]">
+                            {formatCurrency(item.nmck ?? item.nmckWithoutVat)}
+                          </div>
                           <div className="mt-2 max-w-xs text-xs leading-5 text-slate-500">
-                            {getRecognitionStatusNote(recognitionMeta.note)}
+                            {item.nmck
+                              ? "Начальная цена определена"
+                              : item.nmckWithoutVat
+                                ? "Определена цена без НДС"
+                                : getRecognitionStatusNote(recognitionMeta.note) ?? "Не удалось определить автоматически"}
                           </div>
                         </a>
                       </td>

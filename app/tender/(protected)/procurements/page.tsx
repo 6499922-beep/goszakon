@@ -158,7 +158,7 @@ export default async function TenderProcurementsPage({
 
   const prisma = getPrisma();
   const procurements = await prisma.tenderProcurement.findMany({
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ procurementNumber: "asc" }, { updatedAt: "desc" }],
     take: 100,
     include: {
       technicalItems: {

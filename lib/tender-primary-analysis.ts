@@ -83,9 +83,24 @@ export async function runTenderPrimaryAnalysis(input: {
       aiAnalysisError: null,
       aiAnalyzedAt: new Date(),
       aiModel: model,
+      procurementNumber: result.procurement_number?.trim() || procurement.procurementNumber || null,
+      customerName: result.customer_name?.trim() || procurement.customerName || null,
+      customerInn: result.customer_inn?.trim() || procurement.customerInn || null,
+      platform: result.platform?.trim() || procurement.platform || null,
+      itemsCount:
+        Number.isFinite(result.items_count) && result.items_count > 0
+          ? result.items_count
+          : procurement.itemsCount,
+      nmckWithoutVat:
+        result.nmck_without_vat?.trim()
+          ? result.nmck_without_vat.trim().replace(/\s+/g, "").replace(",", ".")
+          : procurement.nmckWithoutVat,
       title:
-        procurement.title === "Новая закупка" && result.summary?.trim()
-          ? result.summary.trim().slice(0, 140)
+        procurement.title.startsWith("Закупка по файлам:") &&
+        (result.procurement_number?.trim() || result.summary?.trim())
+          ? (result.procurement_number?.trim()
+              ? `Закупка ${result.procurement_number.trim()}`
+              : result.summary.trim().slice(0, 140))
           : procurement.title,
       summary: result.summary || null,
       selectionCriteria: result.selection_criteria || null,

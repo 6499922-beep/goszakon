@@ -8,6 +8,12 @@ export const tenderAnalysisSchema = {
     type: "object",
     additionalProperties: false,
     required: [
+      "procurement_number",
+      "customer_name",
+      "customer_inn",
+      "platform",
+      "items_count",
+      "nmck_without_vat",
       "summary",
       "selection_criteria",
       "required_documents",
@@ -19,6 +25,12 @@ export const tenderAnalysisSchema = {
       "stop_factor_findings",
     ],
     properties: {
+      procurement_number: { type: "string" },
+      customer_name: { type: "string" },
+      customer_inn: { type: "string" },
+      platform: { type: "string" },
+      items_count: { type: "number" },
+      nmck_without_vat: { type: "string" },
       summary: { type: "string" },
       selection_criteria: { type: "string" },
       required_documents: {
@@ -69,6 +81,12 @@ export const tenderFasAnalysisSchema = {
 } as const;
 
 type TenderAnalysisResult = {
+  procurement_number: string;
+  customer_name: string;
+  customer_inn: string;
+  platform: string;
+  items_count: number;
+  nmck_without_vat: string;
   summary: string;
   selection_criteria: string;
   required_documents: string[];
@@ -143,6 +161,7 @@ export async function runTenderAiAnalysis(input: {
 - НМЦ без НДС: ${input.nmckWithoutVat ?? ""}
 
 Нужно извлечь:
+0. Номер закупки, заказчика, ИНН заказчика, площадку, количество позиций и НМЦ без НДС, если они явно читаются в документации.
 1. Краткую выжимку сути закупки.
 2. Критерии отбора.
 3. Требуемую документацию до подачи.

@@ -293,6 +293,24 @@ export default function NonPaymentPage() {
                 Если удержали неустойку из оплаты
               </Link>
             </div>
+
+            <div className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
+              <div className="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                Практический сигнал
+              </div>
+              <p className="mt-3 text-base leading-8 text-slate-700">
+                По спорам о неоплате это не только вопрос долга. В нашей
+                практике есть и подтверждения того, что за нарушение сроков
+                оплаты заказчиков реально привлекают к административной
+                ответственности.
+              </p>
+              <Link
+                href="/analitika/chelyabinskoe-ufas-shtraf-za-prosrochku-oplaty-chemk-074-04-7-30-4-1927-2025"
+                className="mt-4 inline-flex text-sm font-semibold text-[#081a4b] underline underline-offset-4"
+              >
+                Смотреть короткий материал по ответственности заказчика →
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -411,6 +429,20 @@ export default function NonPaymentPage() {
               <p className="mt-4 text-slate-700">
                 Кейсы и решения, где заказчик затягивал оплату, ссылался на
                 формальные причины и создавал препятствия для расчета.
+              </p>
+            </Link>
+
+            <Link
+              href="/analitika/chelyabinskoe-ufas-shtraf-za-prosrochku-oplaty-chemk-074-04-7-30-4-1927-2025"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                За просрочку оплаты заказчиков штрафуют
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Короткий материал по письму Челябинского УФАС: нарушение срока
+                оплаты по договору уже привело к административной
+                ответственности заказчика.
               </p>
             </Link>
 

@@ -23,6 +23,20 @@ export type TenderPreparedSourceDocument = {
 
 function isZipArchiveFile(file: TenderUploadedFile) {
   const normalizedName = (file.name || "").toLowerCase().trim();
+  const officeContainerExtensions = [
+    ".docx",
+    ".xlsx",
+    ".xlsm",
+    ".pptx",
+    ".odt",
+    ".ods",
+    ".odp",
+  ];
+
+  if (officeContainerExtensions.some((extension) => normalizedName.endsWith(extension))) {
+    return false;
+  }
+
   if (normalizedName.endsWith(".zip")) {
     return true;
   }
@@ -112,6 +126,131 @@ export async function persistTenderUpload(file: TenderUploadedFile) {
   };
 }
 
+function normalizeSheetCell(value: unknown) {
+  const normalized = String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return normalized;
+}
+
+function isMeaningfulSheetRow(row: unknown[]) {
+  return row.some((cell) => normalizeSheetCell(cell).length > 0);
+}
+
+function chooseHeaderRowIndex(rows: string[][]) {
+  const maxScan = Math.min(8, rows.length);
+  let bestIndex = 0;
+  let bestScore = -1;
+
+  for (let index = 0; index < maxScan; index += 1) {
+    const row = rows[index];
+    const filledCells = row.filter((cell) => cell.length > 0).length;
+    if (filledCells > bestScore) {
+      bestScore = filledCells;
+      bestIndex = index;
+    }
+  }
+
+  return bestIndex;
+}
+
+function isNumericLikeCell(value: string) {
+  return /^\d+(?:[.,]\d+)?$/.test(value.replace(/\s+/g, ""));
+}
+
+function findFirstLikelyDataRowIndex(rows: string[][]) {
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    const nonEmpty = row.filter((cell) => cell.length > 0);
+    if (nonEmpty.length < 3) continue;
+
+    const numericCells = nonEmpty.filter(isNumericLikeCell).length;
+    const firstCell = row[0] ?? "";
+
+    if (isNumericLikeCell(firstCell) && numericCells >= 3) {
+      return index;
+    }
+  }
+
+  return null;
+}
+
+function mergeHeaderRows(headerRows: string[][]) {
+  const width = Math.max(...headerRows.map((row) => row.length), 0);
+
+  return Array.from({ length: width }, (_, columnIndex) => {
+    const parts = headerRows
+      .map((row) => row[columnIndex] ?? "")
+      .map((cell) => cell.trim())
+      .filter(Boolean);
+
+    const uniqueParts = parts.filter((part, index) => parts.indexOf(part) === index);
+    return uniqueParts.join(" / ") || `Колонка ${columnIndex + 1}`;
+  });
+}
+
+function extractStructuredTextFromWorkbook(buffer: Buffer) {
+  const workbook = XLSX.read(buffer, { type: "buffer" });
+
+  const sheets = workbook.SheetNames.map((sheetName) => {
+    const worksheet = workbook.Sheets[sheetName];
+    const rawRows = XLSX.utils.sheet_to_json(worksheet, {
+      header: 1,
+      defval: "",
+      raw: false,
+      blankrows: false,
+    }) as unknown[][];
+
+    const rows = rawRows
+      .map((row) => row.map(normalizeSheetCell))
+      .filter(isMeaningfulSheetRow);
+
+    if (rows.length === 0) {
+      return "";
+    }
+
+    const firstDataRowIndex = findFirstLikelyDataRowIndex(rows);
+    const headerRows =
+      firstDataRowIndex && firstDataRowIndex > 0
+        ? rows.slice(0, firstDataRowIndex)
+        : [rows[chooseHeaderRowIndex(rows)]];
+    const headers = mergeHeaderRows(headerRows);
+    const dataRows = rows
+      .slice(firstDataRowIndex ?? chooseHeaderRowIndex(rows) + 1)
+      .filter((row) => row.some((cell) => cell.length > 0))
+      .slice(0, 80);
+
+    const summaryLines = [
+      `Лист: ${sheetName}`,
+      `Колонки: ${headers.join(" | ")}`,
+    ];
+
+    if (dataRows.length > 0) {
+      summaryLines.push("Строки таблицы:");
+      dataRows.forEach((row, rowIndex) => {
+        const pairs = headers
+          .map((header, index) => {
+            const value = row[index] ?? "";
+            return value ? `${header}: ${value}` : null;
+          })
+          .filter(Boolean);
+
+        if (pairs.length > 0) {
+          summaryLines.push(`${rowIndex + 1}. ${pairs.join(" | ")}`);
+        }
+      });
+    } else {
+      summaryLines.push("Строки таблицы автоматически не выделены.");
+    }
+
+    return summaryLines.join("\n");
+  })
+    .filter(Boolean)
+    .join("\n\n");
+
+  return sheets.trim();
+}
+
 export async function extractTextFromTenderUpload(file: TenderUploadedFile) {
   const type = (file.type || "").toLowerCase();
   const name = (file.name || "").toLowerCase();
@@ -148,21 +287,13 @@ export async function extractTextFromTenderUpload(file: TenderUploadedFile) {
     }
 
     if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
-      const workbook = XLSX.read(buffer, { type: "buffer" });
-      const extractedText = workbook.SheetNames.map((sheetName) => {
-        const worksheet = workbook.Sheets[sheetName];
-        const csv = XLSX.utils.sheet_to_csv(worksheet, { blankrows: false }).trim();
-        return csv ? `Лист: ${sheetName}\n${csv}` : "";
-      })
-        .filter(Boolean)
-        .join("\n\n")
-        .trim();
+      const extractedText = extractStructuredTextFromWorkbook(buffer);
 
       return {
         extractedText: extractedText.length > 0 ? extractedText : null,
         extractionNote:
           extractedText.length > 0
-            ? "Текст из Excel удалось извлечь автоматически."
+            ? "Таблицы и текст из Excel удалось извлечь автоматически."
             : "Excel-файл загружен, но данных для анализа извлечь не удалось.",
       };
     }

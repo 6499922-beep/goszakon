@@ -45,6 +45,87 @@ function buildTerminationFallback(sourceText: string) {
   return matches.length > 0 ? matches : [];
 }
 
+function extractFirstMoneyValue(value: string | null | undefined) {
+  const text = String(value ?? "");
+  const matches = text.match(/\d[\d\s]{0,30}(?:[.,]\d{1,2})?/g);
+  if (!matches || matches.length === 0) return null;
+
+  const candidate = matches
+    .map((item) => item.replace(/\s+/g, "").replace(",", ".").trim())
+    .find((item) => /^\d+(?:\.\d{1,2})?$/.test(item));
+
+  return candidate ?? null;
+}
+
+function buildPriceFallbackFromMentions(
+  mentions: string[],
+  currentWithoutVat: string | null,
+  currentWithVat: string | null
+) {
+  let withoutVat = currentWithoutVat?.trim() || null;
+  let withVat = currentWithVat?.trim() || null;
+  let note: string | null = null;
+
+  for (const mention of mentions) {
+    const normalized = mention.toLowerCase();
+    const amount = extractFirstMoneyValue(mention);
+    if (!amount) continue;
+
+    if (!withoutVat && /без ндс|ндс не облага/i.test(normalized)) {
+      withoutVat = amount;
+      note = note ?? mention.trim();
+      continue;
+    }
+
+    if (!withVat && /с ндс|включая ндс|с учетом ндс/i.test(normalized)) {
+      withVat = amount;
+      note = note ?? mention.trim();
+      continue;
+    }
+
+    if (!withVat) {
+      withVat = amount;
+      note = note ?? mention.trim();
+    }
+  }
+
+  if (!withoutVat && withVat) {
+    const parsedWithVat = Number(withVat);
+    if (Number.isFinite(parsedWithVat) && parsedWithVat > 0) {
+      withoutVat = (parsedWithVat / 1.22).toFixed(2);
+      note = note ?? "Сумма без НДС рассчитана из цены с НДС по ставке 22%.";
+    }
+  }
+
+  return {
+    withoutVat,
+    withVat,
+    note,
+  };
+}
+
+function buildSecurityFallback(mentions: string[], keyword: "заявк" | "исполн") {
+  const relevant = mentions.find((item) => item.toLowerCase().includes(keyword));
+  if (!relevant) return null;
+  return relevant.trim();
+}
+
+function buildProcurementNumberFallback(sourceText: string) {
+  const patterns = [
+    /(?:номер\s+закупки|№\s*закупки|извещение\s*№|закупка\s*№)\s*[:\-]?\s*([A-Za-zА-Яа-я0-9\-\/]+)/i,
+    /\b№\s*([0-9][0-9\-\/]{2,})\b/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = sourceText.match(pattern);
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return null;
+}
+
 export async function runTenderPrimaryAnalysis(input: {
   procurementId: number;
   sourceText: string;
@@ -71,7 +152,7 @@ export async function runTenderPrimaryAnalysis(input: {
     throw new Error("Procurement not found");
   }
 
-  const { model, result } = await runTenderAiAnalysis({
+  const { model, result, dossier } = await runTenderAiAnalysis({
     title: procurement.title,
     customerName: procurement.customerName,
     customerInn: procurement.customerInn,
@@ -109,17 +190,36 @@ export async function runTenderPrimaryAnalysis(input: {
 
   const penaltyFallback = buildPenaltyFallback(sourceText);
   const terminationFallback = buildTerminationFallback(sourceText);
+  const priceFallback = buildPriceFallbackFromMentions(
+    dossier.nmck_mentions,
+    result.nmck_without_vat,
+    result.nmck_with_vat
+  );
+  const bidSecurityFallback = buildSecurityFallback(dossier.security_mentions, "заявк");
+  const contractSecurityFallback = buildSecurityFallback(dossier.security_mentions, "исполн");
+  const procurementNumberFallback = buildProcurementNumberFallback(sourceText);
 
   await prisma.tenderProcurement.update({
     where: { id: procurementId },
     data: {
       sourceText,
-      aiAnalysis: result,
+      aiAnalysis: {
+        ...result,
+        nmck_without_vat: result.nmck_without_vat?.trim() || priceFallback.withoutVat || "",
+        nmck_with_vat: result.nmck_with_vat?.trim() || priceFallback.withVat || "",
+        price_tax_note: result.price_tax_note?.trim() || priceFallback.note || "",
+        bid_security: result.bid_security?.trim() || bidSecurityFallback || "",
+        contract_security: result.contract_security?.trim() || contractSecurityFallback || "",
+      },
       aiAnalysisStatus: "completed",
       aiAnalysisError: null,
       aiAnalyzedAt: new Date(),
       aiModel: model,
-      procurementNumber: result.procurement_number?.trim() || procurement.procurementNumber || null,
+      procurementNumber:
+        result.procurement_number?.trim() ||
+        procurement.procurementNumber ||
+        procurementNumberFallback ||
+        null,
       customerName: result.customer_name?.trim() || procurement.customerName || null,
       customerInn: result.customer_inn?.trim() || procurement.customerInn || null,
       platform: result.platform?.trim() || procurement.platform || null,
@@ -128,8 +228,10 @@ export async function runTenderPrimaryAnalysis(input: {
           ? result.items_count
           : procurement.itemsCount,
       nmckWithoutVat:
-        result.nmck_without_vat?.trim()
-          ? result.nmck_without_vat.trim().replace(/\s+/g, "").replace(",", ".")
+        result.nmck_without_vat?.trim() || priceFallback.withoutVat
+          ? String(result.nmck_without_vat?.trim() || priceFallback.withoutVat)
+              .replace(/\s+/g, "")
+              .replace(",", ".")
           : procurement.nmckWithoutVat,
       purchaseType: result.procurement_type?.trim() || procurement.purchaseType || null,
       title:

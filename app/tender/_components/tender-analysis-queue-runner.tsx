@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type TenderAnalysisQueueRunnerProps = {
   procurementId: number;
@@ -11,6 +12,7 @@ export function TenderAnalysisQueueRunner({
   procurementId,
   view,
 }: TenderAnalysisQueueRunnerProps) {
+  const router = useRouter();
   const hasStartedRef = useRef(false);
   const [statusLabel, setStatusLabel] = useState("Идёт первичный анализ...");
   const nextLink = useMemo(() => {
@@ -37,6 +39,15 @@ export function TenderAnalysisQueueRunner({
         }
 
         setStatusLabel("Анализ запущен. Можно переходить к следующей закупке.");
+        router.refresh();
+
+        const refreshTimer = window.setInterval(() => {
+          router.refresh();
+        }, 5000);
+
+        window.setTimeout(() => {
+          window.clearInterval(refreshTimer);
+        }, 60000);
       } catch {
         setStatusLabel("Не удалось автоматически запустить анализ. Обновите список.");
       }

@@ -6,7 +6,6 @@ import { NextResponse } from "next/server";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
-import { runTenderPrimaryAnalysis } from "@/lib/tender-primary-analysis";
 import { logTenderEvent } from "@/lib/tender-workflow";
 
 export const runtime = "nodejs";
@@ -96,7 +95,7 @@ export async function POST(request: Request) {
       where: { id: procurementId },
       data: {
         sourceText: combinedSourceText,
-        aiAnalysisStatus: "running",
+        aiAnalysisStatus: "queued",
         aiAnalysisError: null,
         status: TenderProcurementStatus.ANALYSIS,
       },
@@ -106,42 +105,14 @@ export async function POST(request: Request) {
       procurementId,
       actionType: TenderActionType.NOTE_ADDED,
       title: "Первичный анализ запущен",
-      description: "Система перешла к автоматическому разбору загруженной документации.",
+      description: "Документация поставлена в очередь на автоматический разбор.",
       actorName: "AI",
     });
-
-    try {
-      await runTenderPrimaryAnalysis({
-        procurementId,
-        sourceText: combinedSourceText,
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Не удалось выполнить первичный AI-анализ";
-
-      await prisma.tenderProcurement.update({
-        where: { id: procurementId },
-        data: {
-          aiAnalysisStatus: "failed",
-          aiAnalysisError: message,
-        },
-      });
-
-      await logTenderEvent({
-        procurementId,
-        actionType: TenderActionType.NOTE_ADDED,
-        title: "Первичный анализ не завершён",
-        description: message,
-        actorName: "AI",
-      });
-    }
 
     return NextResponse.json({
       ok: true,
       procurementId,
-      status: "processed",
+      status: "queued",
     });
   } catch (error) {
     console.error("[tender-intake-finalize] failed", error);

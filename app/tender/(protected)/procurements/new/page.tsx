@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { tenderHasCapability } from "@/lib/tender-permissions";
+import { TenderAnalysisQueueRunner } from "@/app/tender/_components/tender-analysis-queue-runner";
 import { TenderIntakeUploadForm } from "@/app/tender/_components/tender-intake-upload-form";
 import { getPrisma } from "@/lib/prisma";
 
@@ -42,6 +43,10 @@ export default async function NewTenderProcurementPage({
 
   return (
     <main className="space-y-4">
+      {uploadedProcurementId && Number.isInteger(uploadedProcurementId) && uploadedProcurementId > 0 ? (
+        <TenderAnalysisQueueRunner procurementId={uploadedProcurementId} />
+      ) : null}
+
       <section className="rounded-[1.5rem] border border-slate-200 bg-white px-5 py-3 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

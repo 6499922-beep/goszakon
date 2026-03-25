@@ -47,17 +47,6 @@ async function main() {
       requiresManualReview: false,
     },
     {
-      code: "PAPER_APPLICATION",
-      name: "Заявка на бумажных носителях",
-      description: "Если закупка требует бумажную подачу заявки, она не идет в работу.",
-      kind: "PROCUREMENT",
-      keyword: "бумаж",
-      sortOrder: 20,
-      isActive: true,
-      isToggleable: true,
-      requiresManualReview: false,
-    },
-    {
       code: "CLOSED_PROCUREMENT",
       name: "Закрытая закупка",
       description: "Закрытая закупка или предквалификационный отбор.",
@@ -97,17 +86,6 @@ async function main() {
       kind: "REGULATORY",
       keyword: "фстэк",
       sortOrder: 60,
-      isActive: true,
-      isToggleable: true,
-      requiresManualReview: false,
-    },
-    {
-      code: "KSO_EQUIPMENT",
-      name: "КСО (ячейки)",
-      description: "Закупка по КСО относится к стоп-факторам.",
-      kind: "CATEGORY",
-      keyword: "ксо",
-      sortOrder: 70,
       isActive: true,
       isToggleable: true,
       requiresManualReview: false,
@@ -154,6 +132,17 @@ async function main() {
       create: rule,
     });
   }
+
+  await prisma.tenderStopRule.updateMany({
+    where: {
+      code: {
+        in: ["PAPER_APPLICATION", "KSO_EQUIPMENT"],
+      },
+    },
+    data: {
+      isActive: false,
+    },
+  });
 
   await prisma.tenderPromptConfig.upsert({
     where: { key: "FAS_POTENTIAL_COMPLAINT" },

@@ -379,7 +379,7 @@ function buildMissingFields(procurement: {
     });
   }
 
-  if (!procurement.customerInn) {
+  if (!procurement.customerInn && !procurement.customerName) {
     missing.push({
       title: "ИНН заказчика не определён",
       description: "Не удалось автоматически определить ИНН заказчика.",
@@ -513,7 +513,10 @@ export default async function TenderRecognitionDetailPage({
   const finalSourceDocuments = sourceDocuments.filter(
     (item) => !isArchiveFileName(item.fileLabel) && !isArchiveFileName(item.title)
   );
-  const equipmentCount = procurement.itemsCount ?? equipmentItems.length;
+  const equipmentCount = Math.max(
+    procurement.itemsCount ?? 0,
+    equipmentItems.length
+  );
   const stopFactorState = procurement.ruleMatches.length > 0 ? "stop" : "ok";
   const stopFactorTitle =
     stopFactorState === "stop"

@@ -107,6 +107,7 @@ export default async function TenderRecognitionEquipmentPage({
           details: "",
           amount: "Не определено автоматически",
         }));
+  const resolvedItemsCount = Math.max(procurement.itemsCount ?? 0, rows.length);
 
   return (
     <main className="space-y-4">
@@ -132,7 +133,7 @@ export default async function TenderRecognitionEquipmentPage({
           Список оборудования по закупке
         </h1>
         <div className="mt-2 text-sm text-slate-600">
-          Всего позиций: {rows.length || procurement.itemsCount || 0}
+          Всего позиций: {resolvedItemsCount}
         </div>
 
         <div className="mt-5 overflow-hidden rounded-3xl border border-slate-200">

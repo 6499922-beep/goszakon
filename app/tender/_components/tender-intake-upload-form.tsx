@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { createTenderProcurementAction } from "@/app/tender/actions";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type TenderIntakeUploadFormProps = {
   actorName: string;
@@ -10,9 +10,11 @@ type TenderIntakeUploadFormProps = {
 export function TenderIntakeUploadForm({
   actorName,
 }: TenderIntakeUploadFormProps) {
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const estimatedSeconds =
     selectedFiles.length === 0
       ? null
@@ -20,10 +22,34 @@ export function TenderIntakeUploadForm({
 
   return (
     <form
-      action={(formData) => {
-        startTransition(() => {
-          createTenderProcurementAction(formData);
-        });
+      onSubmit={async (event) => {
+        event.preventDefault();
+        setErrorMessage(null);
+        setIsPending(true);
+
+        try {
+          const formData = new FormData(event.currentTarget);
+          const response = await fetch("/api/tender/intake", {
+            method: "POST",
+            body: formData,
+          });
+
+          const payload = await response.json().catch(() => null);
+
+          if (!response.ok || !payload?.ok) {
+            setErrorMessage(
+              payload?.error || "Не удалось загрузить документы и запустить анализ."
+            );
+            setIsPending(false);
+            return;
+          }
+
+          router.push("/procurements?view=analysis");
+          router.refresh();
+        } catch {
+          setErrorMessage("Не удалось загрузить документы и запустить анализ.");
+          setIsPending(false);
+        }
       }}
       className="space-y-4"
     >
@@ -39,6 +65,7 @@ export function TenderIntakeUploadForm({
         onChange={(event) => {
           const files = Array.from(event.target.files ?? []);
           setSelectedFiles(files.map((file) => file.name));
+          setErrorMessage(null);
         }}
       />
 
@@ -145,6 +172,12 @@ export function TenderIntakeUploadForm({
           документы для анализа.
         </div>
       )}
+
+      {errorMessage ? (
+        <div className="rounded-[2rem] border border-rose-200 bg-rose-50 px-5 py-4 text-sm leading-6 text-rose-700">
+          {errorMessage}
+        </div>
+      ) : null}
     </form>
   );
 }

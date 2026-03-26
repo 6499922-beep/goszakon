@@ -232,23 +232,23 @@ function describeSourceDocument(note: string | null | undefined) {
   if (!value) {
     return {
       tone: "neutral" as const,
-      label: "Файл сохранён",
-      description: "Документ загружен в закупку и доступен для открытия.",
+      label: "Текст не извлечён",
+      description: "Документ сохранён и доступен для открытия.",
     };
   }
 
   if (value.includes("не удалось разобрать автоматически")) {
     return {
       tone: "warning" as const,
-      label: "Нужна ручная проверка",
-      description: "Формат пока не удалось разобрать автоматически. Файл сохранён и доступен для открытия.",
+      label: "Текст не извлечён",
+      description: "Формат не удалось разобрать автоматически. Документ сохранён и доступен для открытия.",
     };
   }
 
   if (value.includes("Текст из PDF не удалось извлечь автоматически")) {
     return {
       tone: "warning" as const,
-      label: "Нужна ручная проверка",
+      label: "Текст не извлечён",
       description: "PDF сохранён, но текст из него не удалось извлечь автоматически.",
     };
   }
@@ -256,7 +256,7 @@ function describeSourceDocument(note: string | null | undefined) {
   if (value.includes("Текст из DOCX не удалось извлечь автоматически")) {
     return {
       tone: "warning" as const,
-      label: "Нужна ручная проверка",
+      label: "Текст не извлечён",
       description: "DOCX сохранён, но текст из него не удалось извлечь автоматически.",
     };
   }
@@ -264,7 +264,7 @@ function describeSourceDocument(note: string | null | undefined) {
   if (value.includes("Текст из Excel не удалось извлечь автоматически")) {
     return {
       tone: "warning" as const,
-      label: "Нужна ручная проверка",
+      label: "Текст не извлечён",
       description: "Таблица Excel сохранена, но текст/данные не удалось извлечь автоматически.",
     };
   }
@@ -272,7 +272,7 @@ function describeSourceDocument(note: string | null | undefined) {
   if (value.includes("Текст из DOCX удалось извлечь автоматически")) {
     return {
       tone: "success" as const,
-      label: "Распознан",
+      label: "Текст извлечён",
       description: "Текст из DOCX извлечён, файл сохранён в закупке.",
     };
   }
@@ -280,7 +280,7 @@ function describeSourceDocument(note: string | null | undefined) {
   if (value.includes("Текст из PDF удалось извлечь автоматически")) {
     return {
       tone: "success" as const,
-      label: "Распознан",
+      label: "Текст извлечён",
       description: "Текст из PDF извлечён, файл сохранён в закупке.",
     };
   }
@@ -288,14 +288,14 @@ function describeSourceDocument(note: string | null | undefined) {
   if (value.includes("Текст из Excel удалось извлечь автоматически")) {
     return {
       tone: "success" as const,
-      label: "Распознан",
+      label: "Текст извлечён",
       description: "Текст из Excel извлечён, файл сохранён в закупке.",
     };
   }
 
   return {
     tone: "neutral" as const,
-    label: "Файл сохранён",
+    label: "Текст не извлечён",
     description: value.replace(/\s*Файл сохранён:\s*\/[^\s]+/g, "").trim() || "Документ сохранён в закупке.",
   };
 }
@@ -1046,7 +1046,6 @@ export async function renderTenderRecognitionDetailPage({
                             <th className="px-4 py-3 font-medium">Тип</th>
                             <th className="px-4 py-3 font-medium">Документ</th>
                             <th className="px-4 py-3 font-medium">Статус</th>
-                            <th className="px-4 py-3 font-medium">Фрагмент</th>
                             <th className="px-4 py-3 text-right font-medium">Открыть</th>
                           </tr>
                         </thead>
@@ -1059,15 +1058,24 @@ export async function renderTenderRecognitionDetailPage({
                                 </span>
                               </td>
                               <td className="px-4 py-4">
-                                <div
-                                  className="max-w-[420px] text-sm font-semibold text-[#081a4b]"
-                                  title={item.title}
-                                >
-                                  {item.title}
-                                </div>
-                                <div className="mt-1 text-xs leading-5 text-slate-500">
-                                  {item.status.description}
-                                </div>
+                                {item.href ? (
+                                  <a
+                                    href={item.href}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="block max-w-[520px] text-sm font-semibold text-[#081a4b] underline-offset-2 hover:text-[#0b2a72] hover:underline"
+                                    title={item.title}
+                                  >
+                                    {item.title}
+                                  </a>
+                                ) : (
+                                  <div
+                                    className="max-w-[520px] text-sm font-semibold text-[#081a4b]"
+                                    title={item.title}
+                                  >
+                                    {item.title}
+                                  </div>
+                                )}
                               </td>
                               <td className="px-4 py-4">
                                 <span
@@ -1081,10 +1089,8 @@ export async function renderTenderRecognitionDetailPage({
                                 >
                                   {item.status.label}
                                 </span>
-                              </td>
-                              <td className="px-4 py-4">
-                                <div className="max-w-[520px] text-sm leading-6 text-slate-600">
-                                  {item.excerpt ?? "Фрагмент текста не показан."}
+                                <div className="mt-1 max-w-[360px] text-xs leading-5 text-slate-500">
+                                  {item.status.description}
                                 </div>
                               </td>
                               <td className="px-4 py-4 text-right">
@@ -1101,7 +1107,7 @@ export async function renderTenderRecognitionDetailPage({
                                   ) : (
                                     <span className="text-xs text-slate-400">Нет ссылки</span>
                                   )}
-                                  {item.status.label !== "Распознан" ? (
+                                  {item.status.label !== "Текст извлечён" ? (
                                     <form action={rerunTenderSourceDocumentDeepAnalysisAction}>
                                       <input type="hidden" name="sourceDocumentId" value={item.id} />
                                       <input type="hidden" name="procurementId" value={procurement.id} />

@@ -908,22 +908,40 @@ function getTenderSourcePriority(title: string) {
 }
 
 function classifyTenderSection(section: TenderSourceSection): TenderDocumentCategory {
-  const haystack = `${section.title}\n${section.body.slice(0, 1500)}`.toLowerCase();
+  const titleHaystack = section.title.toLowerCase();
+  const bodyHaystack = section.body.slice(0, 1500).toLowerCase();
+  const haystack = `${titleHaystack}\n${bodyHaystack}`;
 
-  if (/нмц|цено|price|стоим|коммерч|обоснование|калькул|excel|xlsx/i.test(haystack)) {
-    return "pricing";
+  if (/договор|контракт|проект договора|условия договора/i.test(titleHaystack)) {
+    return "contract";
   }
 
-  if (/извещ|документац|информационн|карта|закупк/i.test(haystack)) {
-    return "notice";
-  }
-
-  if (/технич|тз|специфик|описан.*товар|характерист/i.test(haystack)) {
+  if (/технич|тз|специфик|описан.*товар|характерист/i.test(titleHaystack)) {
     return "spec";
   }
 
-  if (/договор|контракт|проект договора|условия договора/i.test(haystack)) {
+  if (/извещ|документац|информационн|карта|закупк/i.test(titleHaystack)) {
+    return "notice";
+  }
+
+  if (/нмц|цено|price|стоим|коммерч|обоснование|калькул|excel|xlsx/i.test(titleHaystack)) {
+    return "pricing";
+  }
+
+  if (/договор|контракт|проект договора|условия договора/i.test(bodyHaystack)) {
     return "contract";
+  }
+
+  if (/технич|тз|специфик|описан.*товар|характерист/i.test(bodyHaystack)) {
+    return "spec";
+  }
+
+  if (/извещ|документац|информационн|карта|закупк/i.test(bodyHaystack)) {
+    return "notice";
+  }
+
+  if (/нмц|цено|price|стоим|коммерч|обоснование|калькул|excel|xlsx/i.test(bodyHaystack)) {
+    return "pricing";
   }
 
   if (/форма|заявк|анкет|соглас|декларац/i.test(haystack)) {
@@ -1135,9 +1153,13 @@ function buildPackedScopeSelection(
   const includedIds: number[] = [];
   let currentLength = 0;
   const categorySeeded = new Set<TenderDocumentCategory>();
+  const categorySeedBudget = Math.max(
+    1600,
+    Math.floor(input.maxTotalLength / Math.max(input.categories.length, 1))
+  );
 
   for (const item of packed) {
-    const chunk = item.compressed.text.trim();
+    const chunk = item.compressed.text.trim().slice(0, categorySeedBudget);
     if (!chunk) continue;
     if (currentLength > 0 && currentLength + chunk.length > input.maxTotalLength) continue;
     if (categorySeeded.has(item.category)) continue;

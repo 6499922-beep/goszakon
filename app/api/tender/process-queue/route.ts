@@ -8,17 +8,26 @@ function spawnTenderAnalysisJob(procurementId: number) {
   const internalToken = process.env.DATABASE_URL;
   const port = process.env.PORT || "3000";
   const script = `
-    fetch("http://127.0.0.1:${port}/api/tender/run-analysis", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-tender-internal-token": ${JSON.stringify(internalToken ?? "")}
-      },
-      body: JSON.stringify({ procurementId: ${procurementId} })
-    }).catch((error) => {
-      console.error("[tender-process-queue] detached runner failed", error);
-      process.exitCode = 1;
-    });
+    (async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:${port}/api/tender/run-analysis", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tender-internal-token": ${JSON.stringify(internalToken ?? "")}
+          },
+          body: JSON.stringify({ procurementId: ${procurementId} })
+        });
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error("[tender-process-queue] run-analysis failed: " + response.status + " " + text.slice(0, 400));
+        }
+        await response.text().catch(() => "");
+      } catch (error) {
+        console.error("[tender-process-queue] detached runner failed", error);
+        process.exitCode = 1;
+      }
+    })();
   `;
 
   const child = spawn(

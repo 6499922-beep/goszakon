@@ -316,6 +316,12 @@ export default function NonPaymentPage() {
               >
                 Еще один пример: Московское УФАС подтвердило ответственность за просрочку оплаты →
               </Link>
+              <Link
+                href="/analitika/krasnoyarskoe-ufas-kos-shtraf-za-prosrochku-oplaty-024-04-7-30-4-3481-2025"
+                className="mt-3 inline-flex text-sm font-semibold text-[#081a4b] underline underline-offset-4"
+              >
+                И еще один пример: Красноярское УФАС назначило заказчику штраф 50 000 рублей →
+              </Link>
             </div>
           </div>
         </div>
@@ -463,6 +469,33 @@ export default function NonPaymentPage() {
                 Короткий материал по письму Московского УФАС: за просрочку
                 оплаты по договору к ответственности привлекли и заказчика, и
                 его должностное лицо.
+              </p>
+            </Link>
+
+            <Link
+              href="/analitika/moskovskoe-ufas-oak-shtraf-za-prosrochku-oplaty-077-04-7-30-4-12634-2025"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Московское УФАС: ОАК оштрафовали за просрочку оплаты
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Еще один практический материал, где просрочка оплаты по
+                договору привела к ответственности и для компании, и для
+                должностного лица.
+              </p>
+            </Link>
+
+            <Link
+              href="/analitika/spb-ufas-odk-klimov-shtraf-za-prosrochku-oplaty-2025-29730"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+            >
+              <h3 className="text-2xl font-semibold text-[#081a4b]">
+                Санкт-Петербургское УФАС: штраф за просрочку оплаты у ОДК-Климов
+              </h3>
+              <p className="mt-4 text-slate-700">
+                Материал полезен тем, что УФАС прямо указало на событие, вину
+                и состав административного правонарушения из-за неоплаты.
               </p>
             </Link>
 

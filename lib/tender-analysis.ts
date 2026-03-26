@@ -1163,9 +1163,11 @@ export async function runTenderAiAnalysis(input: {
   }
 
   const model = process.env.OPENAI_MODEL || "gpt-5";
-  const compactMode = input.sourceText.length >= 60_000;
-  const ultraCompactMode = input.sourceText.length >= 140_000;
-  const hyperCompactMode = input.sourceText.length >= 260_000;
+  const sourceLength = input.sourceText.length;
+  const compactMode = sourceLength >= 20_000;
+  const ultraCompactMode = sourceLength >= 35_000;
+  const hyperCompactMode = sourceLength >= 70_000;
+  const fastSynthesisMode = sourceLength >= 12_000;
   const scopes = buildTenderDocumentScopes(input.sourceText);
   const primarySourcePack = buildTenderAiSourcePack(input.sourceText);
   const packedSourceText = primarySourcePack.text || input.sourceText.slice(0, 90000);
@@ -1299,7 +1301,7 @@ ${equipmentSourceText}
         prompt: metaPrompt,
         schema: tenderMetaAnalysisSchema,
         reasoningEffort: "low",
-        timeoutMs: hyperCompactMode ? 25_000 : ultraCompactMode ? 35_000 : compactMode ? 45_000 : 60_000,
+        timeoutMs: hyperCompactMode ? 18_000 : ultraCompactMode ? 22_000 : compactMode ? 28_000 : 35_000,
       }),
       runStructuredResponse<TenderPricingAnalysis>({
         apiKey,
@@ -1307,7 +1309,7 @@ ${equipmentSourceText}
         prompt: pricingPrompt,
         schema: tenderPricingAnalysisSchema,
         reasoningEffort: "low",
-        timeoutMs: hyperCompactMode ? 25_000 : ultraCompactMode ? 35_000 : compactMode ? 45_000 : 60_000,
+        timeoutMs: hyperCompactMode ? 18_000 : ultraCompactMode ? 22_000 : compactMode ? 28_000 : 35_000,
       }),
       runStructuredResponse<TenderRequirementsAnalysis>({
         apiKey,
@@ -1315,7 +1317,7 @@ ${equipmentSourceText}
         prompt: requirementsPrompt,
         schema: tenderRequirementsAnalysisSchema,
         reasoningEffort: "low",
-        timeoutMs: hyperCompactMode ? 25_000 : ultraCompactMode ? 35_000 : compactMode ? 45_000 : 60_000,
+        timeoutMs: hyperCompactMode ? 18_000 : ultraCompactMode ? 22_000 : compactMode ? 28_000 : 35_000,
       }),
       runStructuredResponse<TenderContractAnalysis>({
         apiKey,
@@ -1323,7 +1325,7 @@ ${equipmentSourceText}
         prompt: contractPrompt,
         schema: tenderContractAnalysisSchema,
         reasoningEffort: "low",
-        timeoutMs: hyperCompactMode ? 25_000 : ultraCompactMode ? 35_000 : compactMode ? 45_000 : 60_000,
+        timeoutMs: hyperCompactMode ? 18_000 : ultraCompactMode ? 22_000 : compactMode ? 28_000 : 35_000,
       }),
       runStructuredResponse<TenderEquipmentAnalysis>({
         apiKey,
@@ -1331,7 +1333,7 @@ ${equipmentSourceText}
         prompt: equipmentPrompt,
         schema: tenderEquipmentAnalysisSchema,
         reasoningEffort: "low",
-        timeoutMs: hyperCompactMode ? 25_000 : ultraCompactMode ? 35_000 : compactMode ? 45_000 : 60_000,
+        timeoutMs: hyperCompactMode ? 18_000 : ultraCompactMode ? 22_000 : compactMode ? 28_000 : 35_000,
       }),
     ]);
 
@@ -1411,7 +1413,7 @@ ${equipmentSourceText}
     stop_factor_findings: metaAnalysis.stop_factor_findings,
   };
 
-  if (ultraCompactMode) {
+  if (fastSynthesisMode) {
     const result = normalizeTenderAnalysisResult({
       result: synthesizedRawResult,
       dossier: synthesizedDossier,

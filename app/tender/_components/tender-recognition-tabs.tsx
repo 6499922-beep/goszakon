@@ -10,6 +10,7 @@ type TenderRecognitionTabsProps = {
   sourceDocuments: React.ReactNode;
   submissionDocuments: React.ReactNode;
   goods: React.ReactNode;
+  chat?: React.ReactNode;
 };
 
 export function TenderRecognitionTabs({
@@ -20,6 +21,7 @@ export function TenderRecognitionTabs({
   sourceDocuments,
   submissionDocuments,
   goods,
+  chat,
 }: TenderRecognitionTabsProps) {
   const [activeTab, setActiveTab] = useState<
     | "about"
@@ -49,27 +51,31 @@ export function TenderRecognitionTabs({
     }`;
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-7">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            className={tabClassName(activeTab === tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
+    <div className={`grid gap-4 ${chat ? "xl:grid-cols-[minmax(0,1fr)_380px]" : ""}`}>
+      <div className="space-y-4">
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-7">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={tabClassName(activeTab === tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div hidden={activeTab !== "about"}>{about}</div>
+        <div hidden={activeTab !== "contract"}>{contract}</div>
+        <div hidden={activeTab !== "pricing"}>{pricing}</div>
+        <div hidden={activeTab !== "requirements"}>{requirements}</div>
+        <div hidden={activeTab !== "sourceDocuments"}>{sourceDocuments}</div>
+        <div hidden={activeTab !== "submissionDocuments"}>{submissionDocuments}</div>
+        <div hidden={activeTab !== "goods"}>{goods}</div>
       </div>
 
-      <div hidden={activeTab !== "about"}>{about}</div>
-      <div hidden={activeTab !== "contract"}>{contract}</div>
-      <div hidden={activeTab !== "pricing"}>{pricing}</div>
-      <div hidden={activeTab !== "requirements"}>{requirements}</div>
-      <div hidden={activeTab !== "sourceDocuments"}>{sourceDocuments}</div>
-      <div hidden={activeTab !== "submissionDocuments"}>{submissionDocuments}</div>
-      <div hidden={activeTab !== "goods"}>{goods}</div>
+      {chat ? <div className="xl:sticky xl:top-4 xl:self-start">{chat}</div> : null}
     </div>
   );
 }

@@ -174,6 +174,85 @@ function normalizeSheetCell(value: unknown) {
   return normalized;
 }
 
+function getWorksheetCellDisplayValue(cell: XLSX.CellObject | undefined) {
+  if (!cell) return "";
+  if (typeof cell.w === "string" && cell.w.trim()) {
+    return normalizeSheetCell(cell.w);
+  }
+  if (cell.v == null) return "";
+  return normalizeSheetCell(cell.v);
+}
+
+function extractWorksheetRows(worksheet: XLSX.WorkSheet) {
+  const ref = worksheet["!ref"];
+  if (!ref) return [];
+
+  const range = XLSX.utils.decode_range(ref);
+  const merges = Array.isArray(worksheet["!merges"]) ? worksheet["!merges"] : [];
+
+  const mergeValueByAnchor = new Map<string, string>();
+  merges.forEach((merge) => {
+    const anchorRef = XLSX.utils.encode_cell(merge.s);
+    const anchorValue = getWorksheetCellDisplayValue(worksheet[anchorRef]);
+    mergeValueByAnchor.set(anchorRef, anchorValue);
+  });
+
+  const rows: string[][] = [];
+
+  for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex += 1) {
+    const row: string[] = [];
+
+    for (let columnIndex = range.s.c; columnIndex <= range.e.c; columnIndex += 1) {
+      const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex });
+      let value = getWorksheetCellDisplayValue(worksheet[cellRef]);
+
+      if (!value) {
+        const mergedRange = merges.find(
+          (merge) =>
+            rowIndex >= merge.s.r &&
+            rowIndex <= merge.e.r &&
+            columnIndex >= merge.s.c &&
+            columnIndex <= merge.e.c
+        );
+        if (mergedRange) {
+          const anchorRef = XLSX.utils.encode_cell(mergedRange.s);
+          value = mergeValueByAnchor.get(anchorRef) ?? "";
+        }
+      }
+
+      row.push(value);
+    }
+
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function splitWorksheetIntoBlocks(rows: string[][]) {
+  const blocks: string[][][] = [];
+  let currentBlock: string[][] = [];
+
+  rows.forEach((row) => {
+    const hasMeaning = row.some((cell) => cell.length > 0);
+    if (!hasMeaning) {
+      if (currentBlock.length > 0) {
+        blocks.push(currentBlock);
+        currentBlock = [];
+      }
+      return;
+    }
+
+    currentBlock.push(row);
+  });
+
+  if (currentBlock.length > 0) {
+    blocks.push(currentBlock);
+  }
+
+  return blocks;
+}
+
 function isMeaningfulSheetRow(row: unknown[]) {
   return row.some((cell) => normalizeSheetCell(cell).length > 0);
 }
@@ -321,6 +400,25 @@ function inferWorkbookTableNature(headers: string[], rows: string[][]) {
   }
 
   return "mixed";
+}
+
+function scoreWorkbookBlock(tableNature: "pricing" | "goods" | "mixed", rows: string[][]) {
+  const totalRows = rows.filter(isWorkbookTotalRow).length;
+  const numericCells = rows
+    .flatMap((row) => row)
+    .filter((cell) => parseWorkbookAmount(cell) != null).length;
+  const textCells = rows
+    .flatMap((row) => row)
+    .filter((cell) => /[а-яa-z]/i.test(cell)).length;
+
+  const base =
+    tableNature === "pricing"
+      ? 120
+      : tableNature === "goods"
+        ? 100
+        : 60;
+
+  return base + totalRows * 30 + Math.min(40, numericCells) + Math.min(30, textCells);
 }
 
 function buildWorkbookPricingLines(headers: string[], rows: string[][]) {
@@ -495,100 +593,113 @@ function extractStructuredTextFromWorkbook(buffer: Buffer) {
 
   const sheets = workbook.SheetNames.map((sheetName) => {
     const worksheet = workbook.Sheets[sheetName];
-    const rawRows = XLSX.utils.sheet_to_json(worksheet, {
-      header: 1,
-      defval: "",
-      raw: false,
-      blankrows: false,
-    }) as unknown[][];
-
-    const rows = rawRows
-      .map((row) => row.map(normalizeSheetCell))
-      .filter(isMeaningfulSheetRow);
+    const rows = extractWorksheetRows(worksheet).map((row) => row.map(normalizeSheetCell));
 
     if (rows.length === 0) {
       return "";
     }
+    const blocks = splitWorksheetIntoBlocks(rows)
+      .map((blockRows, blockIndex) => {
+        const firstDataRowIndex = findFirstLikelyDataRowIndex(blockRows);
+        const headerlessTable =
+          firstDataRowIndex === 0 && isLikelyWorkbookDataRow(blockRows[0] ?? []);
+        const headerRows =
+          !headerlessTable && firstDataRowIndex && firstDataRowIndex > 0
+            ? blockRows.slice(0, firstDataRowIndex)
+            : [blockRows[chooseHeaderRowIndex(blockRows)]];
+        let headers = headerlessTable
+          ? inferWorkbookHeadersFromDataRow(blockRows[0] ?? [])
+          : mergeHeaderRows(headerRows);
+        const dataRows = blockRows
+          .slice(
+            headerlessTable
+              ? 0
+              : firstDataRowIndex ?? chooseHeaderRowIndex(blockRows) + 1
+          )
+          .filter((row) => row.some((cell) => cell.length > 0))
+          .slice(0, 120);
 
-    const firstDataRowIndex = findFirstLikelyDataRowIndex(rows);
-    const headerlessTable = firstDataRowIndex === 0 && isLikelyWorkbookDataRow(rows[0] ?? []);
-    const headerRows =
-      !headerlessTable && firstDataRowIndex && firstDataRowIndex > 0
-        ? rows.slice(0, firstDataRowIndex)
-        : [rows[chooseHeaderRowIndex(rows)]];
-    let headers = headerlessTable
-      ? inferWorkbookHeadersFromDataRow(rows[0] ?? [])
-      : mergeHeaderRows(headerRows);
-    const dataRows = rows
-      .slice(
-        headerlessTable
-          ? 0
-          : firstDataRowIndex ?? chooseHeaderRowIndex(rows) + 1
-      )
-      .filter((row) => row.some((cell) => cell.length > 0))
-      .slice(0, 80);
-    if (!headerlessTable && areWorkbookHeadersTooGeneric(headers) && dataRows.length > 0) {
-      const inferredHeaders = inferWorkbookHeadersFromDataRow(dataRows[0] ?? []);
-      if (!areWorkbookHeadersTooGeneric(inferredHeaders)) {
-        headers = inferredHeaders;
-      }
-    }
-
-    const tableNature = inferWorkbookTableNature(headers, dataRows);
-    const summaryLines = [
-      `Лист: ${sheetName}`,
-      `Тип таблицы: ${
-        tableNature === "pricing"
-          ? "НМЦК и цены"
-          : tableNature === "goods"
-            ? "Товарная таблица"
-            : "Смешанная таблица"
-      }`,
-      `Колонки: ${headers.join(" | ")}`,
-    ];
-
-    const positionLines = collectWorkbookPositionLines(headers, dataRows);
-    const tableLines = buildWorkbookTableLines(headers, dataRows);
-    const totalLines = buildWorkbookTotalLines(headers, dataRows);
-    const pricingLines = buildWorkbookPricingLines(headers, dataRows);
-
-    if (dataRows.length > 0 && tableLines.length === 0) {
-      summaryLines.push("Строки таблицы:");
-      dataRows.forEach((row, rowIndex) => {
-        const pairs = headers
-          .map((header, index) => {
-            const value = row[index] ?? "";
-            return value ? `${header}: ${value}` : null;
-          })
-          .filter(Boolean);
-
-        if (pairs.length > 0) {
-          summaryLines.push(`${rowIndex + 1}. ${pairs.join(" | ")}`);
+        if (!headerlessTable && areWorkbookHeadersTooGeneric(headers) && dataRows.length > 0) {
+          const inferredHeaders = inferWorkbookHeadersFromDataRow(dataRows[0] ?? []);
+          if (!areWorkbookHeadersTooGeneric(inferredHeaders)) {
+            headers = inferredHeaders;
+          }
         }
-      });
-    } else {
-      summaryLines.push("Строки таблицы автоматически не выделены.");
+
+        const tableNature = inferWorkbookTableNature(headers, dataRows);
+        const positionLines = collectWorkbookPositionLines(headers, dataRows);
+        const tableLines = buildWorkbookTableLines(headers, dataRows);
+        const totalLines = buildWorkbookTotalLines(headers, dataRows);
+        const pricingLines = buildWorkbookPricingLines(headers, dataRows);
+
+        return {
+          blockIndex,
+          headers,
+          dataRows,
+          tableNature,
+          positionLines,
+          tableLines,
+          totalLines,
+          pricingLines,
+          score: scoreWorkbookBlock(tableNature, dataRows),
+        };
+      })
+      .filter((block) => block.dataRows.length > 0)
+      .sort((left, right) => right.score - left.score)
+      .slice(0, 4);
+
+    if (blocks.length === 0) {
+      return "";
     }
 
-    if (positionLines.length > 0) {
-      summaryLines.push("Позиции для анализа:");
-      summaryLines.push(...positionLines);
-    }
+    const summaryLines = [`Лист: ${sheetName}`];
 
-    if (tableLines.length > 0) {
-      summaryLines.push("Компактная таблица позиций:");
-      summaryLines.push(...tableLines);
-    }
+    blocks.forEach((block, index) => {
+      summaryLines.push(
+        `Блок ${index + 1}. Тип: ${
+          block.tableNature === "pricing"
+            ? "НМЦК и цены"
+            : block.tableNature === "goods"
+              ? "Товарная таблица"
+              : "Смешанная таблица"
+        }`
+      );
+      summaryLines.push(`Колонки: ${block.headers.join(" | ")}`);
 
-    if (totalLines.length > 0) {
-      summaryLines.push("Итоги таблицы:");
-      summaryLines.push(...totalLines);
-    }
+      if (block.positionLines.length > 0) {
+        summaryLines.push("Позиции для анализа:");
+        summaryLines.push(...block.positionLines.slice(0, 40));
+      }
 
-    if (pricingLines.length > 0) {
-      summaryLines.push("Ценовые строки и кандидаты на НМЦК:");
-      summaryLines.push(...pricingLines);
-    }
+      if (block.tableLines.length > 0) {
+        summaryLines.push("Компактная таблица позиций:");
+        summaryLines.push(...block.tableLines.slice(0, 50));
+      } else {
+        summaryLines.push("Строки таблицы:");
+        block.dataRows.slice(0, 20).forEach((row, rowIndex) => {
+          const pairs = block.headers
+            .map((header, columnIndex) => {
+              const value = row[columnIndex] ?? "";
+              return value ? `${header}: ${value}` : null;
+            })
+            .filter(Boolean);
+
+          if (pairs.length > 0) {
+            summaryLines.push(`${rowIndex + 1}. ${pairs.join(" | ")}`);
+          }
+        });
+      }
+
+      if (block.totalLines.length > 0) {
+        summaryLines.push("Итоги таблицы:");
+        summaryLines.push(...block.totalLines.slice(0, 12));
+      }
+
+      if (block.pricingLines.length > 0) {
+        summaryLines.push("Ценовые строки и кандидаты на НМЦК:");
+        summaryLines.push(...block.pricingLines.slice(0, 30));
+      }
+    });
 
     return summaryLines.join("\n");
   })

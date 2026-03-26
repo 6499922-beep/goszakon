@@ -111,20 +111,6 @@ export async function POST(request: Request) {
       }
     }
 
-    if (combinedExtractedBlocks.length > 0) {
-      const nextSourceText = [procurement.sourceText?.trim(), ...combinedExtractedBlocks]
-        .filter(Boolean)
-        .join("\n\n")
-        .trim();
-
-      await prisma.tenderProcurement.update({
-        where: { id: procurementId },
-        data: {
-          sourceText: nextSourceText,
-        },
-      });
-    }
-
     return NextResponse.json({
       ok: true,
       procurementId,

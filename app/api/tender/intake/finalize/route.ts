@@ -92,16 +92,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const combinedSourceText = [
-      procurement.sourceText?.trim(),
-      ...procurement.sourceDocuments
-        .map((doc) =>
-          doc.contentSnippet?.trim()
-            ? `Файл: ${doc.fileName}\n${doc.contentSnippet.trim()}`
-            : null
-        )
-        .filter(Boolean),
-    ]
+    const combinedSourceText = procurement.sourceDocuments
+      .map((doc) =>
+        doc.contentSnippet?.trim()
+          ? `Файл: ${doc.fileName}\n${doc.contentSnippet.trim()}`
+          : null
+      )
       .filter(Boolean)
       .join("\n\n")
       .trim();

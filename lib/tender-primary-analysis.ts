@@ -142,6 +142,83 @@ async function updateProcurementAnalysisSafely(
   }
 }
 
+async function persistQuickFallbackCompletion(input: {
+  prisma: ReturnType<typeof getPrisma>;
+  procurementId: number;
+  sourceText: string;
+}) {
+  const procurement = await input.prisma.tenderProcurement.findUnique({
+    where: { id: input.procurementId },
+  });
+
+  if (!procurement) {
+    return;
+  }
+
+  const fallback = buildQuickTenderFallback({
+    procurement: {
+      procurementNumber: procurement.procurementNumber,
+      customerName: procurement.customerName,
+      customerInn: procurement.customerInn,
+      platform: procurement.platform,
+      itemsCount: procurement.itemsCount,
+      nmckWithoutVat: procurement.nmckWithoutVat,
+      title: procurement.title,
+    },
+    sourceText: input.sourceText,
+  });
+
+  const nmckWithoutVatValue = normalizeDecimalForDb(
+    fallback.result.nmck_without_vat?.trim() || null
+  );
+
+  await updateProcurementAnalysisSafely(input.prisma, input.procurementId, {
+    sourceText: input.sourceText,
+    aiAnalysis: fallback.result,
+    aiAnalysisStatus: "completed",
+    aiAnalysisError: null,
+    aiAnalyzedAt: new Date(),
+    aiModel: "quick-fallback",
+    procurementNumber:
+      fallback.result.procurement_number?.trim() || procurement.procurementNumber || null,
+    customerName: fallback.result.customer_name?.trim() || procurement.customerName || null,
+    customerInn: fallback.result.customer_inn?.trim() || procurement.customerInn || null,
+    platform: fallback.result.platform?.trim() || procurement.platform || null,
+    itemsCount:
+      Number.isFinite(fallback.result.items_count) && fallback.result.items_count > 0
+        ? fallback.result.items_count
+        : procurement.itemsCount,
+    nmckWithoutVat: nmckWithoutVatValue ?? procurement.nmckWithoutVat,
+    purchaseType: fallback.result.procurement_type?.trim() || procurement.purchaseType || null,
+    title:
+      procurement.title.startsWith("Закупка по файлам:") &&
+      (fallback.result.procurement_number?.trim() || fallback.result.summary?.trim())
+        ? (fallback.result.procurement_number?.trim()
+            ? `Закупка ${fallback.result.procurement_number.trim()}`
+            : fallback.result.summary.trim().slice(0, 140))
+        : procurement.title,
+    summary: fallback.result.summary || null,
+    selectionCriteria: fallback.result.selection_criteria || null,
+    deliveryTerms: fallback.result.delivery_terms || null,
+    paymentTerms: fallback.result.payment_terms || null,
+    contractTerm: fallback.result.contract_term || null,
+    penaltyTerms: fallback.result.penalty_terms || null,
+    terminationTerms: fallback.result.termination_reasons.length
+      ? fallback.result.termination_reasons
+      : undefined,
+    stopFactorsSummary: "Быстрый анализ завершён без явных стоп-факторов",
+  });
+
+  await logTenderEvent({
+    procurementId: input.procurementId,
+    actionType: TenderActionType.NOTE_ADDED,
+    title: "Сохранён быстрый анализ",
+    description:
+      "Глубокий проход занял слишком много времени. Система автоматически сохранила быстрый результат по ключевым данным без перевода на ручную проверку.",
+    actorName: "AI",
+  });
+}
+
 function buildPriceFallbackFromMentions(
   mentions: string[],
   currentWithoutVat: string | null,
@@ -211,6 +288,188 @@ function buildProcurementNumberFallback(sourceText: string) {
   return null;
 }
 
+function buildCustomerInnFallback(sourceText: string) {
+  const match = sourceText.match(/\bинн\b[^\d]{0,12}(\d{10,12})/i);
+  return match?.[1]?.trim() ?? null;
+}
+
+function buildPlatformFallback(sourceText: string) {
+  const match = sourceText.match(/\b(?:https?:\/\/)?([a-z0-9.-]+\.[a-z]{2,})(?:\/[^\s]*)?/i);
+  return match?.[1]?.trim() ?? null;
+}
+
+function buildCustomerNameFallback(sourceText: string) {
+  const lines = sourceText
+    .split(/\n+/)
+    .map((item) => item.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 80);
+
+  for (const line of lines) {
+    if (/^(АО|ООО|ПАО|МУП|ГУП|ФГБУ|ФГУП|ГБУ|ОГАУ|ИП)\b/i.test(line)) {
+      return line.slice(0, 240);
+    }
+  }
+
+  const explicit = sourceText.match(/(?:заказчик|организатор закупки)\s*[:\-]?\s*([^\n]{4,240})/i);
+  return explicit?.[1]?.trim() ?? null;
+}
+
+function buildItemsCountFallback(sourceText: string) {
+  const matches = [...sourceText.matchAll(/(\d+)\s*(?:позиц|наименован|товар|лотов?|шт\.)/gi)];
+  const values = matches
+    .map((match) => Number(match[1]))
+    .filter((value) => Number.isInteger(value) && value > 0 && value < 10000);
+
+  if (values.length === 0) return 0;
+  return Math.max(...values);
+}
+
+function buildSummaryFallback(sourceText: string) {
+  const paragraphs = sourceText
+    .split(/\n{2,}/)
+    .map((item) => item.replace(/\s+/g, " ").trim())
+    .filter((item) => item.length >= 20)
+    .slice(0, 4);
+
+  return paragraphs.join("\n\n").slice(0, 900).trim();
+}
+
+function buildSelectionCriteriaFallback(sourceText: string) {
+  const matches = extractRelevantParagraphs(sourceText, [/критер/i, /победител/i, /оценк/i], 4);
+  return matches.join("\n\n").trim() || null;
+}
+
+function buildDeliveryFallback(sourceText: string) {
+  const matches = extractRelevantParagraphs(sourceText, [/поставк/i, /место поставк/i, /срок поставк/i], 4);
+  return matches.join("\n\n").trim() || null;
+}
+
+function buildPaymentFallback(sourceText: string) {
+  const matches = extractRelevantParagraphs(sourceText, [/оплат/i, /аванс/i, /рабочих дн/i], 4);
+  return matches.join("\n\n").trim() || null;
+}
+
+function buildContractTermFallback(sourceText: string) {
+  const matches = extractRelevantParagraphs(sourceText, [/срок действия/i, /действует до/i, /срок договор/i], 3);
+  return matches.join("\n\n").trim() || null;
+}
+
+function buildQuickTenderFallback(input: {
+  procurement: {
+    procurementNumber: string | null;
+    customerName: string | null;
+    customerInn: string | null;
+    platform: string | null;
+    itemsCount: number | null;
+    nmckWithoutVat: { toString(): string } | null;
+    title: string;
+  };
+  sourceText: string;
+}) {
+  const procurementNumber =
+    input.procurement.procurementNumber ||
+    buildProcurementNumberFallback(input.sourceText) ||
+    "";
+  const customerName =
+    input.procurement.customerName ||
+    buildCustomerNameFallback(input.sourceText) ||
+    "";
+  const customerInn =
+    input.procurement.customerInn ||
+    buildCustomerInnFallback(input.sourceText) ||
+    "";
+  const platform = input.procurement.platform || buildPlatformFallback(input.sourceText) || "";
+  const itemsCount =
+    input.procurement.itemsCount ||
+    buildItemsCountFallback(input.sourceText) ||
+    0;
+  const summary = buildSummaryFallback(input.sourceText);
+  const selectionCriteria = buildSelectionCriteriaFallback(input.sourceText) || "";
+  const deliveryTerms = buildDeliveryFallback(input.sourceText) || "";
+  const paymentTerms = buildPaymentFallback(input.sourceText) || "";
+  const contractTerm = buildContractTermFallback(input.sourceText) || "";
+  const penaltyTerms = buildPenaltyFallback(input.sourceText) || "";
+  const terminationReasons = buildTerminationFallback(input.sourceText);
+  const nmckMentions = extractRelevantParagraphs(
+    input.sourceText,
+    [/нмц/i, /максимальн.*цен/i, /начальн.*цен/i, /цена договор/i, /ндс/i],
+    6
+  );
+  const securityMentions = extractRelevantParagraphs(
+    input.sourceText,
+    [/обеспеч/i, /заявк/i, /исполнен/i],
+    6
+  );
+  const priceFallback = buildPriceFallbackFromMentions(
+    nmckMentions,
+    input.procurement.nmckWithoutVat?.toString() ?? null,
+    null
+  );
+  const bidSecurity = buildSecurityFallback(securityMentions, "заявк") || "";
+  const contractSecurity = buildSecurityFallback(securityMentions, "исполн") || "";
+
+  return {
+    dossier: {
+      procurement_number: procurementNumber,
+      customer_name: customerName,
+      customer_inn: customerInn,
+      platform,
+      items_count: itemsCount,
+      procurement_type: "",
+      nmck_mentions: nmckMentions,
+      security_mentions: securityMentions,
+      criteria_points: selectionCriteria ? [selectionCriteria] : [],
+      required_documents: [],
+      nonstandard_requirements: [],
+      rrep_rpp_requirements: "",
+      decree_1875_ban: "",
+      requires_commissioning: "",
+      lot_structure: "",
+      military_acceptance: "",
+      equipment_items: [],
+      delivery_terms: deliveryTerms,
+      payment_terms: paymentTerms,
+      contract_term: contractTerm,
+      responsibility_terms: penaltyTerms,
+      penalty_terms: penaltyTerms,
+      termination_reasons: terminationReasons,
+      stop_factor_findings: [],
+      unresolved_questions: [],
+    },
+    result: {
+      procurement_number: procurementNumber,
+      customer_name: customerName,
+      customer_inn: customerInn,
+      platform,
+      items_count: itemsCount,
+      procurement_type: "",
+      nmck_without_vat: priceFallback.withoutVat || "",
+      nmck_with_vat: priceFallback.withVat || "",
+      price_tax_note: priceFallback.note || "",
+      bid_security: bidSecurity,
+      contract_security: contractSecurity,
+      summary,
+      selection_criteria: selectionCriteria,
+      required_documents: [],
+      nonstandard_requirements: [],
+      rrep_rpp_requirements: "",
+      decree_1875_ban: "",
+      requires_commissioning: "",
+      lot_structure: "",
+      military_acceptance: "",
+      equipment_items: [],
+      delivery_terms: deliveryTerms,
+      payment_terms: paymentTerms,
+      contract_term: contractTerm,
+      responsibility_terms: penaltyTerms,
+      penalty_terms: penaltyTerms,
+      termination_reasons: terminationReasons,
+      stop_factor_findings: [],
+    },
+  };
+}
+
 export async function runTenderPrimaryAnalysis(input: {
   procurementId: number;
   sourceText: string;
@@ -237,18 +496,56 @@ export async function runTenderPrimaryAnalysis(input: {
     throw new Error("Procurement not found");
   }
 
-  const { model, result, dossier } = await withAnalysisRetry("основной AI-анализ", () =>
-    runTenderAiAnalysis({
-      title: procurement.title,
-      customerName: procurement.customerName,
-      customerInn: procurement.customerInn,
-      procurementNumber: procurement.procurementNumber,
-      platform: procurement.platform,
-      itemsCount: procurement.itemsCount,
-      nmckWithoutVat: procurement.nmckWithoutVat?.toString() ?? null,
+  let model = "gpt-5";
+  let result;
+  let dossier;
+  let usedFallbackAnalysis = false;
+
+  try {
+    const analysisResponse = await withAnalysisRetry("основной AI-анализ", () =>
+      runTenderAiAnalysis({
+        title: procurement.title,
+        customerName: procurement.customerName,
+        customerInn: procurement.customerInn,
+        procurementNumber: procurement.procurementNumber,
+        platform: procurement.platform,
+        itemsCount: procurement.itemsCount,
+        nmckWithoutVat: procurement.nmckWithoutVat?.toString() ?? null,
+        sourceText,
+      })
+    );
+
+    model = analysisResponse.model;
+    result = analysisResponse.result;
+    dossier = analysisResponse.dossier;
+  } catch (error) {
+    const fallback = buildQuickTenderFallback({
+      procurement: {
+        procurementNumber: procurement.procurementNumber,
+        customerName: procurement.customerName,
+        customerInn: procurement.customerInn,
+        platform: procurement.platform,
+        itemsCount: procurement.itemsCount,
+        nmckWithoutVat: procurement.nmckWithoutVat,
+        title: procurement.title,
+      },
       sourceText,
-    })
-  );
+    });
+
+    model = "quick-fallback";
+    result = fallback.result;
+    dossier = fallback.dossier;
+    usedFallbackAnalysis = true;
+
+    await logTenderEvent({
+      procurementId,
+      actionType: TenderActionType.NOTE_ADDED,
+      title: "Глубокий анализ не успел завершиться",
+      description:
+        "Система автоматически сохранила быстрый результат по ключевым данным закупки и продолжит работать без ручного вмешательства.",
+      actorName: "AI",
+    });
+  }
 
   const fasPromptConfig = await prisma.tenderPromptConfig.findUnique({
     where: { key: TenderPromptConfigKey.FAS_POTENTIAL_COMPLAINT },
@@ -275,6 +572,9 @@ export async function runTenderPrimaryAnalysis(input: {
     | null = null;
 
   try {
+    if (usedFallbackAnalysis) {
+      throw new Error("skip_fas_for_quick_fallback");
+    }
     const fasResponse = await withAnalysisRetry("ФАС-аналитика", () =>
       runTenderFasAiAnalysis({
         title: procurement.title,
@@ -282,7 +582,7 @@ export async function runTenderPrimaryAnalysis(input: {
         customerInn: procurement.customerInn,
         procurementNumber: procurement.procurementNumber,
         platform: procurement.platform,
-        sourceText,
+        sourceText: sourceText.slice(0, 45000),
         promptBody: fasPromptBody,
       })
     );
@@ -490,8 +790,17 @@ export async function executeTenderPrimaryAnalysisJob(input: {
     const isTimeoutError = /слишком много времени|aborted due to timeout|timeout/i.test(
       message ?? ""
     );
-    const nextStatus = isTimeoutError ? "queued" : "failed";
-    const nextError = isTimeoutError ? PRIMARY_ANALYSIS_TIMEOUT_TEXT : message;
+    const nextStatus = isTimeoutError ? "completed" : "failed";
+    const nextError = isTimeoutError ? null : message;
+
+    if (isTimeoutError) {
+      await persistQuickFallbackCompletion({
+        prisma,
+        procurementId,
+        sourceText: input.sourceText,
+      });
+      return { ok: true, fallback: true };
+    }
 
     try {
       await prisma.tenderProcurement.update({

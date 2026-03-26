@@ -355,7 +355,7 @@ async function runStructuredResponse<T>({
   prompt,
   schema,
   reasoningEffort = "high",
-  attempts = 2,
+  attempts = 1,
   timeoutMs = 60_000,
 }: {
   apiKey: string;
@@ -1094,39 +1094,40 @@ export async function runTenderAiAnalysis(input: {
   }
 
   const model = process.env.OPENAI_MODEL || "gpt-5";
-  const compactMode = input.sourceText.length >= 180_000;
-  const ultraCompactMode = input.sourceText.length >= 90_000;
+  const compactMode = input.sourceText.length >= 60_000;
+  const ultraCompactMode = input.sourceText.length >= 140_000;
+  const hyperCompactMode = input.sourceText.length >= 260_000;
   const packedSourceText = buildTenderAiSourcePack(input.sourceText);
   const scopes = buildTenderDocumentScopes(input.sourceText);
   const metaSourceText =
     buildScopedSourcePack(
       scopes,
       ["notice", "other"],
-      ultraCompactMode ? 9000 : compactMode ? 14000 : 28000
+      hyperCompactMode ? 2500 : ultraCompactMode ? 4000 : compactMode ? 7000 : 28000
     ) ||
     packedSourceText;
   const pricingSourceText =
     buildScopedSourcePack(
       scopes,
       ["pricing", "notice", "forms"],
-      ultraCompactMode ? 10000 : compactMode ? 16000 : 32000
+      hyperCompactMode ? 3000 : ultraCompactMode ? 5000 : compactMode ? 9000 : 32000
     ) || packedSourceText;
   const requirementsSourceText =
     buildScopedSourcePack(
       scopes,
       ["notice", "forms", "spec", "other"],
-      ultraCompactMode ? 12000 : compactMode ? 18000 : 36000
+      hyperCompactMode ? 3500 : ultraCompactMode ? 6000 : compactMode ? 10000 : 36000
     ) || packedSourceText;
   const contractSourceText =
     buildScopedSourcePack(
       scopes,
       ["contract", "notice", "other"],
-      ultraCompactMode ? 10000 : compactMode ? 16000 : 32000
+      hyperCompactMode ? 3000 : ultraCompactMode ? 5000 : compactMode ? 9000 : 32000
     ) || packedSourceText;
   const equipmentSourceText =
     buildEquipmentSourcePack(
       scopes,
-      ultraCompactMode ? 14000 : compactMode ? 22000 : 55000
+      hyperCompactMode ? 4500 : ultraCompactMode ? 7000 : compactMode ? 12000 : 55000
     ) || packedSourceText;
 
   const metaPrompt = `
@@ -1222,40 +1223,40 @@ ${equipmentSourceText}
         model,
         prompt: metaPrompt,
         schema: tenderMetaAnalysisSchema,
-        reasoningEffort: ultraCompactMode ? "low" : "medium",
-        timeoutMs: ultraCompactMode ? 75_000 : compactMode ? 90_000 : 60_000,
+        reasoningEffort: "low",
+        timeoutMs: hyperCompactMode ? 25_000 : ultraCompactMode ? 35_000 : compactMode ? 45_000 : 60_000,
       }),
       runStructuredResponse<TenderPricingAnalysis>({
         apiKey,
         model,
         prompt: pricingPrompt,
         schema: tenderPricingAnalysisSchema,
-        reasoningEffort: ultraCompactMode ? "low" : "medium",
-        timeoutMs: ultraCompactMode ? 75_000 : compactMode ? 90_000 : 60_000,
+        reasoningEffort: "low",
+        timeoutMs: hyperCompactMode ? 25_000 : ultraCompactMode ? 35_000 : compactMode ? 45_000 : 60_000,
       }),
       runStructuredResponse<TenderRequirementsAnalysis>({
         apiKey,
         model,
         prompt: requirementsPrompt,
         schema: tenderRequirementsAnalysisSchema,
-        reasoningEffort: ultraCompactMode ? "low" : "medium",
-        timeoutMs: ultraCompactMode ? 75_000 : compactMode ? 90_000 : 60_000,
+        reasoningEffort: "low",
+        timeoutMs: hyperCompactMode ? 25_000 : ultraCompactMode ? 35_000 : compactMode ? 45_000 : 60_000,
       }),
       runStructuredResponse<TenderContractAnalysis>({
         apiKey,
         model,
         prompt: contractPrompt,
         schema: tenderContractAnalysisSchema,
-        reasoningEffort: ultraCompactMode ? "low" : "medium",
-        timeoutMs: ultraCompactMode ? 75_000 : compactMode ? 90_000 : 60_000,
+        reasoningEffort: "low",
+        timeoutMs: hyperCompactMode ? 25_000 : ultraCompactMode ? 35_000 : compactMode ? 45_000 : 60_000,
       }),
       runStructuredResponse<TenderEquipmentAnalysis>({
         apiKey,
         model,
         prompt: equipmentPrompt,
         schema: tenderEquipmentAnalysisSchema,
-        reasoningEffort: ultraCompactMode ? "low" : "medium",
-        timeoutMs: ultraCompactMode ? 75_000 : compactMode ? 90_000 : 60_000,
+        reasoningEffort: "low",
+        timeoutMs: hyperCompactMode ? 25_000 : ultraCompactMode ? 35_000 : compactMode ? 45_000 : 60_000,
       }),
     ]);
 
@@ -1530,7 +1531,7 @@ export async function runTenderFasAiAnalysis(input: {
   }
 
   const model = process.env.OPENAI_FAS_MODEL || process.env.OPENAI_MODEL || "gpt-5";
-  const packedSourceText = buildTenderAiSourcePack(input.sourceText);
+  const packedSourceText = buildTenderAiSourcePack(input.sourceText).slice(0, 18_000);
 
   const prompt = `
 Ты анализируешь документацию закупки по 223-ФЗ только на предмет потенциальной жалобы в ФАС.
@@ -1564,7 +1565,8 @@ ${packedSourceText}
     model,
     prompt,
     schema: tenderFasAnalysisSchema,
-    reasoningEffort: "medium",
+    reasoningEffort: "low",
+    timeoutMs: 45_000,
   });
 
   return {

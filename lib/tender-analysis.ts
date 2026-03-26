@@ -1299,7 +1299,6 @@ export async function runTenderAiAnalysis(input: {
   const compactMode = sourceLength >= 20_000;
   const ultraCompactMode = sourceLength >= 35_000;
   const hyperCompactMode = sourceLength >= 70_000;
-  const fastSynthesisMode = sourceLength >= 12_000;
   const scopes = buildTenderDocumentScopes(input.sourceText);
   const primarySourcePack = buildTenderAiSourcePack(input.sourceText);
   const packedSourceText = primarySourcePack.text || input.sourceText.slice(0, 90000);
@@ -1458,40 +1457,40 @@ ${equipmentSourceText}
         model,
         prompt: metaPrompt,
         schema: tenderMetaAnalysisSchema,
-        reasoningEffort: "low",
-        timeoutMs: hyperCompactMode ? 18_000 : ultraCompactMode ? 22_000 : compactMode ? 28_000 : 35_000,
+        reasoningEffort: "medium",
+        timeoutMs: hyperCompactMode ? 28_000 : ultraCompactMode ? 36_000 : compactMode ? 45_000 : 55_000,
       }),
       runStructuredResponse<TenderPricingAnalysis>({
         apiKey,
         model,
         prompt: pricingPrompt,
         schema: tenderPricingAnalysisSchema,
-        reasoningEffort: "low",
-        timeoutMs: hyperCompactMode ? 18_000 : ultraCompactMode ? 22_000 : compactMode ? 28_000 : 35_000,
+        reasoningEffort: "medium",
+        timeoutMs: hyperCompactMode ? 32_000 : ultraCompactMode ? 40_000 : compactMode ? 50_000 : 60_000,
       }),
       runStructuredResponse<TenderRequirementsAnalysis>({
         apiKey,
         model,
         prompt: requirementsPrompt,
         schema: tenderRequirementsAnalysisSchema,
-        reasoningEffort: "low",
-        timeoutMs: hyperCompactMode ? 18_000 : ultraCompactMode ? 22_000 : compactMode ? 28_000 : 35_000,
+        reasoningEffort: "medium",
+        timeoutMs: hyperCompactMode ? 28_000 : ultraCompactMode ? 36_000 : compactMode ? 45_000 : 55_000,
       }),
       runStructuredResponse<TenderContractAnalysis>({
         apiKey,
         model,
         prompt: contractPrompt,
         schema: tenderContractAnalysisSchema,
-        reasoningEffort: "low",
-        timeoutMs: hyperCompactMode ? 18_000 : ultraCompactMode ? 22_000 : compactMode ? 28_000 : 35_000,
+        reasoningEffort: "medium",
+        timeoutMs: hyperCompactMode ? 32_000 : ultraCompactMode ? 40_000 : compactMode ? 50_000 : 60_000,
       }),
       runStructuredResponse<TenderEquipmentAnalysis>({
         apiKey,
         model,
         prompt: equipmentPrompt,
         schema: tenderEquipmentAnalysisSchema,
-        reasoningEffort: "low",
-        timeoutMs: hyperCompactMode ? 18_000 : ultraCompactMode ? 22_000 : compactMode ? 28_000 : 35_000,
+        reasoningEffort: "medium",
+        timeoutMs: hyperCompactMode ? 32_000 : ultraCompactMode ? 40_000 : compactMode ? 55_000 : 70_000,
       }),
     ]);
 
@@ -1577,26 +1576,6 @@ ${equipmentSourceText}
     stop_factor_findings: metaAnalysis.stop_factor_findings,
   };
 
-  if (fastSynthesisMode) {
-    const result = normalizeTenderAnalysisResult({
-      result: synthesizedRawResult,
-      dossier: synthesizedDossier,
-      metaAnalysis,
-      pricingAnalysis,
-      requirementsAnalysis,
-      contractAnalysis,
-      equipmentAnalysis,
-      fallback: input,
-    });
-
-    return {
-      model,
-      dossier: synthesizedDossier,
-      result,
-      documentCoverage,
-    };
-  }
-
   const dossierPrompt = `
 Ты анализируешь документацию закупки по 223-ФЗ для внутреннего тендерного кабинета поставщика.
 
@@ -1674,7 +1653,7 @@ ${compactMode ? [metaSourceText, pricingSourceText, requirementsSourceText, cont
     prompt: dossierPrompt,
     schema: tenderSourceDossierSchema,
     reasoningEffort: "high",
-    timeoutMs: compactMode ? 120_000 : 90_000,
+    timeoutMs: hyperCompactMode ? 180_000 : compactMode ? 150_000 : 120_000,
   });
 
   const prompt = `
@@ -1741,8 +1720,8 @@ ${JSON.stringify(
     model,
     prompt,
     schema: tenderAnalysisSchema,
-    reasoningEffort: "medium",
-    timeoutMs: compactMode ? 120_000 : 90_000,
+    reasoningEffort: "high",
+    timeoutMs: hyperCompactMode ? 180_000 : compactMode ? 150_000 : 120_000,
   });
 
   const result = normalizeTenderAnalysisResult({

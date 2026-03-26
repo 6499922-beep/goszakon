@@ -10,20 +10,6 @@ export function proxy(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
-  const legacyProcurementMatch = pathname.match(/^\/procurements\/(\d+)$/);
-
-  if (legacyProcurementMatch) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = `/procurements/recognition/${legacyProcurementMatch[1]}`;
-    return NextResponse.redirect(redirectUrl);
-  }
-
-  if (pathname === "/procurements/pricing") {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/procurements/new";
-    return NextResponse.redirect(redirectUrl);
-  }
-
   const isPublicAsset =
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||

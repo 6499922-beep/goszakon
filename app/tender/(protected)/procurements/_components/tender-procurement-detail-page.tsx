@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { TenderProcurementChat } from "@/app/tender/_components/tender-procurement-chat";
 import { TenderRecognitionTabs } from "@/app/tender/_components/tender-recognition-tabs";
 import {
+  archiveTenderFromAnalysisAction,
   archiveTenderAfterApprovalAction,
   declineTenderFromPricingAction,
   markTenderDocumentsPreparedAction,
@@ -272,6 +273,14 @@ function describeSourceDocument(note: string | null | undefined) {
       tone: "neutral" as const,
       label: "Текст не извлечён",
       description: "Документ сохранён и доступен для открытия.",
+    };
+  }
+
+  if (value.includes("Доп. анализ запущен")) {
+    return {
+      tone: "warning" as const,
+      label: "Доп. анализ",
+      description: "Файл повторно отправлен на более тщательное распознавание.",
     };
   }
 
@@ -717,13 +726,13 @@ export async function renderTenderRecognitionDetailPage({
         ? "Вошёл в AI-анализ"
         : "Не вошёл в AI-анализ"
       : item.contentSnippet
-        ? "Ждёт уточнения покрытия"
+        ? "Ожидает включения в анализ"
         : "Нет текста для AI";
     const coverageDescription =
       coverageMatch && typeof coverageMatch.note === "string" && coverageMatch.note.trim()
         ? coverageMatch.note.trim()
-        : item.contentSnippet
-          ? "Документ сохранён, но карта участия в анализе ещё не собрана."
+      : item.contentSnippet
+          ? "Документ сохранён и будет повторно учтён при ближайшем анализе закупки."
           : "По документу не удалось получить достаточно текста для AI-разбора.";
     return {
       id: item.id,
@@ -847,16 +856,28 @@ export async function renderTenderRecognitionDetailPage({
         </div>
         <div className="flex items-center gap-3">
           {canSendToPricing ? (
-            <form action={sendTenderToPricingAction}>
-              <input type="hidden" name="procurementId" value={procurement.id} />
-              <input type="hidden" name="actorName" value={actorName} />
-              <button
-                type="submit"
-                className="inline-flex items-center rounded-full bg-[#081a4b] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
-              >
-                Передать на просчёт
-              </button>
-            </form>
+            <>
+              <form action={sendTenderToPricingAction}>
+                <input type="hidden" name="procurementId" value={procurement.id} />
+                <input type="hidden" name="actorName" value={actorName} />
+                <button
+                  type="submit"
+                  className="inline-flex items-center rounded-full bg-[#081a4b] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
+                >
+                  Передать на просчёт
+                </button>
+              </form>
+              <form action={archiveTenderFromAnalysisAction}>
+                <input type="hidden" name="procurementId" value={procurement.id} />
+                <input type="hidden" name="actorName" value={actorName} />
+                <button
+                  type="submit"
+                  className="inline-flex items-center rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+                >
+                  Отправить в архив
+                </button>
+              </form>
+            </>
           ) : null}
           {canSendToApproval ? (
             <>

@@ -1597,6 +1597,43 @@ export async function sendTenderToPricingAction(formData: FormData) {
   redirect(`/procurements/pricing/${procurementId}`);
 }
 
+export async function archiveTenderFromAnalysisAction(formData: FormData) {
+  await requireTenderCapability("procurement_initial");
+  const prisma = getPrisma();
+  const procurementId = Number(formData.get("procurementId"));
+  const actorName = normalizeString(formData.get("actorName")) ?? "Сотрудник";
+
+  if (!Number.isInteger(procurementId) || procurementId <= 0) {
+    redirect("/procurements/new");
+  }
+
+  await prisma.tenderProcurement.update({
+    where: { id: procurementId },
+    data: {
+      status: TenderProcurementStatus.ARCHIVED,
+    },
+  });
+
+  await logTenderEvent({
+    procurementId,
+    actionType: TenderActionType.STATUS_UPDATED,
+    title: "Закупка отправлена в архив",
+    description: "Карточка заархивирована после этапа анализа.",
+    actorName,
+    metadata: {
+      sourceStage: "analysis",
+      nextStage: "archived",
+    },
+  });
+
+  revalidateTenderRecognitionPaths(procurementId);
+  revalidateTenderPricingPaths(procurementId);
+  revalidatePath("/procurements/new");
+  revalidatePath("/procurements/pricing");
+  revalidatePath("/procurements");
+  redirect("/procurements/new");
+}
+
 export async function saveTenderPricingReviewAction(formData: FormData) {
   const procurementId = Number(formData.get("procurementId"));
   revalidateTenderRecognitionPaths(procurementId);
@@ -2722,7 +2759,7 @@ export async function rerunTenderSourceDocumentDeepAnalysisAction(formData: Form
     where: { id: sourceDocumentId },
     data: {
       contentSnippet: extraction.extractedText?.slice(0, 4000) ?? sourceDocument.contentSnippet,
-      note: `${extraction.extractionNote}\nФайл сохранён: ${storedPath}`,
+      note: `Доп. анализ запущен.\n${extraction.extractionNote}\nФайл сохранён: ${storedPath}`,
       status: extraction.extractedText
         ? TenderSourceDocumentStatus.READY_FOR_ANALYSIS
         : TenderSourceDocumentStatus.UPLOADED,
@@ -2733,7 +2770,7 @@ export async function rerunTenderSourceDocumentDeepAnalysisAction(formData: Form
     where: { id: procurementId },
     data: {
       sourceText: nextSourceText,
-      aiAnalysisStatus: "queued",
+      aiAnalysisStatus: "retrying",
       aiAnalysisError: null,
     },
   });
@@ -2757,6 +2794,7 @@ export async function rerunTenderSourceDocumentDeepAnalysisAction(formData: Form
 
   revalidatePath(`/procurements/recognition/${procurementId}`);
   revalidatePath("/procurements/new");
+  redirect(`/procurements/recognition/${procurementId}`);
 }
 
 export async function buildTenderSourceDocumentFieldsAction(formData: FormData) {

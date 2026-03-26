@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
-import { executeTenderPrimaryAnalysisJob } from "@/lib/tender-primary-analysis";
+import { enqueueTenderPrimaryAnalysisJob } from "@/lib/tender-primary-analysis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,10 +44,10 @@ export async function POST(request: Request) {
     );
   }
 
-  await executeTenderPrimaryAnalysisJob({
+  enqueueTenderPrimaryAnalysisJob({
     procurementId,
     sourceText: procurement.sourceText,
   });
 
-  return NextResponse.json({ ok: true, completed: true });
+  return NextResponse.json({ ok: true, started: true });
 }

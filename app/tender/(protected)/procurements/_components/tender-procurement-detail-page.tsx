@@ -124,9 +124,11 @@ function inferDocumentKind(
   documentKind?: string | null | undefined,
   formType?: string | null | undefined
 ) {
-  const haystack = normalizeSearchText(
-    `${title ?? ""} ${fileLabel ?? ""} ${extractStoredDocumentPath(note) ?? ""} ${contentSnippet ?? ""} ${documentKind ?? ""} ${formType ?? ""}`
+  const titleHaystack = normalizeSearchText(
+    `${title ?? ""} ${fileLabel ?? ""} ${extractStoredDocumentPath(note) ?? ""} ${documentKind ?? ""} ${formType ?? ""}`
   );
+  const contentHaystack = normalizeSearchText(contentSnippet ?? "");
+  const haystack = `${titleHaystack} ${contentHaystack}`.trim();
 
   if (formType === "PRICE_FORM") return "Ценовая таблица";
   if (formType === "TECHNICAL_SPEC") return "Товарная таблица";
@@ -137,26 +139,55 @@ function inferDocumentKind(
   if (formType === "DECLARATION") return "Декларация";
 
   if (
+    /проект договора|договор/i.test(titleHaystack) ||
+    /проект договора/i.test(String(documentKind ?? ""))
+  ) {
+    return "Договор";
+  }
+
+  if (
+    /техническ.*задан|тз|проектно-техническ|техническ.*част/i.test(titleHaystack) ||
+    /техническое задание/i.test(String(documentKind ?? ""))
+  ) {
+    return "ТЗ";
+  }
+
+  if (
+    /извещ/i.test(titleHaystack) ||
+    /документац.*закупк/i.test(titleHaystack) ||
+    /документ закупки/i.test(String(documentKind ?? ""))
+  ) {
+    return "Извещение";
+  }
+
+  if (/коммерческ/i.test(titleHaystack)) {
+    return "Коммерческая часть";
+  }
+
+  if (
+    /нмц|обоснован|ценов|калькул|стоим|price/i.test(titleHaystack) &&
+    /\.xls|\.xlsx/i.test(titleHaystack)
+  ) {
+    return "Ценовая таблица";
+  }
+
+  if (
     /компактная таблица позиций|позиции для анализа|наименован|ед\.? ?изм|колич|цена|сумм/i.test(
-      haystack
+      contentHaystack
     )
   ) {
-    if (/нмц|цена|стоим|итого|ндс|обеспеч|обоснован/i.test(haystack)) {
+    if (/нмц|цена|стоим|итого|ндс|обеспеч|обоснован/i.test(contentHaystack)) {
       return "Ценовая таблица";
     }
 
     return "Товарная таблица";
   }
 
-  if (haystack.includes("извещ")) return "Извещение";
-  if (haystack.includes("техническ") || haystack.includes("тз")) return "ТЗ";
-  if (haystack.includes("договор")) return "Договор";
-  if (haystack.includes("коммерчес")) return "Коммерческая часть";
-  if (haystack.includes("ценов")) return "Ценовая форма";
-  if (haystack.includes("заявк")) return "Форма заявки";
-  if (haystack.includes("нмц") || haystack.includes("обоснован")) return "НМЦК";
-  if (haystack.includes("специфик")) return "Спецификация";
-  if (haystack.includes("приложен")) return "Приложение";
+  if (titleHaystack.includes("ценов")) return "Ценовая форма";
+  if (titleHaystack.includes("заявк")) return "Форма заявки";
+  if (titleHaystack.includes("нмц") || titleHaystack.includes("обоснован")) return "НМЦК";
+  if (titleHaystack.includes("специфик")) return "Спецификация";
+  if (titleHaystack.includes("приложен")) return "Приложение";
   if (haystack.includes(".xlsx") || haystack.includes(".xls")) return "Таблица";
   if (haystack.includes(".pdf")) return "PDF";
   if (haystack.includes(".docx") || haystack.includes(".doc")) return "Документ";

@@ -673,6 +673,20 @@ export async function renderTenderRecognitionDetailPage({
           },
         },
       },
+      technicalItems: {
+        orderBy: [{ lineNumber: "asc" }, { id: "asc" }],
+        select: {
+          id: true,
+          lineNumber: true,
+          requestedName: true,
+          quantity: true,
+          unit: true,
+          identifiedProduct: true,
+          identifiedBrand: true,
+          identifiedModel: true,
+          approximateUnitPrice: true,
+        },
+      },
     },
   });
 
@@ -790,6 +804,48 @@ export async function renderTenderRecognitionDetailPage({
     procurement.itemsCount ?? 0,
     equipmentItems.length
   );
+  const positionRows =
+    procurement.technicalItems.length > 0
+      ? procurement.technicalItems.map((item, index) => {
+          const name =
+            item.identifiedProduct?.trim() ||
+            item.requestedName?.trim() ||
+            "Не определено";
+          const quantityLabel = item.quantity
+            ? `${item.quantity}${item.unit ? ` ${item.unit}` : ""}`
+            : "Не указано";
+          const details = [
+            item.identifiedBrand ? `Бренд: ${item.identifiedBrand}` : null,
+            item.identifiedModel ? `Модель: ${item.identifiedModel}` : null,
+          ]
+            .filter(Boolean)
+            .join(" • ");
+          const amountLabel = item.approximateUnitPrice
+            ? formatCurrency(item.approximateUnitPrice)
+            : equipmentCount <= 1 && procurement.nmckWithoutVat
+              ? formatCurrency(procurement.nmckWithoutVat)
+              : "Не выделено из НМЦК";
+
+          return {
+            key: `tech-${item.id}`,
+            index: item.lineNumber ?? index + 1,
+            name,
+            quantityLabel,
+            details,
+            amountLabel,
+          };
+        })
+      : equipmentItems.map((item, index) => ({
+          key: `ai-${index}`,
+          index: index + 1,
+          name: item,
+          quantityLabel: "Не указано",
+          details: "",
+          amountLabel:
+            equipmentItems.length <= 1 && procurement.nmckWithoutVat
+              ? formatCurrency(procurement.nmckWithoutVat)
+              : "Не выделено из НМЦК",
+        }));
   const stopFactorState = procurement.ruleMatches.length > 0 ? "stop" : "ok";
   const stopFactorTitle =
     stopFactorState === "stop"
@@ -1436,41 +1492,62 @@ export async function renderTenderRecognitionDetailPage({
             }
             goods={
               <div className="space-y-4">
-
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="text-base font-bold text-[#081a4b]">Позиции и оборудование</div>
-                    <div className="text-sm text-slate-500">
-                      Всего позиций: {equipmentCount > 0 ? equipmentCount : "не определено"}
+                    <div>
+                      <div className="text-base font-bold text-[#081a4b]">Позиции и оборудование</div>
+                      <div className="mt-1 text-sm text-slate-500">
+                        Всего позиций: {equipmentCount > 0 ? equipmentCount : "не определено"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="rounded-full bg-white px-3 py-1.5 text-slate-600">
+                        НМЦК: {formatCurrency(procurement.nmckWithoutVat)}
+                      </div>
+                      <Link
+                        href={equipmentHref}
+                        target="_blank"
+                        className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#081a4b] hover:border-slate-300 hover:bg-slate-100"
+                      >
+                        Открыть таблицу товаров
+                      </Link>
                     </div>
                   </div>
-                  {equipmentItems.length > 0 ? (
-                    <div className="mt-3 space-y-2">
-                      {equipmentItems.map((item, index) => (
-                        <div
-                          key={`${index + 1}-${item}`}
-                          className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700"
-                        >
-                          <span className="font-semibold text-[#081a4b]">{index + 1}.</span>{" "}
-                          {item}
-                        </div>
-                      ))}
+                  {positionRows.length > 0 ? (
+                    <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                      <table className="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead className="bg-slate-50 text-slate-600">
+                          <tr className="text-left">
+                            <th className="px-4 py-3 font-semibold">№</th>
+                            <th className="px-4 py-3 font-semibold">Позиция</th>
+                            <th className="px-4 py-3 font-semibold">Кол-во</th>
+                            <th className="px-4 py-3 font-semibold">Цена</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {positionRows.map((item) => (
+                            <tr key={item.key} className="align-top">
+                              <td className="px-4 py-3 font-semibold text-[#081a4b]">{item.index}</td>
+                              <td className="px-4 py-3">
+                                <div className="font-medium text-slate-800">{item.name}</div>
+                                {item.details ? (
+                                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                                    {item.details}
+                                  </div>
+                                ) : null}
+                              </td>
+                              <td className="px-4 py-3 text-slate-700">{item.quantityLabel}</td>
+                              <td className="px-4 py-3 text-slate-800">{item.amountLabel}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   ) : (
                     <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-600">
                       Система пока не смогла уверенно определить перечень оборудования.
                     </div>
                   )}
-
-                  <div className="mt-4">
-                    <Link
-                      href={equipmentHref}
-                      target="_blank"
-                      className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#081a4b] hover:border-slate-300 hover:bg-slate-100"
-                    >
-                      Открыть таблицу товаров
-                    </Link>
-                  </div>
                 </div>
 
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
@@ -1489,7 +1566,7 @@ export async function renderTenderRecognitionDetailPage({
                           }`}
                         >
                           <div className="font-semibold text-[#081a4b]">{item.title}</div>
-                          <div className="mt-1">{item.description}</div>
+                          <div className="mt-1 text-sm text-slate-600">{item.description}</div>
                           {item.documentId ? (
                             <div className="mt-2">
                               <a

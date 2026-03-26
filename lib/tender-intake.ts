@@ -331,11 +331,17 @@ function buildWorkbookPricingLines(headers: string[], rows: string[][]) {
 
   const pricingRows = rows.filter((row) => {
     const haystack = row.join(" | ").toLowerCase();
+    const hasNumericAmount = amountColumnCandidates.some((index) => {
+      const raw = row[index] ?? "";
+      const amount = parseWorkbookAmount(raw);
+      return Number.isFinite(amount) && (amount ?? 0) > 0;
+    });
     return (
       isWorkbookTotalRow(row) ||
-      /нмцк|нмцд|нмц|итого|всего|ндс|без ндс|с ндс|общая сумма|цена договора|цена лота/i.test(
-        haystack
-      )
+      (hasNumericAmount &&
+        /нмцк|нмцд|нмц|итого|всего|ндс|без ндс|с ндс|общая сумма|цена договора|цена лота|стоимость|руб/i.test(
+          haystack
+        ))
     );
   });
 

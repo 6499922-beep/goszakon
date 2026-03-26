@@ -369,12 +369,18 @@ async function persistQuickFallbackCompletion(input: {
     purchaseType: fallback.result.procurement_type?.trim() || procurement.purchaseType || null,
     title:
       procurement.title.startsWith("Закупка по файлам:") &&
-      (fallback.result.procurement_number?.trim() || fallback.result.summary?.trim())
+      (
+        fallback.result.procurement_number?.trim() ||
+        (fallback.result.summary?.trim() && !looksLikeRawWorkbookDump(fallback.result.summary))
+      )
         ? (fallback.result.procurement_number?.trim()
             ? `Закупка ${fallback.result.procurement_number.trim()}`
             : fallback.result.summary.trim().slice(0, 140))
         : procurement.title,
-    summary: fallback.result.summary || null,
+    summary:
+      fallback.result.summary && !looksLikeRawWorkbookDump(fallback.result.summary)
+        ? fallback.result.summary
+        : null,
     selectionCriteria: fallback.result.selection_criteria || null,
     deliveryTerms: fallback.result.delivery_terms || null,
     paymentTerms: fallback.result.payment_terms || null,
@@ -732,6 +738,18 @@ function buildSummaryFallback(sourceText: string) {
     .slice(0, 4);
 
   return paragraphs.join("\n\n").slice(0, 900).trim();
+}
+
+function looksLikeRawWorkbookDump(value: string | null | undefined) {
+  const normalized = String(value ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+  if (!normalized) return false;
+
+  return (
+    normalized.startsWith("файл: ") &&
+    normalized.includes("лист:") &&
+    normalized.includes("тип таблицы:") &&
+    normalized.includes("колонки:")
+  );
 }
 
 function buildSelectionCriteriaFallback(sourceText: string) {
@@ -1164,12 +1182,18 @@ export async function runTenderPrimaryAnalysis(input: {
       purchaseType: result.procurement_type?.trim() || procurement.purchaseType || null,
       title:
         procurement.title.startsWith("Закупка по файлам:") &&
-        (result.procurement_number?.trim() || result.summary?.trim())
+        (
+          result.procurement_number?.trim() ||
+          (result.summary?.trim() && !looksLikeRawWorkbookDump(result.summary))
+        )
           ? (result.procurement_number?.trim()
               ? `Закупка ${result.procurement_number.trim()}`
               : result.summary.trim().slice(0, 140))
           : procurement.title,
-      summary: result.summary || null,
+      summary:
+        result.summary && !looksLikeRawWorkbookDump(result.summary)
+          ? result.summary
+          : procurement.summary,
       selectionCriteria: result.selection_criteria || null,
       requiredDocuments: result.required_documents.length
         ? result.required_documents

@@ -91,7 +91,9 @@ function buildTerminationFallback(sourceText: string) {
 
 function extractFirstMoneyValue(value: string | null | undefined) {
   const text = String(value ?? "");
-  const matches = text.match(/-?\d{1,3}(?:[ \u00A0.,]\d{3})*(?:[.,]\d{1,2})?|-?\d+(?:[.,]\d{1,2})?/g);
+  const matches = text.match(
+    /-?\d{1,3}(?:[ \u00A0]\d{3})+(?:[.,]\d{1,2})?|-?\d{4,}(?:[.,]\d{1,2})?|-?\d+(?:[.,]\d{2})/g
+  );
   if (!matches || matches.length === 0) return null;
 
   const candidate = matches
@@ -123,6 +125,52 @@ function normalizeDecimalForDb(value: string | null | undefined) {
 
   normalized = normalized.replace(/(?!^)-/g, "");
   return /^-?\d+(?:\.\d{1,2})?$/.test(normalized) ? normalized : null;
+}
+
+function extractMoneyCandidates(value: string | null | undefined) {
+  const text = String(value ?? "");
+  if (!text) return [];
+
+  const matches =
+    text.match(
+      /-?\d{1,3}(?:[ \u00A0]\d{3})+(?:[.,]\d{1,2})?|-?\d{4,}(?:[.,]\d{1,2})?|-?\d+(?:[.,]\d{2})/g
+    ) ?? [];
+
+  const unique = new Map<string, number>();
+  for (const match of matches) {
+    const normalized = normalizeDecimalForDb(match);
+    if (!normalized) continue;
+    const numeric = Number(normalized);
+    if (!Number.isFinite(numeric) || numeric <= 0) continue;
+    unique.set(normalized, numeric);
+  }
+
+  return [...unique.entries()]
+    .sort((left, right) => right[1] - left[1])
+    .map(([normalized]) => normalized);
+}
+
+function choosePreferablePriceValue(aiValue: string | null | undefined, fallbackValue: string | null) {
+  const normalizedAi = normalizeDecimalForDb(aiValue);
+  const normalizedFallback = normalizeDecimalForDb(fallbackValue);
+
+  if (!normalizedAi) return normalizedFallback;
+  if (!normalizedFallback) return normalizedAi;
+
+  const aiNumeric = Number(normalizedAi);
+  const fallbackNumeric = Number(normalizedFallback);
+  if (!Number.isFinite(aiNumeric)) return normalizedFallback;
+  if (!Number.isFinite(fallbackNumeric)) return normalizedAi;
+
+  if (aiNumeric < 100 && fallbackNumeric > aiNumeric * 10) {
+    return normalizedFallback;
+  }
+
+  if (aiNumeric < 1000 && fallbackNumeric > aiNumeric * 100) {
+    return normalizedFallback;
+  }
+
+  return normalizedAi;
 }
 
 async function updateProcurementAnalysisSafely(
@@ -242,14 +290,11 @@ function buildPriceFallbackFromMentions(
 
   for (const mention of mentions) {
     const normalized = mention.toLowerCase();
-    const amounts =
-      mention
-        .match(/\d[\d\s]{0,30}(?:[.,]\d{1,2})?/g)
-        ?.map((item) => item.replace(/\s+/g, "").replace(",", ".").trim())
-        .filter((item) => /^\d+(?:\.\d{1,2})?$/.test(item)) ?? [];
+    const amounts = extractMoneyCandidates(mention);
     if (amounts.length === 0) continue;
-    const primaryAmount = amounts[0];
+    const primaryAmount = amounts[0] ?? null;
     const secondaryAmount = amounts[1] ?? null;
+    if (!primaryAmount) continue;
 
     if (!withoutVat && /без ндс|ндс не облага/i.test(normalized)) {
       withoutVat = primaryAmount;
@@ -709,9 +754,14 @@ export async function runTenderPrimaryAnalysis(input: {
   const bidSecurityFallback = buildSecurityFallback(dossier.security_mentions, "заявк");
   const contractSecurityFallback = buildSecurityFallback(dossier.security_mentions, "исполн");
   const procurementNumberFallback = buildProcurementNumberFallback(sourceText);
-  const nmckWithVatRaw = result.nmck_with_vat?.trim() || priceFallback.withVat || "";
-  const nmckWithoutVatRaw =
-    result.nmck_without_vat?.trim() || priceFallback.withoutVat || "";
+  const nmckWithVatRaw = choosePreferablePriceValue(
+    result.nmck_with_vat?.trim(),
+    priceFallback.withVat
+  );
+  const nmckWithoutVatRaw = choosePreferablePriceValue(
+    result.nmck_without_vat?.trim(),
+    priceFallback.withoutVat
+  );
   const nmckWithVatValue = normalizeDecimalForDb(nmckWithVatRaw);
   const nmckWithoutVatValue = normalizeDecimalForDb(
     nmckWithoutVatRaw
@@ -721,8 +771,8 @@ export async function runTenderPrimaryAnalysis(input: {
       sourceText,
       aiAnalysis: {
         ...result,
-        nmck_without_vat: result.nmck_without_vat?.trim() || priceFallback.withoutVat || "",
-        nmck_with_vat: result.nmck_with_vat?.trim() || priceFallback.withVat || "",
+        nmck_without_vat: nmckWithoutVatRaw || "",
+        nmck_with_vat: nmckWithVatRaw || "",
         price_tax_note: result.price_tax_note?.trim() || priceFallback.note || "",
         bid_security: result.bid_security?.trim() || bidSecurityFallback || "",
         contract_security: result.contract_security?.trim() || contractSecurityFallback || "",

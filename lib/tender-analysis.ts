@@ -373,7 +373,7 @@ async function runStructuredResponse<T>({
   prompt,
   schema,
   reasoningEffort = "high",
-  attempts = 1,
+  attempts = 4,
   timeoutMs = 60_000,
 }: {
   apiKey: string;
@@ -385,6 +385,13 @@ async function runStructuredResponse<T>({
   timeoutMs?: number;
 }) {
   let lastError: unknown = null;
+
+  const isRetryableStructuredError = (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error ?? "");
+    return /fetch failed|aborted due to timeout|timeout|OpenAI API error: (429|500|502|503|504)|server_error/i.test(
+      message
+    );
+  };
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
@@ -435,7 +442,8 @@ async function runStructuredResponse<T>({
     } catch (error) {
       lastError = error;
       if (attempt >= attempts) break;
-      await delay(attempt * 1200);
+      if (!isRetryableStructuredError(error)) break;
+      await delay(Math.min(12_000, 1_500 * 2 ** (attempt - 1)));
     }
   }
 

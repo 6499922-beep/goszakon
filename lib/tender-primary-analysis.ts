@@ -1290,11 +1290,19 @@ export async function executeTenderPrimaryAnalysisJob(input: {
       error instanceof Error ? error.message : "Не удалось выполнить первичный AI-анализ"
     );
 
+    const isRetryableAiError = /OpenAI API error: (429|500|502|503|504)|server_error|fetch failed/i.test(
+      message ?? ""
+    );
     const isTimeoutError = /слишком много времени|aborted due to timeout|timeout/i.test(
       message ?? ""
     );
-    const nextStatus = isTimeoutError ? "retrying" : "failed";
-    const nextError = isTimeoutError ? PRIMARY_ANALYSIS_TIMEOUT_TEXT : message;
+    const shouldRetry = isTimeoutError || isRetryableAiError;
+    const nextStatus = shouldRetry ? "retrying" : "failed";
+    const nextError = isTimeoutError
+      ? PRIMARY_ANALYSIS_TIMEOUT_TEXT
+      : isRetryableAiError
+        ? "Внешний AI-сервис временно ответил нестабильно. Система автоматически повторяет глубокий анализ."
+        : message;
 
     try {
       await prisma.tenderProcurement.update({
@@ -1316,6 +1324,8 @@ export async function executeTenderPrimaryAnalysisJob(input: {
       actionType: TenderActionType.NOTE_ADDED,
       title: isTimeoutError
         ? "Глубокий анализ переведён на повторный запуск"
+        : isRetryableAiError
+          ? "Глубокий анализ отправлен на повторный запуск"
         : "Первичный анализ не завершён",
       description:
         nextError ||
@@ -1325,7 +1335,7 @@ export async function executeTenderPrimaryAnalysisJob(input: {
       actorName: "AI",
     });
 
-    if (isTimeoutError) {
+    if (shouldRetry) {
       return { ok: true, retrying: true };
     }
 

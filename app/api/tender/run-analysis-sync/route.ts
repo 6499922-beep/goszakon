@@ -1,45 +1,9 @@
 import { NextResponse } from "next/server";
-import { spawn } from "node:child_process";
 import { getPrisma } from "@/lib/prisma";
+import { executeTenderPrimaryAnalysisJob } from "@/lib/tender-primary-analysis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function spawnTenderAnalysisSyncJob(procurementId: number) {
-  const internalToken = process.env.DATABASE_URL;
-  const port = process.env.PORT || "3000";
-  const script = `
-    (async () => {
-      try {
-        const response = await fetch("http://127.0.0.1:${port}/api/tender/run-analysis-sync", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-tender-internal-token": ${JSON.stringify(internalToken ?? "")}
-          },
-          body: JSON.stringify({ procurementId: ${procurementId} })
-        });
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error("[tender-run-analysis] sync runner failed: " + response.status + " " + text.slice(0, 400));
-        }
-        await response.text().catch(() => "");
-      } catch (error) {
-        console.error("[tender-run-analysis] detached sync runner failed", error);
-        process.exitCode = 1;
-      }
-    })();
-  `;
-
-  const child = spawn(process.execPath, ["-e", script], {
-    cwd: process.cwd(),
-    detached: true,
-    stdio: "ignore",
-    env: process.env,
-  });
-
-  child.unref();
-}
 
 export async function POST(request: Request) {
   const providedToken = request.headers.get("x-tender-internal-token");
@@ -80,7 +44,10 @@ export async function POST(request: Request) {
     );
   }
 
-  spawnTenderAnalysisSyncJob(procurementId);
+  await executeTenderPrimaryAnalysisJob({
+    procurementId,
+    sourceText: procurement.sourceText,
+  });
 
-  return NextResponse.json({ ok: true, started: true });
+  return NextResponse.json({ ok: true, completed: true });
 }

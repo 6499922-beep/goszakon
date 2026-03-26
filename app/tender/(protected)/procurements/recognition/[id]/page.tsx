@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { TenderProcurementChat } from "@/app/tender/_components/tender-procurement-chat";
 import { TenderRecognitionTabs } from "@/app/tender/_components/tender-recognition-tabs";
 import { rerunTenderSourceDocumentDeepAnalysisAction } from "@/app/tender/actions";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
@@ -576,6 +577,16 @@ export default async function TenderRecognitionDetailPage({
           contentSnippet: true,
         },
       },
+      stageComments: {
+        where: { stageKey: "gpt_chat" },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          body: true,
+          authorName: true,
+          createdAt: true,
+        },
+      },
       ruleMatches: {
         include: {
           rule: {
@@ -641,6 +652,13 @@ export default async function TenderRecognitionDetailPage({
       if (orderDiff !== 0) return orderDiff;
       return left.title.localeCompare(right.title, "ru");
     });
+  const procurementChatMessages = procurement.stageComments.map((item) => ({
+    id: item.id,
+    role: item.authorName === "GPT" ? ("assistant" as const) : ("user" as const),
+    authorName: item.authorName?.trim() || "Сотрудник",
+    body: item.body,
+    createdAt: item.createdAt.toISOString(),
+  }));
   const equipmentCount = Math.max(
     procurement.itemsCount ?? 0,
     equipmentItems.length
@@ -1200,6 +1218,12 @@ export default async function TenderRecognitionDetailPage({
                   )}
                 </div>
               </div>
+            }
+            chat={
+              <TenderProcurementChat
+                procurementId={procurement.id}
+                initialMessages={procurementChatMessages}
+              />
             }
           />
         </div>

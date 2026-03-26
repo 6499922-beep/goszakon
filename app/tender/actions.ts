@@ -45,6 +45,11 @@ import { extractTextFromTenderUpload as extractTextFromTenderUploadHelper } from
 
 const execFileAsync = promisify(execFile);
 
+function revalidateTenderRecognitionPaths(procurementId: number) {
+  revalidatePath(`/procurements/recognition/${procurementId}`);
+  revalidatePath(`/procurements/recognition/${procurementId}?stage=pricing`);
+}
+
 function extractRelevantParagraphs(sourceText: string, patterns: RegExp[], limit = 3) {
   const blocks = sourceText
     .split(/\n{2,}/)
@@ -1621,7 +1626,7 @@ export async function processQueuedTenderAnalysisAction(procurementId: number) {
     });
   }
 
-  revalidatePath(`/procurements/${procurementId}`);
+  revalidateTenderRecognitionPaths(procurementId);
   revalidatePath("/procurements");
   revalidatePath("/tender");
 }
@@ -1655,8 +1660,8 @@ export async function analyzeTenderProcurementAction(formData: FormData) {
     });
   }
 
-  revalidatePath(`/procurements/${procurementId}`);
-  redirect(`/procurements/${procurementId}`);
+  revalidateTenderRecognitionPaths(procurementId);
+  redirect(`/procurements/recognition/${procurementId}`);
 }
 
 export async function sendTenderToPricingAction(formData: FormData) {
@@ -1710,8 +1715,7 @@ export async function sendTenderToPricingAction(formData: FormData) {
     },
   });
 
-  revalidatePath(`/procurements/recognition/${procurementId}`);
-  revalidatePath(`/procurements/${procurementId}`);
+  revalidateTenderRecognitionPaths(procurementId);
   revalidatePath("/procurements");
   revalidatePath("/procurements/pricing");
   revalidatePath("/tender");
@@ -1777,7 +1781,7 @@ export async function saveTenderPricingReviewAction(formData: FormData) {
     },
   });
 
-  revalidatePath(`/procurements/${procurementId}`);
+  revalidateTenderRecognitionPaths(procurementId);
 }
 
 export async function saveTenderDecisionAction(formData: FormData) {
@@ -1836,7 +1840,7 @@ export async function saveTenderDecisionAction(formData: FormData) {
     },
   });
 
-  revalidatePath(`/procurements/${procurementId}`);
+  revalidateTenderRecognitionPaths(procurementId);
 }
 
 export async function markTenderDocumentsPreparedAction(formData: FormData) {
@@ -1861,7 +1865,7 @@ export async function markTenderDocumentsPreparedAction(formData: FormData) {
     actorName,
   });
 
-  revalidatePath(`/procurements/${procurementId}`);
+  revalidateTenderRecognitionPaths(procurementId);
 }
 
 export async function markTenderSubmittedAction(formData: FormData) {
@@ -1886,7 +1890,7 @@ export async function markTenderSubmittedAction(formData: FormData) {
     actorName,
   });
 
-  revalidatePath(`/procurements/${procurementId}`);
+  revalidateTenderRecognitionPaths(procurementId);
 }
 
 export async function updateTenderSubmissionDeskAction(formData: FormData) {

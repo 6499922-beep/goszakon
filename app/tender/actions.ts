@@ -1666,60 +1666,15 @@ export async function analyzeTenderProcurementAction(formData: FormData) {
 
 export async function sendTenderToPricingAction(formData: FormData) {
   await requireTenderCapability("procurement_initial");
-  const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
-  const actorName = normalizeString(formData.get("actorName")) ?? "Сотрудник";
 
   if (!Number.isInteger(procurementId) || procurementId <= 0) {
-    throw new Error("Некорректный идентификатор закупки.");
+    redirect("/procurements/new");
   }
-
-  const procurement = await prisma.tenderProcurement.findUnique({
-    where: { id: procurementId },
-    select: {
-      id: true,
-      aiAnalysisStatus: true,
-      status: true,
-      procurementNumber: true,
-      customerName: true,
-    },
-  });
-
-  if (!procurement) {
-    throw new Error("Закупка не найдена.");
-  }
-
-  if (procurement.aiAnalysisStatus !== "completed") {
-    throw new Error("Сначала дождитесь завершения первичного анализа.");
-  }
-
-  await prisma.tenderProcurement.update({
-    where: { id: procurementId },
-    data: {
-      status: TenderProcurementStatus.PRICING,
-    },
-  });
-
-  await logTenderEvent({
-    procurementId,
-    actionType: TenderActionType.STATUS_UPDATED,
-    title: "Закупка передана на предпросчёт",
-    description:
-      procurement.procurementNumber || procurement.customerName
-        ? `После проверки первого этапа закупка отправлена на следующий этап: предпросчёт.`
-        : "После проверки первого этапа закупка отправлена на следующий этап: предпросчёт.",
-    actorName,
-    metadata: {
-      fromStatus: procurement.status,
-      toStatus: TenderProcurementStatus.PRICING,
-    },
-  });
 
   revalidateTenderRecognitionPaths(procurementId);
-  revalidatePath("/procurements");
-  revalidatePath("/procurements/pricing");
-  revalidatePath("/tender");
-  redirect(`/procurements/pricing?uploaded=${procurementId}`);
+  revalidatePath("/procurements/new");
+  redirect(`/procurements/recognition/${procurementId}`);
 }
 
 export async function saveTenderPricingReviewAction(formData: FormData) {

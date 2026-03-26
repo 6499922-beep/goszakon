@@ -12,6 +12,10 @@ import { logTenderEvent } from "@/lib/tender-workflow";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function isArchiveFileName(fileName: string) {
+  return /\.(zip|rar|7z)$/i.test(fileName.trim());
+}
+
 export async function POST(request: Request) {
   try {
     const currentUser = await getCurrentTenderUser();
@@ -36,6 +40,17 @@ export async function POST(request: Request) {
     if (uploadedNames.length === 0) {
       return NextResponse.json(
         { ok: false, error: "Нужно выбрать хотя бы один документ." },
+        { status: 400 }
+      );
+    }
+
+    if (uploadedNames.some(isArchiveFileName)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Архивы ZIP/RAR/7Z загружать нельзя. Выбирайте только сами документы: PDF, DOC, DOCX, XLS, XLSX, TXT.",
+        },
         { status: 400 }
       );
     }

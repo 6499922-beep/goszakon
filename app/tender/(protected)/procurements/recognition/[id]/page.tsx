@@ -4,14 +4,12 @@ import { TenderProcurementChat } from "@/app/tender/_components/tender-procureme
 import { TenderRecognitionTabs } from "@/app/tender/_components/tender-recognition-tabs";
 import {
   rerunTenderSourceDocumentDeepAnalysisAction,
-  sendTenderToPricingAction,
 } from "@/app/tender/actions";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
 import { formatTenderMoscowFullDateTime } from "@/lib/tender-format";
 import { buildTenderCustomerHref } from "@/lib/tender-customers";
-import { TenderProcurementStatus } from "@prisma/client";
 
 function formatDateTime(value: Date | null | undefined) {
   return formatTenderMoscowFullDateTime(value);
@@ -688,19 +686,17 @@ export default async function TenderRecognitionDetailPage({
     stopFactorState === "stop"
       ? "border-rose-200 bg-rose-50 text-rose-800"
       : "border-emerald-200 bg-emerald-50 text-emerald-800";
-  const canSendToPricing = tenderHasCapability(currentUser.role, "procurement_initial");
-  const canOpenPricing = tenderHasCapability(currentUser.role, "procurement_pricing");
-  const isReadyForPricing = procurement.aiAnalysisStatus === "completed";
-  const isAlreadyOnPricing = procurement.status === TenderProcurementStatus.PRICING;
+  const backHref = "/procurements/new";
+  const backLabel = "Назад к заявкам";
 
   return (
     <main className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <Link
-          href="/procurements/new"
+          href={backHref}
           className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
         >
-          Назад к заявкам
+          {backLabel}
         </Link>
         <div className="text-sm text-slate-500">
           Добавлена: {formatDateTime(procurement.createdAt)}
@@ -715,40 +711,6 @@ export default async function TenderRecognitionDetailPage({
                 ? `Закупка № ${procurement.procurementNumber}`
                 : "Закупка без определённого номера"}
             </div>
-            <div className="mt-2 text-sm text-slate-500">
-              Этап 1: Анализ. Следующий этап: предпросчёт.
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {isAlreadyOnPricing && canOpenPricing ? (
-              <Link
-                href={`/procurements/${procurement.id}#pricing-review`}
-                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-300 hover:bg-sky-100"
-              >
-                Открыть этап просчёта
-              </Link>
-            ) : null}
-            {!isAlreadyOnPricing && isReadyForPricing && canSendToPricing ? (
-              <form action={sendTenderToPricingAction}>
-                <input type="hidden" name="procurementId" value={procurement.id} />
-                <input
-                  type="hidden"
-                  name="actorName"
-                  value={currentUser.name?.trim() || currentUser.email?.trim() || "Сотрудник"}
-                />
-                <button
-                  type="submit"
-                  className="inline-flex items-center rounded-full bg-[#0d5bd7] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0b4bb3]"
-                >
-                  Отправить на просчёт
-                </button>
-              </form>
-            ) : null}
-            {!isAlreadyOnPricing && !isReadyForPricing ? (
-              <div className="rounded-full bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700">
-                Сначала дождитесь завершения анализа
-              </div>
-            ) : null}
           </div>
         </div>
 

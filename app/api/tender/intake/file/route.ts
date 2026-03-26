@@ -15,6 +15,10 @@ import { tenderHasCapability } from "@/lib/tender-permissions";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function isArchiveFileName(fileName: string) {
+  return /\.(zip|rar|7z)$/i.test(fileName.trim());
+}
+
 export async function POST(request: Request) {
   try {
     const currentUser = await getCurrentTenderUser();
@@ -30,6 +34,17 @@ export async function POST(request: Request) {
     const rawFileName = request.headers.get("x-file-name")?.trim() || "document.bin";
     const fileName = decodeURIComponent(rawFileName);
     const fileType = request.headers.get("content-type")?.trim() || "";
+
+    if (isArchiveFileName(fileName)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Архивы ZIP/RAR/7Z загружать нельзя. Выбирайте только сами документы: PDF, DOC, DOCX, XLS, XLSX, TXT.",
+        },
+        { status: 400 }
+      );
+    }
 
     if (!Number.isInteger(procurementId) || procurementId <= 0) {
       return NextResponse.json(

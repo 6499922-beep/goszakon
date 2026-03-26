@@ -10,6 +10,7 @@ import { formatTenderMoscowShortDateTime } from "@/lib/tender-format";
 import { buildTenderCustomerHref } from "@/lib/tender-customers";
 
 export const dynamic = "force-dynamic";
+const STALE_ANALYSIS_MINUTES = 10;
 
 function formatCurrency(value: { toString(): string } | null | undefined) {
   if (value == null) return "Не определена";
@@ -91,6 +92,17 @@ function getRecognitionStatusMeta(
   };
 }
 
+function isStaleRunningAnalysis(status: string | null, updatedAt: Date) {
+  if (status !== "running") return false;
+
+  const ageMinutes = Math.max(
+    0,
+    Math.round((Date.now() - updatedAt.getTime()) / 60000)
+  );
+
+  return ageMinutes >= STALE_ANALYSIS_MINUTES;
+}
+
 function getRecognitionStatusNote(note: string) {
   const normalized = note.replace(/\s+/g, " ").trim();
   if (!normalized) return null;
@@ -144,8 +156,9 @@ export default async function NewTenderProcurementPage({
         status: true,
         aiAnalysisStatus: true,
         aiAnalysisError: true,
-      stopFactorsSummary: true,
-      createdAt: true,
+        stopFactorsSummary: true,
+        createdAt: true,
+        updatedAt: true,
     },
   });
   const inns = Array.from(
@@ -165,7 +178,11 @@ export default async function NewTenderProcurementPage({
     registryRecords.map((item) => [item.inn, { id: item.id, label: item.label }])
   );
   const firstQueuedProcurement =
-    recentProcurements.find((item) => item.aiAnalysisStatus === "queued") ?? null;
+    recentProcurements.find(
+      (item) =>
+        item.aiAnalysisStatus === "queued" ||
+        isStaleRunningAnalysis(item.aiAnalysisStatus, item.updatedAt)
+    ) ?? null;
   const queueRunnerProcurementId =
     uploadedProcurementId && Number.isInteger(uploadedProcurementId) && uploadedProcurementId > 0
       ? uploadedProcurementId

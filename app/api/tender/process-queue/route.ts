@@ -4,6 +4,19 @@ import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
 
+const STALE_ANALYSIS_MINUTES = 10;
+
+function isStaleRunningAnalysis(status: string | null, updatedAt: Date) {
+  if (status !== "running") return false;
+
+  const ageMinutes = Math.max(
+    0,
+    Math.round((Date.now() - updatedAt.getTime()) / 60000)
+  );
+
+  return ageMinutes >= STALE_ANALYSIS_MINUTES;
+}
+
 function spawnTenderAnalysisJob(procurementId: number) {
   const internalToken = process.env.DATABASE_URL;
   const port = process.env.PORT || "3000";
@@ -71,6 +84,7 @@ export async function POST(request: Request) {
       id: true,
       sourceText: true,
       aiAnalysisStatus: true,
+      updatedAt: true,
     },
   });
 
@@ -89,14 +103,33 @@ export async function POST(request: Request) {
     });
   }
 
+  if (procurement.aiAnalysisStatus === "completed") {
+    return NextResponse.json({
+      ok: true,
+      skipped: true,
+      reason: "completed",
+    });
+  }
+
   if (
-    procurement.aiAnalysisStatus === "running" ||
-    procurement.aiAnalysisStatus === "completed"
+    procurement.aiAnalysisStatus === "running" &&
+    !isStaleRunningAnalysis(procurement.aiAnalysisStatus, procurement.updatedAt)
   ) {
     return NextResponse.json({
       ok: true,
       skipped: true,
-      reason: procurement.aiAnalysisStatus,
+      reason: "running",
+    });
+  }
+
+  if (isStaleRunningAnalysis(procurement.aiAnalysisStatus, procurement.updatedAt)) {
+    await prisma.tenderProcurement.update({
+      where: { id: procurementId },
+      data: {
+        aiAnalysisStatus: "queued",
+        aiAnalysisError:
+          "Анализ завис и был автоматически поставлен на повторный запуск.",
+      },
     });
   }
 

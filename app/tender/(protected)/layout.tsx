@@ -90,7 +90,7 @@ export default async function TenderProtectedLayout({
             <div className="hidden rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 md:block">
               {currentUser
                 ? `${currentUser.name ?? currentUser.email} • ${tenderUserRoleLabels[currentUser.role]}`
-                : "MVP: анализ, предпросчет и сборка пакета"}
+                : "Тендерный кабинет"}
             </div>
 
             <form action="/logout" method="POST">

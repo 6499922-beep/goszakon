@@ -47,7 +47,6 @@ const execFileAsync = promisify(execFile);
 
 function revalidateTenderRecognitionPaths(procurementId: number) {
   revalidatePath(`/procurements/recognition/${procurementId}`);
-  revalidatePath(`/procurements/recognition/${procurementId}?stage=pricing`);
 }
 
 function extractRelevantParagraphs(sourceText: string, patterns: RegExp[], limit = 3) {
@@ -1678,65 +1677,10 @@ export async function sendTenderToPricingAction(formData: FormData) {
 }
 
 export async function saveTenderPricingReviewAction(formData: FormData) {
-  await requireTenderCapability("procurement_pricing");
-  const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
-  const actorName = normalizeString(formData.get("actorName")) ?? "AI/Сотрудник";
-  const pricingStatus = String(formData.get("pricingStatus") ?? "").trim() || null;
-  const approximatePurchasePrice = normalizeNumber(
-    formData.get("approximatePurchasePrice")
-  );
-  const sourceSummary = normalizeString(formData.get("sourceSummary"));
-  const aiComment = normalizeString(formData.get("aiComment"));
-  const sourceLinks = splitLines(formData.get("sourceLinks")) ?? [];
-
-  await prisma.tenderPricingReview.create({
-    data: {
-      procurementId,
-      approximatePurchasePrice,
-      pricingStatus,
-      sourceSummary,
-      aiComment,
-      sourceLinks,
-      createdBy: actorName,
-    },
-  });
-
-  await prisma.tenderProcurement.update({
-    where: { id: procurementId },
-    data: {
-      approximatePurchasePrice,
-      pricingComment: aiComment ?? sourceSummary,
-      pricingStatus,
-      pricingReviewedAt: new Date(),
-      status:
-        pricingStatus === "profitable"
-          ? TenderProcurementStatus.PRICING
-          : pricingStatus === "low_margin"
-            ? TenderProcurementStatus.PRICING
-            : TenderProcurementStatus.PRICING,
-    },
-  });
-
-  await logTenderEvent({
-    procurementId,
-    actionType: TenderActionType.PRICING_UPDATED,
-    title: "Предпросчёт обновлён",
-    description:
-      pricingStatus === "not_found"
-        ? "Цены не найдены, закупка требует ручной проверки."
-        : pricingStatus === "low_margin"
-          ? "Найденные цены дают низкую рентабельность."
-          : "Добавлен результат предпросчёта по закупке.",
-    actorName,
-    metadata: {
-      pricingStatus,
-      approximatePurchasePrice,
-      sourceLinksCount: sourceLinks.length,
-    },
-  });
-
   revalidateTenderRecognitionPaths(procurementId);
+  revalidatePath("/procurements/new");
+  redirect(`/procurements/recognition/${procurementId}`);
 }
 
 export async function saveTenderDecisionAction(formData: FormData) {

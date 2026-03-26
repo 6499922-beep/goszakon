@@ -78,9 +78,8 @@ export default async function TenderDashboardPage() {
               Обзор тендерного кабинета
             </h1>
             <p className="mt-4 max-w-3xl text-base leading-7 text-white/80">
-              Кабинет уже разделен на основные этапы вашей воронки: первичный
-              анализ, стоп-факторы, предпросчет, передача ответственному и сборка
-              комплекта документов на подачу.
+              Кабинет ведёт закупку от загрузки документов и первичного анализа
+              до проверки правил, карточки закупки и дальнейшей передачи по процессу.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
@@ -239,7 +238,7 @@ export default async function TenderDashboardPage() {
                 Rule engine со стоп-факторами и blacklist по ИНН/брендам
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                Передача в предпросчет и чек-лист комплекта документов
+                Передача по этапам и рабочая карточка закупки
               </div>
             </div>
           </div>

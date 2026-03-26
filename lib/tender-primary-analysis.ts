@@ -949,55 +949,23 @@ export async function runTenderPrimaryAnalysis(input: {
   let result;
   let dossier;
   let documentCoverage: unknown[] = [];
-  let usedFallbackAnalysis = false;
-
-  try {
-    const analysisResponse = await withAnalysisRetry("основной AI-анализ", () =>
-      runTenderAiAnalysis({
-        title: procurement.title,
-        customerName: procurement.customerName,
-        customerInn: procurement.customerInn,
-        procurementNumber: procurement.procurementNumber,
-        platform: procurement.platform,
-        itemsCount: procurement.itemsCount,
-        nmckWithoutVat: procurement.nmckWithoutVat?.toString() ?? null,
-        sourceText,
-      })
-    );
-
-    model = analysisResponse.model;
-    result = analysisResponse.result;
-    dossier = analysisResponse.dossier;
-    documentCoverage = analysisResponse.documentCoverage ?? [];
-  } catch (error) {
-    const fallback = buildQuickTenderFallback({
-      procurement: {
-        procurementNumber: procurement.procurementNumber,
-        customerName: procurement.customerName,
-        customerInn: procurement.customerInn,
-        platform: procurement.platform,
-        itemsCount: procurement.itemsCount,
-        nmckWithoutVat: procurement.nmckWithoutVat,
-        title: procurement.title,
-      },
+  const analysisResponse = await withAnalysisRetry("основной AI-анализ", () =>
+    runTenderAiAnalysis({
+      title: procurement.title,
+      customerName: procurement.customerName,
+      customerInn: procurement.customerInn,
+      procurementNumber: procurement.procurementNumber,
+      platform: procurement.platform,
+      itemsCount: procurement.itemsCount,
+      nmckWithoutVat: procurement.nmckWithoutVat?.toString() ?? null,
       sourceText,
-    });
+    })
+  );
 
-    model = "quick-fallback";
-    result = fallback.result;
-    dossier = fallback.dossier;
-    documentCoverage = [];
-    usedFallbackAnalysis = true;
-
-    await logTenderEvent({
-      procurementId,
-      actionType: TenderActionType.NOTE_ADDED,
-      title: "Глубокий анализ не успел завершиться",
-      description:
-        "Система автоматически сохранила быстрый результат по ключевым данным закупки и продолжит работать без ручного вмешательства.",
-      actorName: "AI",
-    });
-  }
+  model = analysisResponse.model;
+  result = analysisResponse.result;
+  dossier = analysisResponse.dossier;
+  documentCoverage = analysisResponse.documentCoverage ?? [];
 
   const fasPromptConfig = await prisma.tenderPromptConfig.findUnique({
     where: { key: TenderPromptConfigKey.FAS_POTENTIAL_COMPLAINT },
@@ -1024,9 +992,6 @@ export async function runTenderPrimaryAnalysis(input: {
     | null = null;
 
   try {
-    if (usedFallbackAnalysis) {
-      throw new Error("skip_fas_for_quick_fallback");
-    }
     const fasResponse = await withAnalysisRetry("ФАС-аналитика", () =>
       runTenderFasAiAnalysis({
         title: procurement.title,
@@ -1328,17 +1293,8 @@ export async function executeTenderPrimaryAnalysisJob(input: {
     const isTimeoutError = /слишком много времени|aborted due to timeout|timeout/i.test(
       message ?? ""
     );
-    const nextStatus = isTimeoutError ? "completed" : "failed";
-    const nextError = isTimeoutError ? null : message;
-
-    if (isTimeoutError) {
-      await persistQuickFallbackCompletion({
-        prisma,
-        procurementId,
-        sourceText: input.sourceText,
-      });
-      return { ok: true, fallback: true };
-    }
+    const nextStatus = isTimeoutError ? "retrying" : "failed";
+    const nextError = isTimeoutError ? PRIMARY_ANALYSIS_TIMEOUT_TEXT : message;
 
     try {
       await prisma.tenderProcurement.update({
@@ -1359,7 +1315,7 @@ export async function executeTenderPrimaryAnalysisJob(input: {
       procurementId,
       actionType: TenderActionType.NOTE_ADDED,
       title: isTimeoutError
-        ? "Первичный анализ поставлен на повторный запуск"
+        ? "Глубокий анализ переведён на повторный запуск"
         : "Первичный анализ не завершён",
       description:
         nextError ||
@@ -1368,6 +1324,10 @@ export async function executeTenderPrimaryAnalysisJob(input: {
           : "Не удалось выполнить первичный AI-анализ"),
       actorName: "AI",
     });
+
+    if (isTimeoutError) {
+      return { ok: true, retrying: true };
+    }
 
     throw error;
   }

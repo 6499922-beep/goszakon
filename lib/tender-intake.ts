@@ -199,6 +199,16 @@ function isNumericLikeCell(value: string) {
   return /^\d+(?:[.,]\d+)?$/.test(value.replace(/\s+/g, ""));
 }
 
+function isLikelyWorkbookDataRow(row: string[]) {
+  const nonEmpty = row.filter((cell) => cell.length > 0);
+  if (nonEmpty.length < 3) return false;
+
+  const numericCells = nonEmpty.filter(isNumericLikeCell).length;
+  const longTextCells = nonEmpty.filter((cell) => /[а-яa-z]/i.test(cell) && cell.length >= 12).length;
+
+  return numericCells >= 2 && longTextCells >= 1;
+}
+
 function findFirstLikelyDataRowIndex(rows: string[][]) {
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
@@ -208,7 +218,7 @@ function findFirstLikelyDataRowIndex(rows: string[][]) {
     const numericCells = nonEmpty.filter(isNumericLikeCell).length;
     const firstCell = row[0] ?? "";
 
-    if (isNumericLikeCell(firstCell) && numericCells >= 3) {
+    if ((isNumericLikeCell(firstCell) && numericCells >= 2) || isLikelyWorkbookDataRow(row)) {
       return index;
     }
   }
@@ -248,6 +258,19 @@ function getWorkbookColumnIndexes(headers: string[]) {
     price: findIndex(/цена|стоим.*ед|unit.?price|за единиц/i),
     amount: findIndex(/сумм|стоим(?!.*ед)|итого|total/i),
   };
+}
+
+function inferWorkbookHeadersFromDataRow(row: string[]) {
+  return row.map((cell, index) => {
+    const normalized = cell.trim();
+    if (index === 0 && isNumericLikeCell(normalized)) return "№";
+    if (index === 1 && /[а-яa-z]/i.test(normalized) && normalized.length >= 8) return "Наименование";
+    if (index === 2 && normalized.length <= 10 && /[а-яa-z]/i.test(normalized)) return "Ед. изм.";
+    if (index === 3 && isNumericLikeCell(normalized)) return "Количество";
+    if (index === 4 && isNumericLikeCell(normalized)) return "Цена";
+    if (index === 5 && isNumericLikeCell(normalized)) return "Сумма";
+    return `Колонка ${index + 1}`;
+  });
 }
 
 function buildWorkbookTableLines(headers: string[], rows: string[][]) {
@@ -343,13 +366,20 @@ function extractStructuredTextFromWorkbook(buffer: Buffer) {
     }
 
     const firstDataRowIndex = findFirstLikelyDataRowIndex(rows);
+    const headerlessTable = firstDataRowIndex === 0 && isLikelyWorkbookDataRow(rows[0] ?? []);
     const headerRows =
-      firstDataRowIndex && firstDataRowIndex > 0
+      !headerlessTable && firstDataRowIndex && firstDataRowIndex > 0
         ? rows.slice(0, firstDataRowIndex)
         : [rows[chooseHeaderRowIndex(rows)]];
-    const headers = mergeHeaderRows(headerRows);
+    const headers = headerlessTable
+      ? inferWorkbookHeadersFromDataRow(rows[0] ?? [])
+      : mergeHeaderRows(headerRows);
     const dataRows = rows
-      .slice(firstDataRowIndex ?? chooseHeaderRowIndex(rows) + 1)
+      .slice(
+        headerlessTable
+          ? 0
+          : firstDataRowIndex ?? chooseHeaderRowIndex(rows) + 1
+      )
       .filter((row) => row.some((cell) => cell.length > 0))
       .slice(0, 80);
 
@@ -361,7 +391,7 @@ function extractStructuredTextFromWorkbook(buffer: Buffer) {
     const positionLines = collectWorkbookPositionLines(headers, dataRows);
     const tableLines = buildWorkbookTableLines(headers, dataRows);
 
-    if (dataRows.length > 0) {
+    if (dataRows.length > 0 && tableLines.length === 0) {
       summaryLines.push("Строки таблицы:");
       dataRows.forEach((row, rowIndex) => {
         const pairs = headers

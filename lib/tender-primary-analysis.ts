@@ -91,30 +91,40 @@ function buildTerminationFallback(sourceText: string) {
 
 function extractFirstMoneyValue(value: string | null | undefined) {
   const text = String(value ?? "");
-  const matches = text.match(/\d[\d\s]{0,30}(?:[.,]\d{1,2})?/g);
+  const matches = text.match(/-?\d{1,3}(?:[ \u00A0.,]\d{3})*(?:[.,]\d{1,2})?|-?\d+(?:[.,]\d{1,2})?/g);
   if (!matches || matches.length === 0) return null;
 
   const candidate = matches
-    .map((item) => item.replace(/\s+/g, "").replace(",", ".").trim())
-    .find((item) => /^\d+(?:\.\d{1,2})?$/.test(item));
+    .map((item) => normalizeDecimalForDb(item))
+    .find(Boolean);
 
-  return candidate ?? null;
+  return candidate || null;
 }
 
 function normalizeDecimalForDb(value: string | null | undefined) {
   const text = String(value ?? "").trim();
   if (!text) return null;
 
-  const directCandidate = text
-    .replace(/[^\d.,-]/g, "")
-    .replace(/\s+/g, "")
-    .trim();
+  const compact = text.replace(/[^\d,.\- ]/g, "").replace(/\s+/g, "").trim();
+  if (!compact) return null;
 
-  const candidate = extractFirstMoneyValue(directCandidate || text);
-  if (!candidate) return null;
+  const lastComma = compact.lastIndexOf(",");
+  const lastDot = compact.lastIndexOf(".");
+  const decimalIndex = Math.max(lastComma, lastDot);
 
-  const normalized = candidate.replace(/\s+/g, "").replace(",", ".").trim();
-  return /^\d+(?:\.\d{1,2})?$/.test(normalized) ? normalized : null;
+  let normalized = compact;
+
+  if (decimalIndex >= 0) {
+    const integerPart = compact.slice(0, decimalIndex).replace(/[.,]/g, "");
+    const fractionalPart = compact.slice(decimalIndex + 1).replace(/[^\d]/g, "");
+
+    normalized = fractionalPart.length > 0 ? `${integerPart}.${fractionalPart}` : integerPart;
+  } else {
+    normalized = compact.replace(/[.,]/g, "");
+  }
+
+  normalized = normalized.replace(/(?!^)-/g, "");
+  return /^-?\d+(?:\.\d{1,2})?$/.test(normalized) ? normalized : null;
 }
 
 async function updateProcurementAnalysisSafely(

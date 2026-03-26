@@ -74,6 +74,7 @@ export function TenderProcurementChat({
   const [procurementOnlyMode, setProcurementOnlyMode] = useState(false);
   const [isPending, startTransition] = useTransition();
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const endRef = useRef<HTMLDivElement | null>(null);
 
   const hasMessages = messages.length > 0;
   const sortedMessages = useMemo(
@@ -111,6 +112,10 @@ export function TenderProcurementChat({
       procurementOnlyMode ? "procurement-only" : "web-default"
     );
   }, [procurementOnlyMode, storageKey]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [sortedMessages, isPending]);
 
   function askQuestion(question: string) {
     if (isPending) return;
@@ -292,6 +297,15 @@ export function TenderProcurementChat({
             <textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  const form = event.currentTarget.form;
+                  if (form && draft.trim() && !isPending) {
+                    form.requestSubmit();
+                  }
+                }
+              }}
               rows={3}
               placeholder="Напиши вопрос по этой закупке..."
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#0d5bd7] focus:ring-2 focus:ring-[#0d5bd7]/10"
@@ -314,6 +328,9 @@ export function TenderProcurementChat({
               ))}
             </div>
             <div className="flex items-center justify-between gap-3">
+              <div className="text-xs text-slate-400">
+                Enter — отправить, Shift + Enter — новая строка
+              </div>
               <button
                 type="submit"
                 disabled={isPending || !draft.trim()}
@@ -329,6 +346,7 @@ export function TenderProcurementChat({
           Чат свёрнут. Разверни панель, чтобы задать вопрос по этой закупке.
         </div>
       )}
+      <div ref={endRef} />
     </aside>
   );
 }

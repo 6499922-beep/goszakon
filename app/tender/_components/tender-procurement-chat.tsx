@@ -197,15 +197,30 @@ export function TenderProcurementChat({
               </button>
             ))}
           </div>
-          <label className="mt-3 flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            <input
-              type="checkbox"
-              checked={procurementOnlyMode}
-              onChange={(event) => setProcurementOnlyMode(event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-[#0d5bd7] focus:ring-[#0d5bd7]"
-            />
-            <span>Только по этой закупке, без интернет-поиска</span>
-          </label>
+          <div className="mt-3 inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1">
+            <button
+              type="button"
+              onClick={() => setProcurementOnlyMode(false)}
+              className={`rounded-2xl px-3 py-2 text-sm font-medium transition ${
+                !procurementOnlyMode
+                  ? "bg-[#0d5bd7] text-white shadow-sm"
+                  : "text-slate-600 hover:bg-white"
+              }`}
+            >
+              Интернет + закупка
+            </button>
+            <button
+              type="button"
+              onClick={() => setProcurementOnlyMode(true)}
+              className={`rounded-2xl px-3 py-2 text-sm font-medium transition ${
+                procurementOnlyMode
+                  ? "bg-[#0d5bd7] text-white shadow-sm"
+                  : "text-slate-600 hover:bg-white"
+              }`}
+            >
+              Только закупка
+            </button>
+          </div>
           <div
             ref={viewportRef}
             className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3"

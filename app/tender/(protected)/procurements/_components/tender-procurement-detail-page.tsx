@@ -84,20 +84,35 @@ function extractLastPathSegment(value: string | null | undefined) {
   return parts[parts.length - 1] ?? normalized;
 }
 
+function cleanDocumentDisplayName(value: string | null | undefined) {
+  const normalized = extractLastPathSegment(value)
+    .replace(/^[^/]+\.zip\s*\/\s*/i, "")
+    .replace(/^[^/]+\.rar\s*\/\s*/i, "")
+    .replace(/^\d{8,}(?:[-_]\d+)+[-_]?/i, "")
+    .replace(/^\d{6,}[-_]/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return normalized || "Документ";
+}
+
 function buildCompactDocumentName(
   title: string | null | undefined,
   fileLabel: string | null | undefined,
   note: string | null | undefined
 ) {
   const storedPath = extractStoredDocumentPath(note);
-  const storedName = extractLastPathSegment(storedPath);
-  const label = extractLastPathSegment(fileLabel);
-  const display = storedName || label || String(title ?? "").trim() || "Документ";
+  const storedName = cleanDocumentDisplayName(storedPath);
+  const label = cleanDocumentDisplayName(fileLabel);
+  const titleLabel = cleanDocumentDisplayName(title);
+  const display =
+    (titleLabel && titleLabel !== "Документ" ? titleLabel : null) ||
+    (label && label !== "Документ" ? label : null) ||
+    (storedName && storedName !== "Документ" ? storedName : null) ||
+    "Документ";
 
   return display
     .replace(/\.(docx|doc|xlsx|xls|pdf|txt)$/i, (match) => match.toLowerCase())
-    .replace(/^[^/]+\.zip\s*\/\s*/i, "")
-    .replace(/^[^/]+\.rar\s*\/\s*/i, "")
     .trim();
 }
 
@@ -174,6 +189,33 @@ function getDocumentKindOrder(kindLabel: string) {
       return 11;
     default:
       return 20;
+  }
+}
+
+function getDocumentSectionMeta(kindLabel: string) {
+  switch (kindLabel) {
+    case "Извещение":
+    case "Документ":
+    case "PDF":
+      return { key: "notice", title: "Извещение и документация", order: 1 };
+    case "ТЗ":
+    case "Товарная таблица":
+    case "Спецификация":
+      return { key: "technical", title: "Техническое задание", order: 2 };
+    case "Договор":
+      return { key: "contract", title: "Договор", order: 3 };
+    case "НМЦК":
+    case "Ценовая таблица":
+    case "Ценовая форма":
+    case "Коммерческая часть":
+      return { key: "pricing", title: "НМЦК и цены", order: 4 };
+    case "Форма заявки":
+    case "Техническое предложение":
+    case "Анкета":
+    case "Декларация":
+      return { key: "forms", title: "Формы заказчика", order: 5 };
+    default:
+      return { key: "other", title: "Приложения и прочее", order: 6 };
   }
 }
 
@@ -793,6 +835,27 @@ export async function renderTenderRecognitionDetailPage({
       if (orderDiff !== 0) return orderDiff;
       return left.title.localeCompare(right.title, "ru");
     });
+  const sourceDocumentSections = Array.from(
+    finalSourceDocuments.reduce((accumulator, item) => {
+      const section = getDocumentSectionMeta(item.kindLabel);
+      const existing = accumulator.get(section.key);
+
+      if (existing) {
+        existing.items.push(item);
+        return accumulator;
+      }
+
+      accumulator.set(section.key, {
+        key: section.key,
+        title: section.title,
+        order: section.order,
+        items: [item],
+      });
+      return accumulator;
+    }, new Map<string, { key: string; title: string; order: number; items: typeof finalSourceDocuments }>())
+  )
+    .map(([, value]) => value)
+    .sort((left, right) => left.order - right.order);
   const procurementChatMessages = procurement.stageComments.map((item) => ({
     id: item.id,
     role: item.authorName === "GPT" ? ("assistant" as const) : ("user" as const),
@@ -1324,7 +1387,12 @@ export async function renderTenderRecognitionDetailPage({
               <div className="space-y-4">
                 <div id="documents-list" className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="text-base font-bold text-[#081a4b]">Документы, которые система анализировала</div>
+                    <div>
+                      <div className="text-base font-bold text-[#081a4b]">Файлы закупки</div>
+                      <div className="mt-1 text-sm text-slate-500">
+                        Документы сгруппированы по разделам закупки и всегда доступны для открытия.
+                      </div>
+                    </div>
                     <div className="text-sm text-slate-500">
                       {finalSourceDocuments.length > 0
                         ? `Файлов: ${finalSourceDocuments.length}`
@@ -1332,102 +1400,113 @@ export async function renderTenderRecognitionDetailPage({
                     </div>
                   </div>
                   {finalSourceDocuments.length > 0 ? (
-                    <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                      <table className="min-w-full divide-y divide-slate-200 text-sm">
-                        <thead className="bg-slate-50 text-left text-slate-500">
-                          <tr>
-                            <th className="px-4 py-3 font-medium">Тип</th>
-                            <th className="px-4 py-3 font-medium">Документ</th>
-                            <th className="px-4 py-3 font-medium">Статус</th>
-                            <th className="px-4 py-3 font-medium">Участие в анализе</th>
-                            <th className="px-4 py-3 text-right font-medium">Открыть</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200 bg-white">
-                          {finalSourceDocuments.map((item, index) => (
-                            <tr key={`${item.title}-${index}`} className="align-top">
-                              <td className="px-4 py-4">
-                                <span className="rounded-full bg-[#081a4b]/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#081a4b]">
-                                  {item.kindLabel}
-                                </span>
-                              </td>
-                              <td className="px-4 py-4">
-                                {item.href ? (
-                                  <a
-                                    href={item.href}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="block max-w-[520px] text-sm font-semibold text-[#081a4b] underline-offset-2 hover:text-[#0b2a72] hover:underline"
-                                    title={item.title}
-                                  >
-                                    {item.title}
-                                  </a>
-                                ) : (
-                                  <div
-                                    className="max-w-[520px] text-sm font-semibold text-[#081a4b]"
-                                    title={item.title}
-                                  >
-                                    {item.title}
-                                  </div>
-                                )}
-                              </td>
-                              <td className="px-4 py-4">
-                                <span
-                                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                    item.status.tone === "success"
-                                      ? "bg-emerald-100 text-emerald-700"
-                                      : item.status.tone === "warning"
-                                        ? "bg-amber-100 text-amber-700"
-                                        : "bg-slate-100 text-slate-600"
-                                  }`}
-                                >
-                                  {item.status.label}
-                                </span>
-                                <div className="mt-1 max-w-[360px] text-xs leading-5 text-slate-500">
-                                  {item.status.description}
-                                </div>
-                              </td>
-                              <td className="px-4 py-4">
-                                <span
-                                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                    item.coverage.included
-                                      ? "bg-[#0d5bd7]/10 text-[#0d5bd7]"
-                                      : "bg-slate-100 text-slate-600"
-                                  }`}
-                                >
-                                  {item.coverage.label}
-                                </span>
-                                <div className="mt-1 max-w-[360px] text-xs leading-5 text-slate-500">
-                                  {item.coverage.description}
-                                </div>
-                              </td>
-                              <td className="px-4 py-4 text-right">
-                                <div className="flex flex-col items-end gap-2">
-                                  {item.href ? (
-                                    <a
-                                      href={item.href}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#081a4b] transition hover:border-slate-300 hover:bg-slate-50 hover:text-[#0b2a72]"
+                    <div className="mt-4 space-y-4">
+                      {sourceDocumentSections.map((section) => (
+                        <div
+                          key={section.key}
+                          className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+                        >
+                          <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+                            <div className="text-sm font-semibold text-[#081a4b]">{section.title}</div>
+                            <div className="text-xs font-medium text-slate-500">
+                              {section.items.length} {section.items.length === 1 ? "файл" : section.items.length < 5 ? "файла" : "файлов"}
+                            </div>
+                          </div>
+                          <table className="min-w-full divide-y divide-slate-200 text-sm">
+                            <thead className="bg-white text-left text-slate-500">
+                              <tr>
+                                <th className="px-4 py-3 font-medium">Документ</th>
+                                <th className="px-4 py-3 font-medium">Статус</th>
+                                <th className="px-4 py-3 font-medium">Участие в анализе</th>
+                                <th className="px-4 py-3 text-right font-medium">Открыть</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200 bg-white">
+                              {section.items.map((item, index) => (
+                                <tr key={`${section.key}-${item.title}-${index}`} className="align-top">
+                                  <td className="px-4 py-4">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="rounded-full bg-[#081a4b]/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#081a4b]">
+                                        {item.kindLabel}
+                                      </span>
+                                      {item.href ? (
+                                        <a
+                                          href={item.href}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-sm font-semibold text-[#081a4b] underline-offset-2 hover:text-[#0b2a72] hover:underline"
+                                          title={item.title}
+                                        >
+                                          {item.title}
+                                        </a>
+                                      ) : (
+                                        <span className="text-sm font-semibold text-[#081a4b]" title={item.title}>
+                                          {item.title}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-4">
+                                    <span
+                                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                        item.status.tone === "success"
+                                          ? "bg-emerald-100 text-emerald-700"
+                                          : item.status.tone === "warning"
+                                            ? "bg-amber-100 text-amber-700"
+                                            : "bg-slate-100 text-slate-600"
+                                      }`}
                                     >
-                                      Открыть
-                                    </a>
-                                  ) : (
-                                    <span className="text-xs text-slate-400">Нет ссылки</span>
-                                  )}
-                                  {item.status.label !== "Текст извлечён" ? (
-                                    <TenderSourceDocumentRerunButton
-                                      sourceDocumentId={item.id}
-                                      procurementId={procurement.id}
-                                      actorName={actorName}
-                                    />
-                                  ) : null}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                                      {item.status.label}
+                                    </span>
+                                    <div className="mt-1 max-w-[360px] text-xs leading-5 text-slate-500">
+                                      {item.status.description}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-4">
+                                    <span
+                                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                        item.coverage.included
+                                          ? "bg-[#0d5bd7]/10 text-[#0d5bd7]"
+                                          : item.coverage.label === "Идёт доп. анализ"
+                                            ? "bg-amber-100 text-amber-700"
+                                            : "bg-slate-100 text-slate-600"
+                                      }`}
+                                    >
+                                      {item.coverage.label}
+                                    </span>
+                                    <div className="mt-1 max-w-[360px] text-xs leading-5 text-slate-500">
+                                      {item.coverage.description}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-4 text-right">
+                                    <div className="flex flex-col items-end gap-2">
+                                      {item.href ? (
+                                        <a
+                                          href={item.href}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#081a4b] transition hover:border-slate-300 hover:bg-slate-50 hover:text-[#0b2a72]"
+                                        >
+                                          Открыть
+                                        </a>
+                                      ) : (
+                                        <span className="text-xs text-slate-400">Нет ссылки</span>
+                                      )}
+                                      {item.status.label !== "Текст извлечён" ? (
+                                        <TenderSourceDocumentRerunButton
+                                          sourceDocumentId={item.id}
+                                          procurementId={procurement.id}
+                                          actorName={actorName}
+                                        />
+                                      ) : null}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <div className="mt-3 text-sm leading-6 text-slate-600">

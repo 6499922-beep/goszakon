@@ -71,7 +71,7 @@ export function TenderProcurementChat({
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [useWebSearch, setUseWebSearch] = useState(false);
+  const [procurementOnlyMode, setProcurementOnlyMode] = useState(false);
   const [isPending, startTransition] = useTransition();
   const viewportRef = useRef<HTMLDivElement | null>(null);
 
@@ -117,7 +117,7 @@ export function TenderProcurementChat({
           body: JSON.stringify({
             procurementId,
             message: question,
-            useWebSearch,
+            useWebSearch: !procurementOnlyMode,
           }),
         });
 
@@ -200,11 +200,11 @@ export function TenderProcurementChat({
           <label className="mt-3 flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
             <input
               type="checkbox"
-              checked={useWebSearch}
-              onChange={(event) => setUseWebSearch(event.target.checked)}
+              checked={procurementOnlyMode}
+              onChange={(event) => setProcurementOnlyMode(event.target.checked)}
               className="h-4 w-4 rounded border-slate-300 text-[#0d5bd7] focus:ring-[#0d5bd7]"
             />
-            <span>Искать в интернете, если это нужно для ответа</span>
+            <span>Только по этой закупке, без интернет-поиска</span>
           </label>
           <div
             ref={viewportRef}

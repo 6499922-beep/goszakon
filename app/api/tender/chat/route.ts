@@ -199,7 +199,7 @@ ${message}
         },
         ...(useWebSearch
           ? {
-              tools: [{ type: "web_search_preview" }],
+              tools: [{ type: "web_search" }],
             }
           : {}),
         input: [

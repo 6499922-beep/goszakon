@@ -131,22 +131,54 @@ function extractMoneyCandidates(value: string | null | undefined) {
   const text = String(value ?? "");
   if (!text) return [];
 
-  const matches =
-    text.match(
-      /-?\d{1,3}(?:[ \u00A0]\d{3})+(?:[.,]\d{1,2})?|-?\d{4,}(?:[.,]\d{1,2})?|-?\d+(?:[.,]\d{2})/g
-    ) ?? [];
+  const moneyPattern =
+    /-?\d{1,3}(?:[ \u00A0.,]\d{3})+(?:[.,]\d{1,2})?|-?\d{4,}(?:[.,]\d{1,2})?|-?\d+(?:[.,]\d{2})/g;
+  const unique = new Map<string, { numeric: number; score: number }>();
 
-  const unique = new Map<string, number>();
-  for (const match of matches) {
-    const normalized = normalizeDecimalForDb(match);
+  for (const match of text.matchAll(moneyPattern)) {
+    const raw = match[0];
+    if (!raw) continue;
+    if (/^\d{1,2}[./]\d{1,2}[./]\d{2,4}$/.test(raw)) continue;
+
+    const normalized = normalizeDecimalForDb(raw);
     if (!normalized) continue;
     const numeric = Number(normalized);
     if (!Number.isFinite(numeric) || numeric <= 0) continue;
-    unique.set(normalized, numeric);
+
+    const index = match.index ?? 0;
+    const context = text.slice(Math.max(0, index - 40), index + raw.length + 40).toLowerCase();
+    let score = 0;
+
+    if (/нмцк|нмцд|нмц|начальн.*максимальн.*цен|начальн.*цен.*договор/.test(context)) {
+      score += 120;
+    }
+    if (/итого|всего|общ(?:ая|ей).*сумм/.test(context)) {
+      score += 100;
+    }
+    if (/цена|стоимост|руб|р\./.test(context)) {
+      score += 60;
+    }
+    if (/от\s+\d{1,2}[./]\d{1,2}[./]\d{2,4}/.test(context)) {
+      score -= 120;
+    }
+    if (/вк\/|исх\./.test(context)) {
+      score -= 60;
+    }
+    if (numeric < 100 && score < 100) {
+      score -= 80;
+    }
+
+    const existing = unique.get(normalized);
+    if (!existing || score > existing.score || (score === existing.score && numeric > existing.numeric)) {
+      unique.set(normalized, { numeric, score });
+    }
   }
 
   return [...unique.entries()]
-    .sort((left, right) => right[1] - left[1])
+    .sort((left, right) => {
+      if (right[1].score !== left[1].score) return right[1].score - left[1].score;
+      return right[1].numeric - left[1].numeric;
+    })
     .map(([normalized]) => normalized);
 }
 

@@ -1713,8 +1713,9 @@ export async function sendTenderToPricingAction(formData: FormData) {
   revalidatePath(`/procurements/recognition/${procurementId}`);
   revalidatePath(`/procurements/${procurementId}`);
   revalidatePath("/procurements");
+  revalidatePath("/procurements/pricing");
   revalidatePath("/tender");
-  redirect(`/procurements/${procurementId}#pricing-review`);
+  redirect(`/procurements/pricing?uploaded=${procurementId}`);
 }
 
 export async function saveTenderPricingReviewAction(formData: FormData) {

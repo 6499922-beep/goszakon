@@ -41,6 +41,9 @@ export default async function TenderProtectedLayout({
   const links = TENDER_INTAKE_ONLY_MODE
     ? [
         { title: "Загрузка и распознавание", href: "/procurements/new" },
+        ...(tenderHasCapability(role, "procurement_pricing")
+          ? [{ title: "Просчёт", href: "/procurements/pricing" }]
+          : []),
         ...(tenderHasCapability(role, "rules_manage")
           ? [{ title: "Реестр ИНН", href: "/registry" }]
           : []),
@@ -125,6 +128,29 @@ export default async function TenderProtectedLayout({
             </nav>
           </div>
         </section>
+
+        {currentUser?.role === TenderUserRole.ADMIN ? (
+          <section className="mb-5 rounded-[1.75rem] border border-slate-200 bg-white px-5 py-4 shadow-sm">
+            <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
+              Этапы работы
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <Link
+                href="/procurements/new"
+                className="inline-flex items-center rounded-full bg-[#081a4b] px-4 py-2 text-sm font-semibold text-white"
+              >
+                1. Анализ
+              </Link>
+              <div className="text-slate-300">→</div>
+              <Link
+                href="/procurements/pricing"
+                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700"
+              >
+                2. Просчёт
+              </Link>
+            </div>
+          </section>
+        ) : null}
 
         <section>{children}</section>
       </div>

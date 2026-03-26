@@ -368,12 +368,17 @@ async function runStructuredResponse<T>({
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
+      const signal =
+        typeof AbortSignal !== "undefined" && "timeout" in AbortSignal
+          ? AbortSignal.timeout(120_000)
+          : undefined;
       const response = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
         },
+        signal,
         body: JSON.stringify({
           model,
           reasoning: {

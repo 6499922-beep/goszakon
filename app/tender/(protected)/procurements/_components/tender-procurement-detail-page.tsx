@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { TenderProcurementChat } from "@/app/tender/_components/tender-procurement-chat";
 import { TenderRecognitionTabs } from "@/app/tender/_components/tender-recognition-tabs";
+import { TenderSourceDocumentRerunButton } from "@/app/tender/_components/tender-source-document-rerun-button";
 import {
   archiveTenderFromAnalysisAction,
   archiveTenderAfterApprovalAction,
@@ -1354,17 +1355,11 @@ export async function renderTenderRecognitionDetailPage({
                                     <span className="text-xs text-slate-400">Нет ссылки</span>
                                   )}
                                   {item.status.label !== "Текст извлечён" ? (
-                                    <form action={rerunTenderSourceDocumentDeepAnalysisAction}>
-                                      <input type="hidden" name="sourceDocumentId" value={item.id} />
-                                      <input type="hidden" name="procurementId" value={procurement.id} />
-                                      <input type="hidden" name="actorName" value="Сотрудник" />
-                                      <button
-                                        type="submit"
-                                        className="inline-flex items-center rounded-full border border-[#0d5bd7]/20 bg-[#0d5bd7]/5 px-4 py-2 text-sm font-medium text-[#0d5bd7] transition hover:border-[#0d5bd7]/40 hover:bg-[#0d5bd7]/10"
-                                      >
-                                        Доп. анализ
-                                      </button>
-                                    </form>
+                                    <TenderSourceDocumentRerunButton
+                                      sourceDocumentId={item.id}
+                                      procurementId={procurement.id}
+                                      actorName={actorName}
+                                    />
                                   ) : null}
                                 </div>
                               </td>

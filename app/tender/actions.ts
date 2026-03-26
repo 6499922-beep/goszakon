@@ -2794,7 +2794,6 @@ export async function rerunTenderSourceDocumentDeepAnalysisAction(formData: Form
 
   revalidatePath(`/procurements/recognition/${procurementId}`);
   revalidatePath("/procurements/new");
-  redirect(`/procurements/recognition/${procurementId}`);
 }
 
 export async function buildTenderSourceDocumentFieldsAction(formData: FormData) {

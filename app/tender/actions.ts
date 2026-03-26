@@ -632,7 +632,13 @@ function inferSourceDocumentFormAnalysis(input: {
       "Похоже на проект договора. Его не нужно заполнять как заявку, но нужно использовать для проверки условий и рисков.";
     reviewQuestion =
       "Проверь, есть ли в проекте договора приложения или таблицы, которые нужно отдельно вынести в формы.";
-  } else if (haystack.includes("ценов") || haystack.includes("стоимост") || haystack.includes("коммерческ")) {
+  } else if (
+    haystack.includes("ценов") ||
+    haystack.includes("стоимост") ||
+    haystack.includes("коммерческ") ||
+    haystack.includes("нмц") ||
+    haystack.includes("обоснован")
+  ) {
     formType = TenderSourceDocumentFormType.PRICE_FORM;
     autofillStatus = TenderSourceDocumentAutofillStatus.PARTIALLY_READY;
     extractedSummary =

@@ -398,6 +398,14 @@ function describeSourceDocument(note: string | null | undefined) {
     };
   }
 
+  if (value.includes("Текст из DOC удалось извлечь автоматически")) {
+    return {
+      tone: "success" as const,
+      label: "Текст извлечён",
+      description: "Текст из DOC извлечён, файл сохранён в закупке.",
+    };
+  }
+
   if (value.includes("Текст из PDF удалось извлечь автоматически")) {
     return {
       tone: "success" as const,

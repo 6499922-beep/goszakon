@@ -37,8 +37,8 @@ export default async function TenderDashboardPage() {
       { title: "Закрыть вопросы по первичному этапу", description: "Проверить закупки, где AI оставил вопросы человеку.", href: "/procurements?view=analysis" },
     ],
     ANALYST: [
-      { title: "Просчитать ТЗ и цены", description: "Открыть закупки, где уже пора искать цены и проверять ТЗ.", href: "/procurements?view=pricing" },
-      { title: "Закрыть ручные вопросы по позициям", description: "Довести спорные позиции до просчёта.", href: "/procurements?view=pricing" },
+      { title: "Открыть этап анализа", description: "Перейти в таблицу распознавания и карточки закупок нового формата.", href: "/procurements/new" },
+      { title: "Проверить карточки закупок", description: "Открыть загруженные закупки и пройтись по вкладкам анализа.", href: "/procurements/new" },
     ],
     MANAGER: [
       { title: "Принять решения по закупкам", description: "Открыть закупки, которые уже ждут согласования.", href: "/procurements?view=manager" },

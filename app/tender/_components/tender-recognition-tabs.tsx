@@ -5,7 +5,6 @@ import { useState } from "react";
 type TenderRecognitionTabsProps = {
   about: React.ReactNode;
   contract: React.ReactNode;
-  pricing: React.ReactNode;
   requirements: React.ReactNode;
   sourceDocuments: React.ReactNode;
   submissionDocuments: React.ReactNode;
@@ -16,7 +15,6 @@ type TenderRecognitionTabsProps = {
 export function TenderRecognitionTabs({
   about,
   contract,
-  pricing,
   requirements,
   sourceDocuments,
   submissionDocuments,
@@ -26,7 +24,6 @@ export function TenderRecognitionTabs({
   const [activeTab, setActiveTab] = useState<
     | "about"
     | "contract"
-    | "pricing"
     | "requirements"
     | "sourceDocuments"
     | "submissionDocuments"
@@ -36,7 +33,6 @@ export function TenderRecognitionTabs({
   const tabs = [
     { key: "about" as const, label: "О закупке" },
     { key: "contract" as const, label: "Условия договора" },
-    { key: "pricing" as const, label: "Обеспечение и отбор" },
     { key: "requirements" as const, label: "Нестандартные требования" },
     { key: "sourceDocuments" as const, label: "Файлы закупки" },
     { key: "submissionDocuments" as const, label: "Документы до подачи" },
@@ -68,7 +64,6 @@ export function TenderRecognitionTabs({
 
         <div hidden={activeTab !== "about"}>{about}</div>
         <div hidden={activeTab !== "contract"}>{contract}</div>
-        <div hidden={activeTab !== "pricing"}>{pricing}</div>
         <div hidden={activeTab !== "requirements"}>{requirements}</div>
         <div hidden={activeTab !== "sourceDocuments"}>{sourceDocuments}</div>
         <div hidden={activeTab !== "submissionDocuments"}>{submissionDocuments}</div>

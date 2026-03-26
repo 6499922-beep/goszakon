@@ -932,7 +932,7 @@ function buildSourceDocumentExtractedFields(input: {
         fields.push({
           label: `Позиция ${index + 1}: цена за единицу`,
           value: `${unitPrice} руб.`,
-          source: item.sourceSummary ?? "предпросчёт",
+          source: item.sourceSummary ?? "проверка цены",
           status: "review",
         });
 
@@ -1221,10 +1221,10 @@ function inferTechnicalItemMetadata(
     pricingReady = true;
     reviewQuestion = null;
     identificationBasis =
-      "По названию позиции и характеристикам удалось выделить тип товара и вероятную модель, поэтому позицию можно передавать в просчёт после быстрой проверки.";
+      "По названию позиции и характеристикам удалось выделить тип товара и вероятную модель, поэтому позиция уже готова к проверке цен после быстрой проверки.";
   } else if (explicit) {
     identificationBasis =
-      "В названии позиции есть явная модель, артикул или бренд, поэтому её можно сразу передавать в просчёт.";
+      "В названии позиции есть явная модель, артикул или бренд, поэтому её можно сразу отправлять на проверку цен.";
   } else if (identifiedProduct) {
     confidence = 58;
     identificationBasis =

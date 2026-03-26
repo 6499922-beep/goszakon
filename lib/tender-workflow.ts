@@ -9,7 +9,7 @@ export const pricingStatusLabels = {
   profitable: "Рентабельно",
   low_margin: "Низкая рентабельность",
   not_found: "Цены не найдены",
-  manual_review: "На ручной просчёт",
+  manual_review: "Нужна проверка цен",
 } as const;
 
 export function getDecisionLabel(decision: TenderDecision) {
@@ -211,7 +211,9 @@ export function getTenderProcessingStages(
         technicalStage.findings.push(`Подобрано по характеристикам: ${identifiedCount}.`);
       }
       if (pricingReadyCount > 0) {
-        technicalStage.findings.push(`Уже можно передавать в просчёт: ${pricingReadyCount}.`);
+        technicalStage.findings.push(
+          `Уже готовы к проверке цен: ${pricingReadyCount}.`
+        );
       }
       if (rejectedCount > 0) {
         technicalStage.findings.push(`Не подходят под профиль: ${rejectedCount}.`);
@@ -263,8 +265,8 @@ export function getTenderProcessingStages(
 
   const pricingStage: TenderProcessingStage = {
     key: "pricing",
-    title: "Предпросчёт",
-    result: "Предпросчёт ещё не выполнялся",
+    title: "Проверка цен",
+    result: "Проверка цен ещё не выполнялась",
     tone: "blue",
     findings: [],
     questions: [],
@@ -293,7 +295,7 @@ export function getTenderProcessingStages(
       );
       break;
     case "manual_review":
-      pricingStage.result = "Нужен ручной предпросчёт";
+      pricingStage.result = "Нужна ручная проверка цен";
       pricingStage.tone = "yellow";
       pricingStage.questions.push(
         procurement.pricingComment?.trim() ||

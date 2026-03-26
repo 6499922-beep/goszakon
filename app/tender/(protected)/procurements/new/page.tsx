@@ -117,10 +117,6 @@ function getRecognitionStatusNote(note: string) {
   const normalized = note.replace(/\s+/g, " ").trim();
   if (!normalized) return null;
 
-  if (normalized.includes("RAR-архив") || normalized.includes("ZIP-архив")) {
-    return "Часть архива не разобралась автоматически. Нужно проверить вложенные файлы.";
-  }
-
   if (normalized.includes("Не удалось автоматически извлечь текст")) {
     return "Из части файлов не удалось извлечь текст автоматически.";
   }

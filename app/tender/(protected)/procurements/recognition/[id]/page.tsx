@@ -625,10 +625,6 @@ export default async function TenderRecognitionDetailPage({
   const nonstandardRequirements = jsonListToStrings(procurement.nonstandardRequirements);
   const aiAnalysis = getAiAnalysisObject(procurement.aiAnalysis);
   const equipmentItems = getAiAnalysisList(aiAnalysis, "equipment_items");
-  const bidSecurity = getAiAnalysisString(aiAnalysis, "bid_security");
-  const contractSecurity = getAiAnalysisString(aiAnalysis, "contract_security");
-  const nmckWithVat = getAiAnalysisString(aiAnalysis, "nmck_with_vat");
-  const priceTaxNote = getAiAnalysisString(aiAnalysis, "price_tax_note");
   const rrepRppRequirements = getAiAnalysisString(aiAnalysis, "rrep_rpp_requirements");
   const decree1875Ban = getAiAnalysisString(aiAnalysis, "decree_1875_ban");
   const requiresCommissioning = getAiAnalysisString(aiAnalysis, "requires_commissioning");
@@ -944,42 +940,6 @@ export default async function TenderRecognitionDetailPage({
                       {terminationReasons.length > 0 ? terminationReasons.join("; ") : "не определено"}
                     </div>
                   </div>
-                </div>
-              </div>
-            }
-            pricing={
-              <div className="space-y-4">
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-lg font-bold text-[#081a4b]">Цена и обеспечение</div>
-                  <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">НМЦ без НДС:</span>{" "}
-                      {formatCurrency(procurement.nmckWithoutVat)}
-                    </div>
-                    {nmckWithVat ? (
-                      <div className="rounded-2xl bg-white px-4 py-3">
-                        <span className="font-medium text-[#081a4b]">НМЦ с НДС:</span> {nmckWithVat}
-                      </div>
-                    ) : null}
-                    {priceTaxNote ? (
-                      <div className="rounded-2xl bg-white px-4 py-3">
-                        <span className="font-medium text-[#081a4b]">Налоги в цене:</span> {priceTaxNote}
-                      </div>
-                    ) : null}
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Обеспечение заявки:</span>{" "}
-                      {bidSecurity || "не указано или не определено"}
-                    </div>
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Обеспечение договора:</span>{" "}
-                      {contractSecurity || "не указано или не определено"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-base font-bold text-[#081a4b]">Критерии отбора</div>
-                  {renderReadableText(procurement.selectionCriteria, "Не удалось определить автоматически", 5)}
                 </div>
               </div>
             }

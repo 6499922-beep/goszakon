@@ -3,7 +3,7 @@ import { TenderUserRole } from "@prisma/client";
 export const tenderUserRoleLabels: Record<TenderUserRole, string> = {
   ADMIN: "Администратор",
   OPERATOR: "Анализ",
-  ANALYST: "Просчёт",
+  ANALYST: "Этап 2",
   MANAGER: "Руководитель",
   SUBMITTER: "Подача",
   FAS_SPECIALIST: "Специалист по жалобам ФАС",
@@ -15,7 +15,7 @@ export const tenderUserRoleDescriptions: Record<TenderUserRole, string> = {
   OPERATOR:
     "Вносит закупку и документацию на первый этап, чтобы система могла проанализировать материалы.",
   ANALYST:
-    "Работает только со своим этапом закупки и продолжает обработку уже переданных материалов.",
+    "Работает только со своим следующим этапом закупки и продолжает обработку уже переданных материалов.",
   MANAGER: "Видит и согласовывает весь маршрут закупки, принимает итоговые решения.",
   SUBMITTER:
     "Получает готовые формы и комплект, видит комментарии и подтверждает подачу на площадке.",

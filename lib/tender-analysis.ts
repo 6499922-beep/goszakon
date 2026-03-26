@@ -940,10 +940,10 @@ function takeRelevantTenderSnippets(body: string) {
     .filter(Boolean);
 
   const importantPatterns = [
-    /нмц|начальн|максимальн|цен[аы]|стоим|ндс/i,
+    /нмцк|нмцд|нмц|начальн|максимальн|цен[аы]|стоим|ндс|цена договора|цена лота/i,
     /обеспеч/i,
-    /штраф|пен|неустой|ответственност|просроч/i,
-    /расторж|односторон|отказ/i,
+    /штраф|пен|неустой|ответственност|просроч|убытк|санкц/i,
+    /расторж|односторон|отказ|уклонен/i,
     /срок|поставк|оплат|адрес|место/i,
     /ррэп|рпп|2013|1875/i,
     /пуско|налад/i,
@@ -988,10 +988,27 @@ function takePricingFocusedSnippets(body: string) {
     .filter(Boolean);
 
   const matched = lines.filter((line) =>
-    /нмц|цена|стоим|сумм|итого|ндс|обеспеч|коммерч|калькул|обоснование/i.test(line)
+    /нмцк|нмцд|нмц|начальн.*максимальн.*цен|начальн.*цен.*договор|цена договора|цена лота|цена|стоим|сумм|итого|без ндс|с ндс|включая ндс|ндс не облага|налог|обеспеч|коммерч|калькул|обоснование/i.test(
+      line
+    )
   );
 
-  return matched.slice(0, 140);
+  return matched.slice(0, 200);
+}
+
+function takeContractFocusedSnippets(body: string) {
+  const lines = body
+    .split(/\n+/)
+    .map((item) => item.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  const matched = lines.filter((line) =>
+    /ответственност|штраф|пен|неустой|убытк|санкц|просроч|за каждый день|односторон|расторж|отказ от исполнения|отказ от договора|место поставк|срок поставк|срок оплат/i.test(
+      line
+    )
+  );
+
+  return matched.slice(0, 180);
 }
 
 function compressTenderSection(section: TenderSourceSection) {
@@ -1089,6 +1106,21 @@ function buildPackedScopeSelection(
                   return lines.length > 0 ? `Ценовые и обеспечительные строки:\n${lines.join("\n")}` : "";
                 })(),
                 item.section.body.slice(0, 3500).trim(),
+              ]
+                .filter(Boolean)
+                .join("\n\n")
+                .trim(),
+              priority: item.priority,
+            }
+        : input.categories.includes("contract") && item.category === "contract"
+          ? {
+              text: [
+                `Файл: ${item.section.title}`,
+                (() => {
+                  const lines = takeContractFocusedSnippets(item.section.body);
+                  return lines.length > 0 ? `Договорные условия и санкции:\n${lines.join("\n")}` : "";
+                })(),
+                item.section.body.slice(0, 4500).trim(),
               ]
                 .filter(Boolean)
                 .join("\n\n")
@@ -1275,6 +1307,13 @@ ${metaSourceText}
 - обеспечение заявки
 - обеспечение исполнения договора
 
+Правила для цены:
+- ищи НМЦК/НМЦД/начальную (максимальную) цену договора/цену лота;
+- не путай общую цену закупки с ценой отдельной позиции;
+- если в таблице есть итог/итого/всего по закупке, это важнее цены отдельной строки;
+- если есть обе суммы, верни отдельно "без НДС" и "с НДС";
+- если явно указано только значение с НДС, можешь рассчитать без НДС по ставке 22%.
+
 Текст документов:
 ${pricingSourceText}
 `.trim();
@@ -1310,6 +1349,11 @@ ${requirementsSourceText}
 - штрафы / пени / неустойки
 - основания одностороннего расторжения
 - требуются ли пуско-наладочные работы
+
+Правила для договора:
+- особенно ищи точные проценты, суммы и формулы штрафов/пеней;
+- отдельно ищи фразы "за каждый день просрочки", "неустойка", "штраф", "ответственность сторон";
+- отдельно ищи все основания одностороннего отказа / расторжения.
 
 Текст документов:
 ${contractSourceText}

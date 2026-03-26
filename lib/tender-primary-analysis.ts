@@ -70,6 +70,9 @@ function buildPenaltyFallback(sourceText: string) {
     /неустой/i,
     /ответственност/i,
     /просрочк/i,
+    /за каждый день/i,
+    /убытк/i,
+    /санкц/i,
   ]);
 
   return matches.length > 0 ? matches.join("\n\n") : null;
@@ -231,23 +234,47 @@ function buildPriceFallbackFromMentions(
 
   for (const mention of mentions) {
     const normalized = mention.toLowerCase();
-    const amount = extractFirstMoneyValue(mention);
-    if (!amount) continue;
+    const amounts =
+      mention
+        .match(/\d[\d\s]{0,30}(?:[.,]\d{1,2})?/g)
+        ?.map((item) => item.replace(/\s+/g, "").replace(",", ".").trim())
+        .filter((item) => /^\d+(?:\.\d{1,2})?$/.test(item)) ?? [];
+    if (amounts.length === 0) continue;
+    const primaryAmount = amounts[0];
+    const secondaryAmount = amounts[1] ?? null;
 
     if (!withoutVat && /без ндс|ндс не облага/i.test(normalized)) {
-      withoutVat = amount;
+      withoutVat = primaryAmount;
       note = note ?? mention.trim();
+      if (!withVat && secondaryAmount && /с ндс|включая ндс|с учетом ндс/i.test(normalized)) {
+        withVat = secondaryAmount;
+      }
       continue;
     }
 
     if (!withVat && /с ндс|включая ндс|с учетом ндс/i.test(normalized)) {
-      withVat = amount;
+      withVat = primaryAmount;
       note = note ?? mention.trim();
+      if (!withoutVat && secondaryAmount && /без ндс|ндс не облага/i.test(normalized)) {
+        withoutVat = secondaryAmount;
+      }
+      continue;
+    }
+
+    if (
+      /нмцк|нмцд|нмц|начальн.*максимальн.*цен|начальн.*цен.*договор|цена договора|цена лота|итого|всего/i.test(
+        normalized
+      )
+    ) {
+      if (!withVat) {
+        withVat = primaryAmount;
+        note = note ?? mention.trim();
+      }
       continue;
     }
 
     if (!withVat) {
-      withVat = amount;
+      withVat = primaryAmount;
       note = note ?? mention.trim();
     }
   }
@@ -394,8 +421,19 @@ function buildQuickTenderFallback(input: {
   const terminationReasons = buildTerminationFallback(input.sourceText);
   const nmckMentions = extractRelevantParagraphs(
     input.sourceText,
-    [/нмц/i, /максимальн.*цен/i, /начальн.*цен/i, /цена договор/i, /ндс/i],
-    6
+    [
+      /нмцк/i,
+      /нмцд/i,
+      /нмц/i,
+      /максимальн.*цен/i,
+      /начальн.*цен/i,
+      /цена договор/i,
+      /цена лота/i,
+      /с учетом ндс/i,
+      /без ндс/i,
+      /ндс/i,
+    ],
+    10
   );
   const securityMentions = extractRelevantParagraphs(
     input.sourceText,

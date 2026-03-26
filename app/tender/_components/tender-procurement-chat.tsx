@@ -26,6 +26,33 @@ const QUICK_PROMPTS = [
   "Какие документы до подачи самые важные?",
 ];
 
+function parseStoredSources(body: string) {
+  const marker = "\n\nИсточники:\n";
+  const index = body.indexOf(marker);
+  if (index === -1) {
+    return {
+      text: body,
+      sources: [] as Array<{ title: string; url: string }>,
+    };
+  }
+
+  const text = body.slice(0, index).trim();
+  const sourcesBlock = body.slice(index + marker.length).trim();
+  const sources = sourcesBlock
+    .split("\n")
+    .map((line) => line.replace(/^\d+\.\s*/, "").trim())
+    .map((line) => {
+      const parts = line.split(" — ");
+      const url = parts.pop()?.trim() ?? "";
+      const title = parts.join(" — ").trim() || url;
+      if (!/^https?:\/\//i.test(url)) return null;
+      return { title, url };
+    })
+    .filter((item): item is { title: string; url: string } => Boolean(item));
+
+  return { text, sources };
+}
+
 function normalizeSearchText(value: string) {
   return value
     .toLowerCase()
@@ -44,6 +71,7 @@ export function TenderProcurementChat({
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [useWebSearch, setUseWebSearch] = useState(false);
   const [isPending, startTransition] = useTransition();
   const viewportRef = useRef<HTMLDivElement | null>(null);
 
@@ -89,6 +117,7 @@ export function TenderProcurementChat({
           body: JSON.stringify({
             procurementId,
             message: question,
+            useWebSearch,
           }),
         });
 
@@ -168,6 +197,15 @@ export function TenderProcurementChat({
               </button>
             ))}
           </div>
+          <label className="mt-3 flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={useWebSearch}
+              onChange={(event) => setUseWebSearch(event.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-[#0d5bd7] focus:ring-[#0d5bd7]"
+            />
+            <span>Искать в интернете, если это нужно для ответа</span>
+          </label>
           <div
             ref={viewportRef}
             className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3"
@@ -175,7 +213,8 @@ export function TenderProcurementChat({
             {hasMessages ? (
               sortedMessages.map((message) => {
                 const isAssistant = message.role === "assistant";
-                const normalizedBody = normalizeSearchText(message.body);
+                const parsedMessage = parseStoredSources(message.body);
+                const normalizedBody = normalizeSearchText(parsedMessage.text);
                 const matchedDocuments = isAssistant
                   ? documentHints.filter(
                       (item) =>
@@ -200,13 +239,28 @@ export function TenderProcurementChat({
                     >
                       {isAssistant ? "GPT" : message.authorName || "Сотрудник"}
                     </div>
-                    <div className="mt-2 whitespace-pre-wrap">{message.body}</div>
+                    <div className="mt-2 whitespace-pre-wrap">{parsedMessage.text}</div>
                     {matchedDocuments.length > 0 ? (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {matchedDocuments.map((item) => (
                           <a
                             key={`${message.id}-${item.href}`}
                             href={item.href}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-[#081a4b] transition hover:border-slate-300 hover:bg-slate-100"
+                          >
+                            {item.title}
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
+                    {parsedMessage.sources.length > 0 ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {parsedMessage.sources.map((item) => (
+                          <a
+                            key={`${message.id}-${item.url}`}
+                            href={item.url}
                             target="_blank"
                             rel="noreferrer"
                             className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-[#081a4b] transition hover:border-slate-300 hover:bg-slate-100"

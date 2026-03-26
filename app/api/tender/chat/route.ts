@@ -23,6 +23,40 @@ function getOpenAiOutputText(payload: any) {
   return "";
 }
 
+function getOpenAiWebSources(payload: any) {
+  const unique = new Map<string, { title: string; url: string }>();
+  const outputs = Array.isArray(payload?.output) ? payload.output : [];
+
+  for (const item of outputs) {
+    const actionSources = Array.isArray(item?.action?.sources) ? item.action.sources : [];
+    for (const source of actionSources) {
+      const url = typeof source?.url === "string" ? source.url.trim() : "";
+      if (!url) continue;
+      const title =
+        (typeof source?.title === "string" && source.title.trim()) ||
+        (typeof source?.site_name === "string" && source.site_name.trim()) ||
+        url;
+      if (!unique.has(url)) unique.set(url, { title, url });
+    }
+
+    if (!Array.isArray(item?.content)) continue;
+    for (const content of item.content) {
+      const annotations = Array.isArray(content?.annotations) ? content.annotations : [];
+      for (const annotation of annotations) {
+        const url = typeof annotation?.url === "string" ? annotation.url.trim() : "";
+        if (!url) continue;
+        const title =
+          (typeof annotation?.title === "string" && annotation.title.trim()) ||
+          (typeof annotation?.text === "string" && annotation.text.trim()) ||
+          url;
+        if (!unique.has(url)) unique.set(url, { title, url });
+      }
+    }
+  }
+
+  return [...unique.values()].slice(0, 8);
+}
+
 function trimForPrompt(value: string | null | undefined, limit: number) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, limit);
 }
@@ -41,10 +75,12 @@ export async function POST(request: Request) {
     const body = (await request.json().catch(() => ({}))) as {
       procurementId?: number;
       message?: string;
+      useWebSearch?: boolean;
     };
 
     const procurementId = Number(body.procurementId);
     const message = String(body.message ?? "").trim();
+    const useWebSearch = Boolean(body.useWebSearch);
 
     if (!Number.isInteger(procurementId) || procurementId <= 0 || !message) {
       return NextResponse.json(
@@ -126,6 +162,7 @@ export async function POST(request: Request) {
 Опирайся только на данные этой закупки: распознанные поля, список документов и переписку ниже.
 Если чего-то нет в данных, прямо скажи, что этого в загруженной документации или в распознавании сейчас нет.
 Если можешь, ссылайся в ответе на название документа, а не на общие слова.
+${useWebSearch ? "Если в данных закупки ответа нет или его нужно проверить по внешним источникам, используй интернет-поиск и в конце укажи источники." : "Интернет-поиск не используй, отвечай только по данным этой закупки."}
 
 Карточка закупки:
 - Закупка: ${procurement.title}
@@ -160,6 +197,11 @@ ${message}
         reasoning: {
           effort: "medium",
         },
+        ...(useWebSearch
+          ? {
+              tools: [{ type: "web_search_preview" }],
+            }
+          : {}),
         input: [
           {
             role: "user",
@@ -178,13 +220,20 @@ ${message}
     const answer =
       getOpenAiOutputText(payload) ||
       "Не удалось получить содержательный ответ по этой закупке.";
+    const webSources = useWebSearch ? getOpenAiWebSources(payload) : [];
+    const finalAnswer =
+      webSources.length > 0
+        ? `${answer}\n\nИсточники:\n${webSources
+            .map((item, index) => `${index + 1}. ${item.title} — ${item.url}`)
+            .join("\n")}`
+        : answer;
 
     const assistantMessage = await prisma.tenderStageComment.create({
       data: {
         procurementId,
         stageKey: "gpt_chat",
         stageTitle: "GPT",
-        body: answer,
+        body: finalAnswer,
         authorName: "GPT",
       },
     });

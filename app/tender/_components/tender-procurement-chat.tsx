@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 type ChatMessage = {
   id: number;
@@ -94,6 +94,23 @@ export function TenderProcurementChat({
         })),
     [sourceDocuments]
   );
+  const storageKey = `tender-chat-mode:${procurementId}`;
+
+  useEffect(() => {
+    const savedMode = window.localStorage.getItem(storageKey);
+    if (savedMode === "procurement-only") {
+      setProcurementOnlyMode(true);
+    } else if (savedMode === "web-default") {
+      setProcurementOnlyMode(false);
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      storageKey,
+      procurementOnlyMode ? "procurement-only" : "web-default"
+    );
+  }, [procurementOnlyMode, storageKey]);
 
   function askQuestion(question: string) {
     if (isPending) return;

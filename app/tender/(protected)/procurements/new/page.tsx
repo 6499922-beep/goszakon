@@ -76,6 +76,16 @@ function getRecognitionStatusMeta(
     };
   }
 
+  if (status === "retrying") {
+    return {
+      label: "Повторный анализ",
+      tone: "bg-indigo-50 text-indigo-700",
+      note:
+        error?.trim() ||
+        "Система автоматически повторно анализирует закупку после долгого или нестабильного запуска.",
+    };
+  }
+
   if (status === "needs_text") {
     return {
       label: "Не хватило текста",
@@ -186,6 +196,7 @@ export default async function NewTenderProcurementPage({
   const firstQueuedProcurement =
     recentProcurements.find(
       (item) =>
+        item.aiAnalysisStatus === "retrying" ||
         item.aiAnalysisStatus === "queued" ||
         isStaleRunningAnalysis(item.aiAnalysisStatus, item.updatedAt)
     ) ?? null;

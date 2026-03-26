@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   await prisma.tenderProcurement.update({
     where: { id: procurementId },
     data: {
-      aiAnalysisStatus: "queued",
+      aiAnalysisStatus: "retrying",
       aiAnalysisError: null,
     },
   });

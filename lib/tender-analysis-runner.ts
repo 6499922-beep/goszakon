@@ -44,16 +44,16 @@ async function pickNextProcurementId() {
     await prisma.tenderProcurement.update({
       where: { id: staleRunning.id },
       data: {
-        aiAnalysisStatus: "queued",
+        aiAnalysisStatus: "retrying",
         aiAnalysisError:
-          "Предыдущий запуск анализа завис и был автоматически поставлен в повторную очередь.",
+          "Предыдущий запуск анализа занял слишком много времени. Система автоматически отправила закупку на повторный анализ.",
       },
     });
   }
 
   const queued = await prisma.tenderProcurement.findFirst({
     where: {
-      aiAnalysisStatus: "queued",
+      aiAnalysisStatus: { in: ["queued", "retrying"] },
       sourceText: { not: null },
     },
     orderBy: [{ updatedAt: "asc" }, { id: "asc" }],

@@ -86,9 +86,9 @@ export async function POST(request: Request) {
     await prisma.tenderProcurement.update({
       where: { id: procurementId },
       data: {
-        aiAnalysisStatus: "queued",
+        aiAnalysisStatus: "retrying",
         aiAnalysisError:
-          "Анализ завис и был автоматически поставлен на повторный запуск.",
+          "Анализ занял слишком много времени. Система автоматически перевела закупку на повторный анализ.",
       },
     });
   }

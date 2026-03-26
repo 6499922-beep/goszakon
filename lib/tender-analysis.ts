@@ -959,6 +959,14 @@ function takeRelevantTenderSnippets(body: string) {
 }
 
 function takeEquipmentFocusedSnippets(body: string) {
+  const compactTableMatch = body.match(/Компактная таблица позиций:\n([\s\S]*?)(?:\n(?:Лист:|Строки таблицы:|Позиции для анализа:|Файл:)|$)/i);
+  const compactTableLines = compactTableMatch
+    ? compactTableMatch[1]
+        .split(/\n+/)
+        .map((item) => item.replace(/\s+/g, " ").trim())
+        .filter(Boolean)
+    : [];
+
   const lines = body
     .split(/\n+/)
     .map((item) => item.replace(/\s+/g, " ").trim())
@@ -970,7 +978,20 @@ function takeEquipmentFocusedSnippets(body: string) {
     )
   );
 
-  return matched.slice(0, 120);
+  return uniqueNonEmptyStrings([...compactTableLines, ...matched]).slice(0, 160);
+}
+
+function takePricingFocusedSnippets(body: string) {
+  const lines = body
+    .split(/\n+/)
+    .map((item) => item.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  const matched = lines.filter((line) =>
+    /нмц|цена|стоим|сумм|итого|ндс|обеспеч|коммерч|калькул|обоснование/i.test(line)
+  );
+
+  return matched.slice(0, 140);
 }
 
 function compressTenderSection(section: TenderSourceSection) {
@@ -1048,17 +1069,32 @@ function buildPackedScopeSelection(
         ? {
             text: [
               `Файл: ${item.section.title}`,
-              item.section.body.slice(0, 5000).trim(),
               (() => {
                 const lines = takeEquipmentFocusedSnippets(item.section.body);
                 return lines.length > 0 ? `Позиции и строки:\n${lines.join("\n")}` : "";
               })(),
+              item.section.body.slice(0, 3500).trim(),
             ]
               .filter(Boolean)
               .join("\n\n")
               .trim(),
             priority: item.priority,
           }
+        : input.categories.includes("pricing") && item.category === "pricing"
+          ? {
+              text: [
+                `Файл: ${item.section.title}`,
+                (() => {
+                  const lines = takePricingFocusedSnippets(item.section.body);
+                  return lines.length > 0 ? `Ценовые и обеспечительные строки:\n${lines.join("\n")}` : "";
+                })(),
+                item.section.body.slice(0, 3500).trim(),
+              ]
+                .filter(Boolean)
+                .join("\n\n")
+                .trim(),
+              priority: item.priority,
+            }
         : compressTenderSection(item.section),
     }))
     .sort((left, right) => right.priority - left.priority);

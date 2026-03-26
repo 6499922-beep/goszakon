@@ -15,10 +15,11 @@ export function TenderStageSwitcher() {
   const pathname = usePathname();
   const isPricing = pathname.startsWith("/procurements/pricing");
   const isApproval = pathname.startsWith("/procurements/approval");
+  const isSubmission = pathname.startsWith("/procurements/submission");
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-3">
-      <Link href="/procurements/new" className={stageLinkClass(!isPricing && !isApproval)}>
+      <Link href="/procurements/new" className={stageLinkClass(!isPricing && !isApproval && !isSubmission)}>
         1. Анализ
       </Link>
       <Link href="/procurements/pricing" className={stageLinkClass(isPricing)}>
@@ -26,6 +27,9 @@ export function TenderStageSwitcher() {
       </Link>
       <Link href="/procurements/approval" className={stageLinkClass(isApproval)}>
         3. Согласование
+      </Link>
+      <Link href="/procurements/submission" className={stageLinkClass(isSubmission)}>
+        4. Подача
       </Link>
     </div>
   );

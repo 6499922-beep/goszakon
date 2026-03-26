@@ -28,7 +28,7 @@ function getAiAnalysisObject(value: unknown) {
   return value as Record<string, unknown>;
 }
 
-type TenderEquipmentViewMode = "analysis" | "pricing" | "approval";
+type TenderEquipmentViewMode = "analysis" | "pricing" | "approval" | "submission";
 
 export async function renderTenderRecognitionEquipmentPage({
   params,
@@ -40,7 +40,10 @@ export async function renderTenderRecognitionEquipmentPage({
   const currentUser = await getCurrentTenderUser();
   const isPricingView = viewMode === "pricing";
   const isApprovalView = viewMode === "approval";
-  const requiredCapability = isApprovalView
+  const isSubmissionView = viewMode === "submission";
+  const requiredCapability = isSubmissionView
+    ? "procurement_submission"
+    : isApprovalView
     ? "procurement_decision"
     : isPricingView
       ? "procurement_pricing"
@@ -117,7 +120,9 @@ export async function renderTenderRecognitionEquipmentPage({
           amount: "Не определено автоматически",
         }));
   const resolvedItemsCount = Math.max(procurement.itemsCount ?? 0, rows.length);
-  const backHref = isApprovalView
+  const backHref = isSubmissionView
+    ? `/procurements/submission/${procurement.id}`
+    : isApprovalView
     ? `/procurements/approval/${procurement.id}`
     : isPricingView
       ? `/procurements/pricing/${procurement.id}`

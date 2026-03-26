@@ -59,6 +59,11 @@ function revalidateTenderApprovalPaths(procurementId: number) {
   revalidatePath(`/procurements/approval/${procurementId}/equipment`);
 }
 
+function revalidateTenderSubmissionPaths(procurementId: number) {
+  revalidatePath(`/procurements/submission/${procurementId}`);
+  revalidatePath(`/procurements/submission/${procurementId}/equipment`);
+}
+
 function extractRelevantParagraphs(sourceText: string, patterns: RegExp[], limit = 3) {
   const blocks = sourceText
     .split(/\n{2,}/)
@@ -1810,6 +1815,99 @@ export async function declineTenderFromPricingAction(formData: FormData) {
   redirect("/procurements/pricing");
 }
 
+export async function sendTenderToSubmissionAction(formData: FormData) {
+  await requireTenderCapability("procurement_decision");
+  const prisma = getPrisma();
+  const procurementId = Number(formData.get("procurementId"));
+  const actorName = normalizeString(formData.get("actorName")) ?? "Сотрудник";
+
+  if (!Number.isInteger(procurementId) || procurementId <= 0) {
+    redirect("/procurements/approval");
+  }
+
+  await prisma.tenderProcurement.update({
+    where: { id: procurementId },
+    data: {
+      decision: TenderDecision.SUBMIT,
+      decisionMadeAt: new Date(),
+      status: TenderProcurementStatus.IN_PREPARATION,
+    },
+  });
+
+  await logTenderEvent({
+    procurementId,
+    actionType: TenderActionType.STATUS_UPDATED,
+    title: "Закупка передана на подачу",
+    description: "Карточка переведена на этап подготовки и подачи документов.",
+    actorName,
+    metadata: {
+      nextStage: "submission",
+    },
+  });
+
+  revalidateTenderRecognitionPaths(procurementId);
+  revalidateTenderPricingPaths(procurementId);
+  revalidateTenderApprovalPaths(procurementId);
+  revalidateTenderSubmissionPaths(procurementId);
+  revalidatePath("/procurements/approval");
+  revalidatePath("/procurements/submission");
+  revalidatePath("/procurements");
+  redirect(`/procurements/submission/${procurementId}`);
+}
+
+export async function archiveTenderAfterApprovalAction(formData: FormData) {
+  await requireTenderCapability("procurement_decision");
+  const prisma = getPrisma();
+  const procurementId = Number(formData.get("procurementId"));
+  const actorName = normalizeString(formData.get("actorName")) ?? "Сотрудник";
+  const comment =
+    normalizeString(formData.get("comment")) ?? "Нерентабельно, заявка переведена в архив.";
+
+  if (!Number.isInteger(procurementId) || procurementId <= 0) {
+    redirect("/procurements/approval");
+  }
+
+  await prisma.tenderDecisionRecord.create({
+    data: {
+      procurementId,
+      decision: TenderDecision.DECLINE,
+      comment,
+      decidedBy: actorName,
+    },
+  });
+
+  await prisma.tenderProcurement.update({
+    where: { id: procurementId },
+    data: {
+      decision: TenderDecision.DECLINE,
+      decisionComment: comment,
+      decisionMadeAt: new Date(),
+      status: TenderProcurementStatus.ARCHIVED,
+    },
+  });
+
+  await logTenderEvent({
+    procurementId,
+    actionType: TenderActionType.DECISION_MADE,
+    title: "Закупка отправлена в архив",
+    description: comment,
+    actorName,
+    metadata: {
+      decision: TenderDecision.DECLINE,
+      sourceStage: "approval",
+    },
+  });
+
+  revalidateTenderRecognitionPaths(procurementId);
+  revalidateTenderPricingPaths(procurementId);
+  revalidateTenderApprovalPaths(procurementId);
+  revalidateTenderSubmissionPaths(procurementId);
+  revalidatePath("/procurements/approval");
+  revalidatePath("/procurements/submission");
+  revalidatePath("/procurements");
+  redirect("/procurements/approval");
+}
+
 export async function saveTenderDecisionAction(formData: FormData) {
   await requireTenderCapability("procurement_decision");
   const prisma = getPrisma();
@@ -1867,6 +1965,9 @@ export async function saveTenderDecisionAction(formData: FormData) {
   });
 
   revalidateTenderRecognitionPaths(procurementId);
+  revalidateTenderApprovalPaths(procurementId);
+  revalidateTenderSubmissionPaths(procurementId);
+  revalidatePath("/procurements/approval");
 }
 
 export async function markTenderDocumentsPreparedAction(formData: FormData) {
@@ -1892,6 +1993,9 @@ export async function markTenderDocumentsPreparedAction(formData: FormData) {
   });
 
   revalidateTenderRecognitionPaths(procurementId);
+  revalidateTenderSubmissionPaths(procurementId);
+  revalidatePath("/procurements/submission");
+  redirect(`/procurements/submission/${procurementId}`);
 }
 
 export async function markTenderSubmittedAction(formData: FormData) {
@@ -1917,6 +2021,9 @@ export async function markTenderSubmittedAction(formData: FormData) {
   });
 
   revalidateTenderRecognitionPaths(procurementId);
+  revalidateTenderSubmissionPaths(procurementId);
+  revalidatePath("/procurements/submission");
+  redirect(`/procurements/submission/${procurementId}`);
 }
 
 export async function updateTenderSubmissionDeskAction(formData: FormData) {
@@ -1950,6 +2057,8 @@ export async function updateTenderSubmissionDeskAction(formData: FormData) {
   });
 
   revalidatePath(`/procurements/${procurementId}`);
+  revalidateTenderSubmissionPaths(procurementId);
+  revalidatePath("/procurements/submission");
 }
 
 export async function updateTenderProcurementStatusAction(formData: FormData) {

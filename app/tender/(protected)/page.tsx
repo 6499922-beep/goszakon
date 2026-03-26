@@ -45,8 +45,8 @@ export default async function TenderDashboardPage() {
       { title: "Проверить этап согласования", description: "Перейти в третий этап и выбрать: подаём или не подаём.", href: "/procurements/approval" },
     ],
     SUBMITTER: [
-      { title: "Подготовить и подать пакеты", description: "Открыть закупки, дошедшие до подачи.", href: "/procurements?view=submission" },
-      { title: "Проверить готовность форм", description: "Убедиться, что пакет уже можно выгружать на площадку.", href: "/procurements?view=submission" },
+      { title: "Подготовить и подать пакеты", description: "Открыть закупки, дошедшие до подачи.", href: "/procurements/submission" },
+      { title: "Проверить готовность форм", description: "Убедиться, что пакет уже можно выгружать на площадку.", href: "/procurements/submission" },
     ],
     FAS_SPECIALIST: [
       { title: "Проверить спорные ФАС-кейсы", description: "Открыть закупки, где AI сомневается или видит нарушение.", href: "/procurements?view=fas" },

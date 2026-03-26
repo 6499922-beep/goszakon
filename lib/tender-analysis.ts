@@ -1043,7 +1043,10 @@ function buildScopedSourcePack(
   return result.join("\n\n").trim();
 }
 
-function buildEquipmentSourcePack(scopes: TenderDocumentScope[]) {
+function buildEquipmentSourcePack(
+  scopes: TenderDocumentScope[],
+  maxTotalLength = 55000
+) {
   const selected = scopes.filter((item) =>
     ["spec", "pricing", "notice", "forms"].includes(item.category)
   );
@@ -1051,7 +1054,6 @@ function buildEquipmentSourcePack(scopes: TenderDocumentScope[]) {
 
   const result: string[] = [];
   let currentLength = 0;
-  const maxTotalLength = 55000;
 
   for (const item of fallback) {
     const head = item.section.body.slice(0, 5000).trim();
@@ -1092,15 +1094,32 @@ export async function runTenderAiAnalysis(input: {
   }
 
   const model = process.env.OPENAI_MODEL || "gpt-5";
+  const compactMode = input.sourceText.length >= 180_000;
   const packedSourceText = buildTenderAiSourcePack(input.sourceText);
   const scopes = buildTenderDocumentScopes(input.sourceText);
-  const metaSourceText = buildScopedSourcePack(scopes, ["notice", "other"], 28000) || packedSourceText;
-  const pricingSourceText = buildScopedSourcePack(scopes, ["pricing", "notice", "forms"], 32000) || packedSourceText;
+  const metaSourceText =
+    buildScopedSourcePack(scopes, ["notice", "other"], compactMode ? 14000 : 28000) ||
+    packedSourceText;
+  const pricingSourceText =
+    buildScopedSourcePack(
+      scopes,
+      ["pricing", "notice", "forms"],
+      compactMode ? 16000 : 32000
+    ) || packedSourceText;
   const requirementsSourceText =
-    buildScopedSourcePack(scopes, ["notice", "forms", "spec", "other"], 36000) || packedSourceText;
+    buildScopedSourcePack(
+      scopes,
+      ["notice", "forms", "spec", "other"],
+      compactMode ? 18000 : 36000
+    ) || packedSourceText;
   const contractSourceText =
-    buildScopedSourcePack(scopes, ["contract", "notice", "other"], 32000) || packedSourceText;
-  const equipmentSourceText = buildEquipmentSourcePack(scopes) || packedSourceText;
+    buildScopedSourcePack(
+      scopes,
+      ["contract", "notice", "other"],
+      compactMode ? 16000 : 32000
+    ) || packedSourceText;
+  const equipmentSourceText =
+    buildEquipmentSourcePack(scopes, compactMode ? 22000 : 55000) || packedSourceText;
 
   const metaPrompt = `
 Ты разбираешь только общую идентификацию закупки и явные стоп-факторы.
@@ -1196,7 +1215,7 @@ ${equipmentSourceText}
         prompt: metaPrompt,
         schema: tenderMetaAnalysisSchema,
         reasoningEffort: "medium",
-        timeoutMs: 45_000,
+        timeoutMs: compactMode ? 90_000 : 60_000,
       }),
       runStructuredResponse<TenderPricingAnalysis>({
         apiKey,
@@ -1204,7 +1223,7 @@ ${equipmentSourceText}
         prompt: pricingPrompt,
         schema: tenderPricingAnalysisSchema,
         reasoningEffort: "medium",
-        timeoutMs: 45_000,
+        timeoutMs: compactMode ? 90_000 : 60_000,
       }),
       runStructuredResponse<TenderRequirementsAnalysis>({
         apiKey,
@@ -1212,7 +1231,7 @@ ${equipmentSourceText}
         prompt: requirementsPrompt,
         schema: tenderRequirementsAnalysisSchema,
         reasoningEffort: "medium",
-        timeoutMs: 45_000,
+        timeoutMs: compactMode ? 90_000 : 60_000,
       }),
       runStructuredResponse<TenderContractAnalysis>({
         apiKey,
@@ -1220,7 +1239,7 @@ ${equipmentSourceText}
         prompt: contractPrompt,
         schema: tenderContractAnalysisSchema,
         reasoningEffort: "medium",
-        timeoutMs: 45_000,
+        timeoutMs: compactMode ? 90_000 : 60_000,
       }),
       runStructuredResponse<TenderEquipmentAnalysis>({
         apiKey,
@@ -1228,7 +1247,7 @@ ${equipmentSourceText}
         prompt: equipmentPrompt,
         schema: tenderEquipmentAnalysisSchema,
         reasoningEffort: "medium",
-        timeoutMs: 45_000,
+        timeoutMs: compactMode ? 90_000 : 60_000,
       }),
     ]);
 
@@ -1307,7 +1326,7 @@ ${JSON.stringify(
 - что осталось неясным
 
 Текст документации:
-${packedSourceText}
+${compactMode ? [metaSourceText, pricingSourceText, requirementsSourceText, contractSourceText, equipmentSourceText].filter(Boolean).join("\n\n") : packedSourceText}
 `.trim();
 
   const dossier = await runStructuredResponse<TenderSourceDossier>({
@@ -1316,7 +1335,7 @@ ${packedSourceText}
     prompt: dossierPrompt,
     schema: tenderSourceDossierSchema,
     reasoningEffort: "high",
-    timeoutMs: 75_000,
+    timeoutMs: compactMode ? 120_000 : 90_000,
   });
 
   const prompt = `
@@ -1381,7 +1400,7 @@ ${JSON.stringify(
     prompt,
     schema: tenderAnalysisSchema,
     reasoningEffort: "medium",
-    timeoutMs: 75_000,
+    timeoutMs: compactMode ? 120_000 : 90_000,
   });
 
   const result = normalizeTenderAnalysisResult({

@@ -2,10 +2,10 @@ import { renderTenderRecognitionEquipmentPage } from "@/app/tender/(protected)/p
 
 export const dynamic = "force-dynamic";
 
-export default async function TenderRecognitionEquipmentPage({
+export default async function TenderPricingEquipmentPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  return renderTenderRecognitionEquipmentPage({ params, viewMode: "analysis" });
+  return renderTenderRecognitionEquipmentPage({ params, viewMode: "pricing" });
 }

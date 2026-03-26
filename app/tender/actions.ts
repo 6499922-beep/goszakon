@@ -49,6 +49,11 @@ function revalidateTenderRecognitionPaths(procurementId: number) {
   revalidatePath(`/procurements/recognition/${procurementId}`);
 }
 
+function revalidateTenderPricingPaths(procurementId: number) {
+  revalidatePath(`/procurements/pricing/${procurementId}`);
+  revalidatePath(`/procurements/pricing/${procurementId}/equipment`);
+}
+
 function extractRelevantParagraphs(sourceText: string, patterns: RegExp[], limit = 3) {
   const blocks = sourceText
     .split(/\n{2,}/)
@@ -1665,22 +1670,47 @@ export async function analyzeTenderProcurementAction(formData: FormData) {
 
 export async function sendTenderToPricingAction(formData: FormData) {
   await requireTenderCapability("procurement_initial");
+  const prisma = getPrisma();
   const procurementId = Number(formData.get("procurementId"));
+  const actorName = normalizeString(formData.get("actorName")) ?? "Сотрудник";
 
   if (!Number.isInteger(procurementId) || procurementId <= 0) {
     redirect("/procurements/new");
   }
 
+  await prisma.tenderProcurement.update({
+    where: { id: procurementId },
+    data: {
+      status: TenderProcurementStatus.PRICING,
+    },
+  });
+
+  await logTenderEvent({
+    procurementId,
+    actionType: TenderActionType.NOTE_ADDED,
+    title: "Закупка передана на просчёт",
+    description: "Карточка переведена на второй этап без изменения полей и документов.",
+    actorName,
+    metadata: {
+      nextStage: "pricing",
+    },
+  });
+
   revalidateTenderRecognitionPaths(procurementId);
+  revalidateTenderPricingPaths(procurementId);
   revalidatePath("/procurements/new");
-  redirect(`/procurements/recognition/${procurementId}`);
+  revalidatePath("/procurements/pricing");
+  revalidatePath("/procurements");
+  redirect(`/procurements/pricing/${procurementId}`);
 }
 
 export async function saveTenderPricingReviewAction(formData: FormData) {
   const procurementId = Number(formData.get("procurementId"));
   revalidateTenderRecognitionPaths(procurementId);
+  revalidateTenderPricingPaths(procurementId);
   revalidatePath("/procurements/new");
-  redirect(`/procurements/recognition/${procurementId}`);
+  revalidatePath("/procurements/pricing");
+  redirect(`/procurements/pricing/${procurementId}`);
 }
 
 export async function saveTenderDecisionAction(formData: FormData) {

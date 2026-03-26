@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 function stageLinkClass(isActive: boolean) {
   if (isActive) {
@@ -11,10 +12,16 @@ function stageLinkClass(isActive: boolean) {
 }
 
 export function TenderStageSwitcher() {
+  const pathname = usePathname();
+  const isPricing = pathname.startsWith("/procurements/pricing");
+
   return (
     <div className="mt-3 flex flex-wrap items-center gap-3">
-      <Link href="/procurements/new" className={stageLinkClass(true)}>
+      <Link href="/procurements/new" className={stageLinkClass(!isPricing)}>
         1. Анализ
+      </Link>
+      <Link href="/procurements/pricing" className={stageLinkClass(isPricing)}>
+        2. Просчёт
       </Link>
     </div>
   );

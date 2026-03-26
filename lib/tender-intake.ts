@@ -241,9 +241,29 @@ function mergeHeaderRows(headerRows: string[][]) {
 }
 
 function normalizeWorkbookNumeric(value: string) {
-  const normalized = value.replace(/\s+/g, "").replace(",", ".").trim();
-  if (!normalized) return "";
-  return /^\d+(?:\.\d+)?$/.test(normalized) ? normalized : value;
+  const compact = value.replace(/\u00A0/g, " ").replace(/\s+/g, "").trim();
+  if (!compact) return "";
+
+  const trimmed = compact.replace(/[^\d,.\-]/g, "");
+  if (!trimmed) return value;
+
+  const decimalMatch = trimmed.match(/([.,])(\d{1,2})$/);
+  if (decimalMatch && decimalMatch.index != null) {
+    const integerPart = trimmed.slice(0, decimalMatch.index).replace(/[.,]/g, "");
+    const fractionalPart = decimalMatch[2];
+    const normalized = `${integerPart}.${fractionalPart}`;
+    return /^-?\d+(?:\.\d+)?$/.test(normalized) ? normalized : value;
+  }
+
+  const normalized = trimmed.replace(/[.,]/g, "");
+  return /^-?\d+$/.test(normalized) ? normalized : value;
+}
+
+function parseWorkbookAmount(value: string) {
+  const normalized = normalizeWorkbookNumeric(value);
+  if (!/^-?\d+(?:\.\d+)?$/.test(normalized)) return null;
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) ? numeric : null;
 }
 
 function getWorkbookColumnIndexes(headers: string[]) {
@@ -273,6 +293,13 @@ function inferWorkbookHeadersFromDataRow(row: string[]) {
   });
 }
 
+function areWorkbookHeadersTooGeneric(headers: string[]) {
+  const meaningful = headers.filter(
+    (header) => !/^колонка \d+$/i.test(header) && /[а-яa-z]/i.test(header)
+  );
+  return meaningful.length < Math.max(2, Math.ceil(headers.length / 3));
+}
+
 function isWorkbookTotalRow(row: string[]) {
   const haystack = row.join(" | ").toLowerCase();
   return /(^|[^\w])(итого|всего|итог|total)([^\w]|$)/i.test(haystack);
@@ -294,6 +321,77 @@ function inferWorkbookTableNature(headers: string[], rows: string[][]) {
   }
 
   return "mixed";
+}
+
+function buildWorkbookPricingLines(headers: string[], rows: string[][]) {
+  const headerHaystack = headers.join(" | ").toLowerCase();
+  const columns = getWorkbookColumnIndexes(headers);
+  const amountColumnCandidates = [columns.amount, columns.price].filter((index) => index >= 0);
+  const lines: string[] = [];
+
+  const pricingRows = rows.filter((row) => {
+    const haystack = row.join(" | ").toLowerCase();
+    return (
+      isWorkbookTotalRow(row) ||
+      /нмцк|нмцд|нмц|итого|всего|ндс|без ндс|с ндс|общая сумма|цена договора|цена лота/i.test(
+        haystack
+      )
+    );
+  });
+
+  if (pricingRows.length === 0 && /нмц|нмцк|нмцд|цена|стоим|ндс|итого|всего/i.test(headerHaystack)) {
+    rows.slice(0, 20).forEach((row) => pricingRows.push(row));
+  }
+
+  pricingRows.slice(0, 24).forEach((row, rowIndex) => {
+    const pairs = headers
+      .map((header, index) => {
+        const value = row[index] ?? "";
+        if (!value) return null;
+        return `${header}: ${normalizeWorkbookNumeric(value)}`;
+      })
+      .filter(Boolean);
+
+    if (pairs.length > 0) {
+      lines.push(`Ценовая строка ${rowIndex + 1}. ${pairs.join(" | ")}`);
+    }
+  });
+
+  const numericCandidates = rows
+    .flatMap((row) =>
+      amountColumnCandidates.map((index) => {
+        const raw = row[index] ?? "";
+        const amount = parseWorkbookAmount(raw);
+        if (!amount || amount <= 0) return null;
+        const haystack = row.join(" | ").toLowerCase();
+        const score =
+          (isWorkbookTotalRow(row) ? 100 : 0) +
+          (/нмцк|нмцд|нмц|цена договора|цена лота/i.test(haystack) ? 90 : 0) +
+          (/итого|всего|общая сумма/i.test(haystack) ? 80 : 0) +
+          (/ндс/i.test(haystack) ? 30 : 0);
+
+        return {
+          amount,
+          score,
+          line: row.join(" | "),
+        };
+      })
+    )
+    .filter((item): item is { amount: number; score: number; line: string } => Boolean(item))
+    .sort((left, right) => {
+      if (right.score !== left.score) return right.score - left.score;
+      return right.amount - left.amount;
+    })
+    .slice(0, 5);
+
+  if (numericCandidates.length > 0) {
+    lines.push("Кандидаты на НМЦК:");
+    numericCandidates.forEach((item, index) => {
+      lines.push(`${index + 1}. ${item.amount.toFixed(2)} | ${item.line}`);
+    });
+  }
+
+  return lines;
 }
 
 function buildWorkbookTotalLines(headers: string[], rows: string[][]) {
@@ -412,7 +510,7 @@ function extractStructuredTextFromWorkbook(buffer: Buffer) {
       !headerlessTable && firstDataRowIndex && firstDataRowIndex > 0
         ? rows.slice(0, firstDataRowIndex)
         : [rows[chooseHeaderRowIndex(rows)]];
-    const headers = headerlessTable
+    let headers = headerlessTable
       ? inferWorkbookHeadersFromDataRow(rows[0] ?? [])
       : mergeHeaderRows(headerRows);
     const dataRows = rows
@@ -423,13 +521,20 @@ function extractStructuredTextFromWorkbook(buffer: Buffer) {
       )
       .filter((row) => row.some((cell) => cell.length > 0))
       .slice(0, 80);
+    if (!headerlessTable && areWorkbookHeadersTooGeneric(headers) && dataRows.length > 0) {
+      const inferredHeaders = inferWorkbookHeadersFromDataRow(dataRows[0] ?? []);
+      if (!areWorkbookHeadersTooGeneric(inferredHeaders)) {
+        headers = inferredHeaders;
+      }
+    }
 
+    const tableNature = inferWorkbookTableNature(headers, dataRows);
     const summaryLines = [
       `Лист: ${sheetName}`,
       `Тип таблицы: ${
-        inferWorkbookTableNature(headers, dataRows) === "pricing"
+        tableNature === "pricing"
           ? "НМЦК и цены"
-          : inferWorkbookTableNature(headers, dataRows) === "goods"
+          : tableNature === "goods"
             ? "Товарная таблица"
             : "Смешанная таблица"
       }`,
@@ -439,6 +544,7 @@ function extractStructuredTextFromWorkbook(buffer: Buffer) {
     const positionLines = collectWorkbookPositionLines(headers, dataRows);
     const tableLines = buildWorkbookTableLines(headers, dataRows);
     const totalLines = buildWorkbookTotalLines(headers, dataRows);
+    const pricingLines = buildWorkbookPricingLines(headers, dataRows);
 
     if (dataRows.length > 0 && tableLines.length === 0) {
       summaryLines.push("Строки таблицы:");
@@ -471,6 +577,11 @@ function extractStructuredTextFromWorkbook(buffer: Buffer) {
     if (totalLines.length > 0) {
       summaryLines.push("Итоги таблицы:");
       summaryLines.push(...totalLines);
+    }
+
+    if (pricingLines.length > 0) {
+      summaryLines.push("Ценовые строки и кандидаты на НМЦК:");
+      summaryLines.push(...pricingLines);
     }
 
     return summaryLines.join("\n");

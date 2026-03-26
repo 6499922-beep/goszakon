@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { spawn } from "node:child_process";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
+import { kickTenderAnalysisRunner } from "@/lib/tender-analysis-runner";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
 
@@ -15,46 +15,6 @@ function isStaleRunningAnalysis(status: string | null, updatedAt: Date) {
   );
 
   return ageMinutes >= STALE_ANALYSIS_MINUTES;
-}
-
-function spawnTenderAnalysisJob(procurementId: number) {
-  const internalToken = process.env.DATABASE_URL;
-  const port = process.env.PORT || "3000";
-  const script = `
-    (async () => {
-      try {
-        const response = await fetch("http://127.0.0.1:${port}/api/tender/run-analysis", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-tender-internal-token": ${JSON.stringify(internalToken ?? "")}
-          },
-          body: JSON.stringify({ procurementId: ${procurementId} })
-        });
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error("[tender-process-queue] run-analysis failed: " + response.status + " " + text.slice(0, 400));
-        }
-        await response.text().catch(() => "");
-      } catch (error) {
-        console.error("[tender-process-queue] detached runner failed", error);
-        process.exitCode = 1;
-      }
-    })();
-  `;
-
-  const child = spawn(
-    process.execPath,
-    ["-e", script],
-    {
-      cwd: process.cwd(),
-      detached: true,
-      stdio: "ignore",
-      env: process.env,
-    }
-  );
-
-  child.unref();
 }
 
 export async function POST(request: Request) {
@@ -133,7 +93,7 @@ export async function POST(request: Request) {
     });
   }
 
-  spawnTenderAnalysisJob(procurementId);
+  kickTenderAnalysisRunner();
 
   return NextResponse.json({ ok: true, started: true });
 }

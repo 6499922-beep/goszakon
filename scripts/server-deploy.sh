@@ -8,7 +8,9 @@ APP_CONTAINER="${APP_CONTAINER:-goszakon-app}"
 
 cd "$APP_PATH"
 
-git pull origin main
+git fetch origin main
+git reset --hard origin/main
+git clean -fd
 DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0 docker compose -f "$COMPOSE_FILE" up -d --build --remove-orphans
 docker exec "$APP_CONTAINER" npx prisma db push
 docker image prune -f >/dev/null 2>&1 || true

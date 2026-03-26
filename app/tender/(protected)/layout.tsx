@@ -12,6 +12,7 @@ import { TenderUserRole } from "@prisma/client";
 import { tenderUserRoleLabels } from "@/lib/tender-users";
 import { tenderHasCapability } from "@/lib/tender-permissions";
 import { TENDER_INTAKE_ONLY_MODE } from "@/lib/tender-stage-mode";
+import { TenderStageSwitcher } from "@/app/tender/_components/tender-stage-switcher";
 
 export const dynamic = "force-dynamic";
 
@@ -41,9 +42,6 @@ export default async function TenderProtectedLayout({
   const links = TENDER_INTAKE_ONLY_MODE
     ? [
         { title: "Загрузка и распознавание", href: "/procurements/new" },
-        ...(tenderHasCapability(role, "procurement_pricing")
-          ? [{ title: "Просчёт", href: "/procurements/pricing" }]
-          : []),
         ...(tenderHasCapability(role, "rules_manage")
           ? [{ title: "ТВАРИ!", href: "/registry" }]
           : []),
@@ -109,24 +107,17 @@ export default async function TenderProtectedLayout({
 
       <div className="mx-auto max-w-[1500px] px-6 py-5">
         <section className="mb-5 rounded-[1.75rem] border border-slate-200 bg-white px-5 py-4 shadow-sm">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-2xl bg-[#081a4b] px-4 py-2 text-sm text-white">
-              {TENDER_INTAKE_ONLY_MODE
-                ? "Сейчас работаем только с первым шагом: загрузка документов и запуск распознавания."
-                : "Основной сценарий: загрузить закупку, проверить стоп-факторы, передать на предпросчёт и собрать комплект документов."}
-            </div>
-            <nav className="flex flex-1 flex-wrap gap-2">
-              {links.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="inline-flex rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-[#0d5bd7] hover:bg-white hover:text-[#0d5bd7]"
-                >
-                  {item.title}
-                </Link>
-              ))}
-            </nav>
-          </div>
+          <nav className="flex flex-wrap gap-2">
+            {links.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="inline-flex rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-[#0d5bd7] hover:bg-white hover:text-[#0d5bd7]"
+              >
+                {item.title}
+              </Link>
+            ))}
+          </nav>
         </section>
 
         {currentUser?.role === TenderUserRole.ADMIN ? (
@@ -134,21 +125,7 @@ export default async function TenderProtectedLayout({
             <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
               Этапы работы
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <Link
-                href="/procurements/new"
-                className="inline-flex items-center rounded-full bg-[#081a4b] px-4 py-2 text-sm font-semibold text-white"
-              >
-                1. Анализ
-              </Link>
-              <div className="text-slate-300">→</div>
-              <Link
-                href="/procurements/pricing"
-                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700"
-              >
-                2. Просчёт
-              </Link>
-            </div>
+            <TenderStageSwitcher />
           </section>
         ) : null}
 

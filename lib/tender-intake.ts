@@ -573,14 +573,27 @@ export async function prepareTenderUploadDocuments(
 export function inferSourceDocumentKind(fileName: string) {
   const normalized = fileName.toLowerCase();
 
-  if (normalized.includes("тз") || normalized.includes("техническ")) {
+  if (
+    normalized.includes("тз") ||
+    normalized.includes("техническ") ||
+    normalized.includes("техзад") ||
+    normalized.includes("тх")
+  ) {
     return "Техническое задание";
   }
   if (normalized.includes("договор")) {
     return "Проект договора";
   }
-  if (normalized.includes("цен") || normalized.includes("price")) {
+  if (
+    normalized.includes("нмц") ||
+    normalized.includes("обоснован") ||
+    normalized.includes("цен") ||
+    normalized.includes("price")
+  ) {
     return "Ценовая форма";
+  }
+  if (normalized.includes("извещ") || normalized.includes("документац")) {
+    return "Извещение";
   }
   if (normalized.includes("анкет")) {
     return "Анкета";

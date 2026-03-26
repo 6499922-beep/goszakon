@@ -146,6 +146,15 @@ function inferDocumentKind(
   }
 
   if (
+    /нмц|обоснован|ценов|калькул|стоим|price/i.test(titleHaystack) &&
+    /\.xls|\.xlsx|\.doc|\.docx|\.pdf/i.test(titleHaystack)
+  ) {
+    return titleHaystack.includes("нмц") || titleHaystack.includes("обоснован")
+      ? "НМЦК"
+      : "Ценовая таблица";
+  }
+
+  if (
     /техническ.*задан|тз|проектно-техническ|техническ.*част/i.test(titleHaystack) ||
     /техническое задание/i.test(String(documentKind ?? ""))
   ) {
@@ -162,13 +171,6 @@ function inferDocumentKind(
 
   if (/коммерческ/i.test(titleHaystack)) {
     return "Коммерческая часть";
-  }
-
-  if (
-    /нмц|обоснован|ценов|калькул|стоим|price/i.test(titleHaystack) &&
-    /\.xls|\.xlsx/i.test(titleHaystack)
-  ) {
-    return "Ценовая таблица";
   }
 
   if (

@@ -297,9 +297,27 @@ async function runTenderPrimaryAnalysis(prisma: ReturnType<typeof getPrisma>, in
           ? result.items_count
           : procurement.itemsCount,
       nmckWithoutVat:
-        result.nmck_without_vat?.trim()
-          ? result.nmck_without_vat.trim().replace(/\s+/g, "").replace(",", ".")
-          : procurement.nmckWithoutVat,
+        (() => {
+          const rawValue = result.nmck_without_vat?.trim() || "";
+          if (!rawValue) return procurement.nmckWithoutVat;
+
+          const compact = rawValue.replace(/[^\d,.\- ]/g, "").replace(/\s+/g, "").trim();
+          const lastComma = compact.lastIndexOf(",");
+          const lastDot = compact.lastIndexOf(".");
+          const decimalIndex = Math.max(lastComma, lastDot);
+
+          if (decimalIndex >= 0) {
+            const integerPart = compact.slice(0, decimalIndex).replace(/[.,]/g, "");
+            const fractionalPart = compact.slice(decimalIndex + 1).replace(/[^\d]/g, "");
+            const normalized = fractionalPart.length > 0 ? `${integerPart}.${fractionalPart}` : integerPart;
+            return /^-?\d+(?:\.\d{1,2})?$/.test(normalized)
+              ? normalized
+              : procurement.nmckWithoutVat;
+          }
+
+          const normalized = compact.replace(/[.,]/g, "");
+          return /^-?\d+$/.test(normalized) ? normalized : procurement.nmckWithoutVat;
+        })(),
       purchaseType: result.procurement_type?.trim() || procurement.purchaseType || null,
       title:
         procurement.title.startsWith("Закупка по файлам:") &&
@@ -409,7 +427,12 @@ async function runTenderPrimaryAnalysis(prisma: ReturnType<typeof getPrisma>, in
 function inferSourceDocumentKind(fileName: string) {
   const normalized = fileName.toLowerCase();
 
-  if (normalized.includes("тз") || normalized.includes("техническ")) {
+  if (
+    normalized.includes("тз") ||
+    normalized.includes("техническ") ||
+    normalized.includes("техзад") ||
+    normalized.includes("тх")
+  ) {
     return "Техническое задание";
   }
 
@@ -417,8 +440,17 @@ function inferSourceDocumentKind(fileName: string) {
     return "Проект договора";
   }
 
-  if (normalized.includes("цен") || normalized.includes("price")) {
+  if (
+    normalized.includes("нмц") ||
+    normalized.includes("обоснован") ||
+    normalized.includes("цен") ||
+    normalized.includes("price")
+  ) {
     return "Ценовая форма";
+  }
+
+  if (normalized.includes("извещ") || normalized.includes("документац")) {
+    return "Извещение";
   }
 
   if (normalized.includes("анкет")) {

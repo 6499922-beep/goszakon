@@ -175,22 +175,9 @@ export function TenderProcurementChat({
   }
 
   return (
-    <aside className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+    <aside className="flex max-h-[calc(100vh-2rem)] flex-col rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="text-base font-bold text-[#081a4b]">GPT по закупке</div>
-          <div className="mt-1 text-sm text-slate-500">
-            Можно спрашивать по документам и распознанным данным прямо отсюда.
-          </div>
-        </div>
-        <div className="rounded-full bg-[#0d5bd7]/8 px-3 py-1 text-xs font-semibold text-[#0d5bd7]">
-          История сохраняется
-        </div>
-      </div>
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <div className="text-xs text-slate-400">
-          Можно писать по документам, условиям, рискам и стоп-факторам.
-        </div>
+        <div className="text-base font-bold text-[#081a4b]">GPT по закупке</div>
         <button
           type="button"
           onClick={() => setIsCollapsed((current) => !current)}
@@ -202,18 +189,6 @@ export function TenderProcurementChat({
 
       {!isCollapsed ? (
         <>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {QUICK_PROMPTS.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                onClick={() => askQuestion(prompt)}
-                className="rounded-full border border-[#0d5bd7]/15 bg-[#0d5bd7]/5 px-3 py-2 text-xs font-medium text-[#0d5bd7] transition hover:border-[#0d5bd7]/30 hover:bg-[#0d5bd7]/10"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
           <div className="mt-3 inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1">
             <button
               type="button"
@@ -240,7 +215,7 @@ export function TenderProcurementChat({
           </div>
           <div
             ref={viewportRef}
-            className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3"
+            className="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3"
           >
             {hasMessages ? (
               sortedMessages.map((message) => {
@@ -317,7 +292,7 @@ export function TenderProcurementChat({
             <textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              rows={4}
+              rows={3}
               placeholder="Напиши вопрос по этой закупке..."
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#0d5bd7] focus:ring-2 focus:ring-[#0d5bd7]/10"
             />
@@ -326,14 +301,23 @@ export function TenderProcurementChat({
                 {error}
               </div>
             ) : null}
+            <div className="flex flex-wrap gap-2">
+              {QUICK_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => askQuestion(prompt)}
+                  className="rounded-full border border-[#0d5bd7]/15 bg-[#0d5bd7]/5 px-3 py-2 text-xs font-medium text-[#0d5bd7] transition hover:border-[#0d5bd7]/30 hover:bg-[#0d5bd7]/10"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
             <div className="flex items-center justify-between gap-3">
-              <div className="text-xs text-slate-400">
-                GPT отвечает в контексте именно этой закупки и её файлов.
-              </div>
               <button
                 type="submit"
                 disabled={isPending || !draft.trim()}
-                className="inline-flex items-center rounded-full bg-[#0d5bd7] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0b4fc0] disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="ml-auto inline-flex items-center rounded-full bg-[#0d5bd7] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0b4fc0] disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {isPending ? "Думаю..." : "Спросить"}
               </button>

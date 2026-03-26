@@ -442,8 +442,32 @@ type TenderDocumentCategory =
   | "other";
 
 type TenderDocumentScope = {
+  id: number;
   category: TenderDocumentCategory;
+  priority: number;
+  normalizedTitle: string;
+  hasMeaningfulBody: boolean;
   section: TenderSourceSection;
+};
+
+type TenderPackedScopeSelection = {
+  text: string;
+  includedIds: number[];
+};
+
+type TenderDocumentCoverageEntry = {
+  id: number;
+  title: string;
+  category: TenderDocumentCategory;
+  priority: number;
+  has_meaningful_text: boolean;
+  included_in_primary_pack: boolean;
+  included_in_meta_pack: boolean;
+  included_in_pricing_pack: boolean;
+  included_in_requirements_pack: boolean;
+  included_in_contract_pack: boolean;
+  included_in_equipment_pack: boolean;
+  note: string;
 };
 
 const tenderMetaAnalysisSchema = {
@@ -981,40 +1005,95 @@ function compressTenderSection(section: TenderSourceSection) {
 }
 
 function buildTenderAiSourcePack(sourceText: string) {
-  const sections = parseTenderSourceSections(sourceText);
+  const scopes = buildTenderDocumentScopes(sourceText);
+  return buildPackedScopeSelection(scopes, {
+    categories: ["notice", "spec", "contract", "pricing", "forms", "other"],
+    maxTotalLength: 90000,
+  });
+}
 
-  if (sections.length <= 1) {
-    return sourceText.slice(0, 90000);
+function buildTenderDocumentScopes(sourceText: string) {
+  return parseTenderSourceSections(sourceText).map((section, index) => {
+    const normalizedTitle = section.title.toLowerCase().trim();
+    const priority = getTenderSourcePriority(section.title);
+    const compactBody = section.body.replace(/\s+/g, " ").trim();
+    return {
+      id: index + 1,
+      section,
+      category: classifyTenderSection(section),
+      priority,
+      normalizedTitle,
+      hasMeaningfulBody: compactBody.length >= 80,
+    };
+  });
+}
+
+function buildPackedScopeSelection(
+  scopes: TenderDocumentScope[],
+  input: {
+    categories: TenderDocumentCategory[];
+    maxTotalLength: number;
+    equipmentMode?: boolean;
   }
+): TenderPackedScopeSelection {
+  const selected = scopes.filter(
+    (item) => input.categories.includes(item.category) && item.hasMeaningfulBody
+  );
+  const fallback = selected.length > 0 ? selected : scopes.filter((item) => item.hasMeaningfulBody);
 
-  const packed = sections
-    .map((section) => ({ section, compressed: compressTenderSection(section) }))
-    .sort((left, right) => right.compressed.priority - left.compressed.priority);
+  const packed = fallback
+    .map((item) => ({
+      ...item,
+      compressed: input.equipmentMode
+        ? {
+            text: [
+              `Файл: ${item.section.title}`,
+              item.section.body.slice(0, 5000).trim(),
+              (() => {
+                const lines = takeEquipmentFocusedSnippets(item.section.body);
+                return lines.length > 0 ? `Позиции и строки:\n${lines.join("\n")}` : "";
+              })(),
+            ]
+              .filter(Boolean)
+              .join("\n\n")
+              .trim(),
+            priority: item.priority,
+          }
+        : compressTenderSection(item.section),
+    }))
+    .sort((left, right) => right.priority - left.priority);
 
   const result: string[] = [];
+  const includedIds: number[] = [];
   let currentLength = 0;
-  const maxTotalLength = 90000;
+  const categorySeeded = new Set<TenderDocumentCategory>();
 
   for (const item of packed) {
     const chunk = item.compressed.text.trim();
     if (!chunk) continue;
-
-    if (currentLength > 0 && currentLength + chunk.length > maxTotalLength) {
-      continue;
-    }
+    if (currentLength > 0 && currentLength + chunk.length > input.maxTotalLength) continue;
+    if (categorySeeded.has(item.category)) continue;
 
     result.push(chunk);
+    includedIds.push(item.id);
+    currentLength += chunk.length + 2;
+    categorySeeded.add(item.category);
+  }
+
+  for (const item of packed) {
+    const chunk = item.compressed.text.trim();
+    if (!chunk) continue;
+    if (includedIds.includes(item.id)) continue;
+    if (currentLength > 0 && currentLength + chunk.length > input.maxTotalLength) continue;
+    result.push(chunk);
+    includedIds.push(item.id);
     currentLength += chunk.length + 2;
   }
 
-  return result.join("\n\n").trim() || sourceText.slice(0, maxTotalLength);
-}
-
-function buildTenderDocumentScopes(sourceText: string) {
-  return parseTenderSourceSections(sourceText).map((section) => ({
-    section,
-    category: classifyTenderSection(section),
-  }));
+  return {
+    text: result.join("\n\n").trim(),
+    includedIds,
+  };
 }
 
 function buildScopedSourcePack(
@@ -1022,59 +1101,49 @@ function buildScopedSourcePack(
   categories: TenderDocumentCategory[],
   maxTotalLength = 45000
 ) {
-  const selected = scopes.filter((item) => categories.includes(item.category));
-  const fallback = selected.length > 0 ? selected : scopes;
-
-  const packed = fallback
-    .map((item) => ({ ...item, compressed: compressTenderSection(item.section) }))
-    .sort((left, right) => right.compressed.priority - left.compressed.priority);
-
-  const result: string[] = [];
-  let currentLength = 0;
-
-  for (const item of packed) {
-    const chunk = item.compressed.text.trim();
-    if (!chunk) continue;
-    if (currentLength > 0 && currentLength + chunk.length > maxTotalLength) continue;
-    result.push(chunk);
-    currentLength += chunk.length + 2;
-  }
-
-  return result.join("\n\n").trim();
+  return buildPackedScopeSelection(scopes, {
+    categories,
+    maxTotalLength,
+  }).text;
 }
 
-function buildEquipmentSourcePack(
-  scopes: TenderDocumentScope[],
-  maxTotalLength = 55000
-) {
-  const selected = scopes.filter((item) =>
-    ["spec", "pricing", "notice", "forms"].includes(item.category)
-  );
-  const fallback = selected.length > 0 ? selected : scopes;
+function buildTenderDocumentCoverage(input: {
+  scopes: TenderDocumentScope[];
+  primaryPackIds: number[];
+  metaPackIds: number[];
+  pricingPackIds: number[];
+  requirementsPackIds: number[];
+  contractPackIds: number[];
+  equipmentPackIds: number[];
+}) {
+  return input.scopes.map<TenderDocumentCoverageEntry>((scope) => {
+    const included =
+      input.primaryPackIds.includes(scope.id) ||
+      input.metaPackIds.includes(scope.id) ||
+      input.pricingPackIds.includes(scope.id) ||
+      input.requirementsPackIds.includes(scope.id) ||
+      input.contractPackIds.includes(scope.id) ||
+      input.equipmentPackIds.includes(scope.id);
 
-  const result: string[] = [];
-  let currentLength = 0;
-
-  for (const item of fallback) {
-    const head = item.section.body.slice(0, 5000).trim();
-    const lines = takeEquipmentFocusedSnippets(item.section.body);
-    const chunk = [
-      `Файл: ${item.section.title}`,
-      head,
-      lines.length > 0 ? `Позиции и строки:\n${lines.join("\n")}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n")
-      .trim();
-
-    if (!chunk) continue;
-    if (currentLength > 0 && currentLength + chunk.length > maxTotalLength) continue;
-
-    result.push(chunk);
-    currentLength += chunk.length + 2;
-  }
-
-  return result.join("\n\n").trim();
+    return {
+      id: scope.id,
+      title: scope.section.title,
+      category: scope.category,
+      priority: scope.priority,
+      has_meaningful_text: scope.hasMeaningfulBody,
+      included_in_primary_pack: input.primaryPackIds.includes(scope.id),
+      included_in_meta_pack: input.metaPackIds.includes(scope.id),
+      included_in_pricing_pack: input.pricingPackIds.includes(scope.id),
+      included_in_requirements_pack: input.requirementsPackIds.includes(scope.id),
+      included_in_contract_pack: input.contractPackIds.includes(scope.id),
+      included_in_equipment_pack: input.equipmentPackIds.includes(scope.id),
+      note: !scope.hasMeaningfulBody
+        ? "Текст слишком короткий или пустой, поэтому документ не вошёл в AI-разбор."
+        : included
+          ? "Документ вошёл в один или несколько AI-проходов."
+          : "Документ распознан, но не попал в приоритетный набор из-за лимита контекста.",
+    };
+  });
 }
 
 export async function runTenderAiAnalysis(input: {
@@ -1097,38 +1166,44 @@ export async function runTenderAiAnalysis(input: {
   const compactMode = input.sourceText.length >= 60_000;
   const ultraCompactMode = input.sourceText.length >= 140_000;
   const hyperCompactMode = input.sourceText.length >= 260_000;
-  const packedSourceText = buildTenderAiSourcePack(input.sourceText);
   const scopes = buildTenderDocumentScopes(input.sourceText);
-  const metaSourceText =
-    buildScopedSourcePack(
-      scopes,
-      ["notice", "other"],
-      hyperCompactMode ? 2500 : ultraCompactMode ? 4000 : compactMode ? 7000 : 28000
-    ) ||
-    packedSourceText;
-  const pricingSourceText =
-    buildScopedSourcePack(
-      scopes,
-      ["pricing", "notice", "forms"],
-      hyperCompactMode ? 3000 : ultraCompactMode ? 5000 : compactMode ? 9000 : 32000
-    ) || packedSourceText;
-  const requirementsSourceText =
-    buildScopedSourcePack(
-      scopes,
-      ["notice", "forms", "spec", "other"],
-      hyperCompactMode ? 3500 : ultraCompactMode ? 6000 : compactMode ? 10000 : 36000
-    ) || packedSourceText;
-  const contractSourceText =
-    buildScopedSourcePack(
-      scopes,
-      ["contract", "notice", "other"],
-      hyperCompactMode ? 3000 : ultraCompactMode ? 5000 : compactMode ? 9000 : 32000
-    ) || packedSourceText;
-  const equipmentSourceText =
-    buildEquipmentSourcePack(
-      scopes,
-      hyperCompactMode ? 4500 : ultraCompactMode ? 7000 : compactMode ? 12000 : 55000
-    ) || packedSourceText;
+  const primarySourcePack = buildTenderAiSourcePack(input.sourceText);
+  const packedSourceText = primarySourcePack.text || input.sourceText.slice(0, 90000);
+  const metaSourcePack = buildPackedScopeSelection(scopes, {
+    categories: ["notice", "other"],
+    maxTotalLength: hyperCompactMode ? 2500 : ultraCompactMode ? 4000 : compactMode ? 7000 : 28000,
+  });
+  const pricingSourcePack = buildPackedScopeSelection(scopes, {
+    categories: ["pricing", "notice", "forms"],
+    maxTotalLength: hyperCompactMode ? 3000 : ultraCompactMode ? 5000 : compactMode ? 9000 : 32000,
+  });
+  const requirementsSourcePack = buildPackedScopeSelection(scopes, {
+    categories: ["notice", "forms", "spec", "other"],
+    maxTotalLength: hyperCompactMode ? 3500 : ultraCompactMode ? 6000 : compactMode ? 10000 : 36000,
+  });
+  const contractSourcePack = buildPackedScopeSelection(scopes, {
+    categories: ["contract", "notice", "other"],
+    maxTotalLength: hyperCompactMode ? 3000 : ultraCompactMode ? 5000 : compactMode ? 9000 : 32000,
+  });
+  const equipmentSourcePack = buildPackedScopeSelection(scopes, {
+    categories: ["spec", "pricing", "notice", "forms"],
+    maxTotalLength: hyperCompactMode ? 4500 : ultraCompactMode ? 7000 : compactMode ? 12000 : 55000,
+    equipmentMode: true,
+  });
+  const metaSourceText = metaSourcePack.text || packedSourceText;
+  const pricingSourceText = pricingSourcePack.text || packedSourceText;
+  const requirementsSourceText = requirementsSourcePack.text || packedSourceText;
+  const contractSourceText = contractSourcePack.text || packedSourceText;
+  const equipmentSourceText = equipmentSourcePack.text || packedSourceText;
+  const documentCoverage = buildTenderDocumentCoverage({
+    scopes,
+    primaryPackIds: primarySourcePack.includedIds,
+    metaPackIds: metaSourcePack.includedIds,
+    pricingPackIds: pricingSourcePack.includedIds,
+    requirementsPackIds: requirementsSourcePack.includedIds,
+    contractPackIds: contractSourcePack.includedIds,
+    equipmentPackIds: equipmentSourcePack.includedIds,
+  });
 
   const metaPrompt = `
 Ты разбираешь только общую идентификацию закупки и явные стоп-факторы.
@@ -1352,6 +1427,7 @@ ${equipmentSourceText}
       model,
       dossier: synthesizedDossier,
       result,
+      documentCoverage,
     };
   }
 
@@ -1512,6 +1588,7 @@ ${JSON.stringify(
     model,
     dossier,
     result,
+    documentCoverage,
   };
 }
 
@@ -1531,7 +1608,8 @@ export async function runTenderFasAiAnalysis(input: {
   }
 
   const model = process.env.OPENAI_FAS_MODEL || process.env.OPENAI_MODEL || "gpt-5";
-  const packedSourceText = buildTenderAiSourcePack(input.sourceText).slice(0, 18_000);
+  const packedSourceText =
+    buildTenderAiSourcePack(input.sourceText).text.slice(0, 18_000);
 
   const prompt = `
 Ты анализируешь документацию закупки по 223-ФЗ только на предмет потенциальной жалобы в ФАС.

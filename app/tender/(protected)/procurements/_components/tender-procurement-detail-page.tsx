@@ -52,6 +52,11 @@ function getAiAnalysisList(value: Record<string, unknown> | null, key: string) {
   return jsonListToStrings(raw);
 }
 
+function getAiAnalysisCoverageList(value: Record<string, unknown> | null) {
+  const raw = value?.analysis_document_coverage;
+  return Array.isArray(raw) ? raw : [];
+}
+
 function extractStoredDocumentPath(note: string | null | undefined) {
   const match = note?.match(/Файл сохранён:\s*(.+)$/m);
   return match?.[1]?.trim() ?? null;
@@ -304,6 +309,14 @@ function describeSourceDocument(note: string | null | undefined) {
 
 function normalizeSearchText(value: string | null | undefined) {
   return String(value ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function normalizeDocumentIdentity(value: string | null | undefined) {
+  return normalizeSearchText(value)
+    .replace(/^[^/]+\.zip\s*\/\s*/i, "")
+    .replace(/^[^/]+\.rar\s*\/\s*/i, "")
+    .replace(/\.(docx|doc|xlsx|xls|pdf|txt)$/i, "")
+    .trim();
 }
 
 function findMatchingDocumentsForRule(
@@ -645,11 +658,40 @@ export async function renderTenderRecognitionDetailPage({
   const responsibilityTerms = getAiAnalysisString(aiAnalysis, "responsibility_terms");
   const terminationReasons = getAiAnalysisList(aiAnalysis, "termination_reasons");
   const missingFields = buildMissingFields(procurement);
+  const analysisCoverage = getAiAnalysisCoverageList(aiAnalysis);
   const sourceDocuments = procurement.sourceDocuments.map((item) => {
     const storagePath = extractStoredDocumentPath(item.note);
+    const compactTitle = buildCompactDocumentName(item.title, item.fileName, item.note);
+    const coverageMatch = analysisCoverage.find((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
+      const record = entry as Record<string, unknown>;
+      const title = typeof record.title === "string" ? record.title : "";
+      return normalizeDocumentIdentity(title) === normalizeDocumentIdentity(compactTitle);
+    }) as Record<string, unknown> | undefined;
+    const coverageIncluded = Boolean(
+      coverageMatch?.included_in_primary_pack ||
+        coverageMatch?.included_in_meta_pack ||
+        coverageMatch?.included_in_pricing_pack ||
+        coverageMatch?.included_in_requirements_pack ||
+        coverageMatch?.included_in_contract_pack ||
+        coverageMatch?.included_in_equipment_pack
+    );
+    const coverageLabel = coverageMatch
+      ? coverageIncluded
+        ? "Вошёл в AI-анализ"
+        : "Не вошёл в AI-анализ"
+      : item.contentSnippet
+        ? "Ждёт уточнения покрытия"
+        : "Нет текста для AI";
+    const coverageDescription =
+      coverageMatch && typeof coverageMatch.note === "string" && coverageMatch.note.trim()
+        ? coverageMatch.note.trim()
+        : item.contentSnippet
+          ? "Документ сохранён, но карта участия в анализе ещё не собрана."
+          : "По документу не удалось получить достаточно текста для AI-разбора.";
     return {
       id: item.id,
-      title: buildCompactDocumentName(item.title, item.fileName, item.note),
+      title: compactTitle,
       fileLabel: item.fileName || item.title || "Документ",
       kindLabel: inferDocumentKind(item.title, item.fileName, item.note),
       href: buildSourceDocumentHref(item.id, storagePath),
@@ -665,6 +707,11 @@ export async function renderTenderRecognitionDetailPage({
         }
       ) : null,
       status: describeSourceDocument(item.note),
+      coverage: {
+        included: coverageIncluded,
+        label: coverageLabel,
+        description: coverageDescription,
+      },
     };
   });
   const finalSourceDocuments = sourceDocuments
@@ -1093,6 +1140,7 @@ export async function renderTenderRecognitionDetailPage({
                             <th className="px-4 py-3 font-medium">Тип</th>
                             <th className="px-4 py-3 font-medium">Документ</th>
                             <th className="px-4 py-3 font-medium">Статус</th>
+                            <th className="px-4 py-3 font-medium">Участие в анализе</th>
                             <th className="px-4 py-3 text-right font-medium">Открыть</th>
                           </tr>
                         </thead>
@@ -1138,6 +1186,20 @@ export async function renderTenderRecognitionDetailPage({
                                 </span>
                                 <div className="mt-1 max-w-[360px] text-xs leading-5 text-slate-500">
                                   {item.status.description}
+                                </div>
+                              </td>
+                              <td className="px-4 py-4">
+                                <span
+                                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                    item.coverage.included
+                                      ? "bg-[#0d5bd7]/10 text-[#0d5bd7]"
+                                      : "bg-slate-100 text-slate-600"
+                                  }`}
+                                >
+                                  {item.coverage.label}
+                                </span>
+                                <div className="mt-1 max-w-[360px] text-xs leading-5 text-slate-500">
+                                  {item.coverage.description}
                                 </div>
                               </td>
                               <td className="px-4 py-4 text-right">

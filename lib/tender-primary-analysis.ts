@@ -1,4 +1,5 @@
 import {
+  Prisma,
   TenderActionType,
   TenderFasReviewStatus,
   TenderProcurementStatus,
@@ -499,6 +500,7 @@ export async function runTenderPrimaryAnalysis(input: {
   let model = "gpt-5";
   let result;
   let dossier;
+  let documentCoverage: unknown[] = [];
   let usedFallbackAnalysis = false;
 
   try {
@@ -518,6 +520,7 @@ export async function runTenderPrimaryAnalysis(input: {
     model = analysisResponse.model;
     result = analysisResponse.result;
     dossier = analysisResponse.dossier;
+    documentCoverage = analysisResponse.documentCoverage ?? [];
   } catch (error) {
     const fallback = buildQuickTenderFallback({
       procurement: {
@@ -535,6 +538,7 @@ export async function runTenderPrimaryAnalysis(input: {
     model = "quick-fallback";
     result = fallback.result;
     dossier = fallback.dossier;
+    documentCoverage = [];
     usedFallbackAnalysis = true;
 
     await logTenderEvent({
@@ -629,7 +633,25 @@ export async function runTenderPrimaryAnalysis(input: {
           result.penalty_terms?.trim() ||
           penaltyFallback ||
           "",
-      },
+        analysis_document_coverage: documentCoverage as any,
+        analysis_document_summary: {
+          total_documents: Array.isArray(documentCoverage) ? documentCoverage.length : 0,
+          included_documents: Array.isArray(documentCoverage)
+            ? documentCoverage.filter((item) => {
+                if (!item || typeof item !== "object") return false;
+                const record = item as Record<string, unknown>;
+                return Boolean(
+                  record.included_in_primary_pack ||
+                    record.included_in_meta_pack ||
+                    record.included_in_pricing_pack ||
+                    record.included_in_requirements_pack ||
+                    record.included_in_contract_pack ||
+                    record.included_in_equipment_pack
+                );
+              }).length
+            : 0,
+        } as any,
+      } as Prisma.InputJsonValue,
       aiAnalysisStatus: "completed",
       aiAnalysisError: null,
       aiAnalyzedAt: new Date(),

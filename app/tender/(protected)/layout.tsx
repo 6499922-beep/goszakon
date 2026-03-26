@@ -42,6 +42,9 @@ export default async function TenderProtectedLayout({
     ? [
         { title: "Загрузка и распознавание", href: "/procurements/new" },
         ...(tenderHasCapability(role, "rules_manage")
+          ? [{ title: "Реестр ИНН", href: "/registry" }]
+          : []),
+        ...(tenderHasCapability(role, "rules_manage")
           ? [{ title: "Стоп-факторы", href: "/rules" }]
           : []),
       ]
@@ -57,6 +60,9 @@ export default async function TenderProtectedLayout({
           : []),
         ...(tenderHasCapability(role, "rules_manage")
           ? [{ title: "Стоп-факторы", href: "/rules" }]
+          : []),
+        ...(tenderHasCapability(role, "rules_manage")
+          ? [{ title: "Реестр ИНН", href: "/registry" }]
           : []),
         ...(tenderHasCapability(role, "fas_access")
           ? [{ title: "Жалобы в ФАС", href: "/fas" }]

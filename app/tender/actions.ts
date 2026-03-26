@@ -2052,6 +2052,90 @@ export async function deleteTenderRuleAction(formData: FormData) {
   revalidatePath("/rules");
 }
 
+export async function createTenderInnRegistryAction(formData: FormData) {
+  await requireTenderCapability("rules_manage");
+  const prisma = getPrisma();
+  const inn = String(formData.get("inn") ?? "").replace(/\D+/g, "").trim();
+  const label = String(formData.get("label") ?? "").trim();
+
+  if (!inn || !label) {
+    throw new Error("ИНН и название записи обязательны.");
+  }
+
+  await prisma.tenderInnRegistry.create({
+    data: {
+      inn,
+      label,
+      description: normalizeString(formData.get("description")),
+      isActive: String(formData.get("isActive") ?? "on") === "on",
+    },
+  });
+
+  revalidatePath("/registry");
+  revalidatePath("/procurements/new");
+}
+
+export async function updateTenderInnRegistryAction(formData: FormData) {
+  await requireTenderCapability("rules_manage");
+  const prisma = getPrisma();
+  const recordId = Number(formData.get("recordId"));
+  const inn = String(formData.get("inn") ?? "").replace(/\D+/g, "").trim();
+  const label = String(formData.get("label") ?? "").trim();
+
+  if (!recordId || !inn || !label) {
+    throw new Error("Идентификатор, ИНН и название записи обязательны.");
+  }
+
+  await prisma.tenderInnRegistry.update({
+    where: { id: recordId },
+    data: {
+      inn,
+      label,
+      description: normalizeString(formData.get("description")),
+      isActive: String(formData.get("isActive") ?? "") === "on",
+    },
+  });
+
+  revalidatePath("/registry");
+  revalidatePath("/procurements/new");
+}
+
+export async function toggleTenderInnRegistryAction(formData: FormData) {
+  await requireTenderCapability("rules_manage");
+  const prisma = getPrisma();
+  const recordId = Number(formData.get("recordId"));
+  const nextValue = String(formData.get("nextValue") ?? "") === "true";
+
+  if (!recordId) {
+    throw new Error("Идентификатор записи обязателен.");
+  }
+
+  await prisma.tenderInnRegistry.update({
+    where: { id: recordId },
+    data: { isActive: nextValue },
+  });
+
+  revalidatePath("/registry");
+  revalidatePath("/procurements/new");
+}
+
+export async function deleteTenderInnRegistryAction(formData: FormData) {
+  await requireTenderCapability("rules_manage");
+  const prisma = getPrisma();
+  const recordId = Number(formData.get("recordId"));
+
+  if (!recordId) {
+    throw new Error("Идентификатор записи обязателен.");
+  }
+
+  await prisma.tenderInnRegistry.delete({
+    where: { id: recordId },
+  });
+
+  revalidatePath("/registry");
+  revalidatePath("/procurements/new");
+}
+
 export async function saveTenderCompanyProfileAction(formData: FormData) {
   await requireTenderCapability("companies_manage");
   const prisma = getPrisma();

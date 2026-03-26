@@ -334,6 +334,19 @@ model TenderStopRule {
   @@index([sortOrder])
 }
 
+model TenderInnRegistry {
+  id          Int      @id @default(autoincrement())
+  inn         String   @unique
+  label       String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([inn])
+  @@index([isActive])
+}
+
 model TenderProcurement {
   id                       Int                          @id @default(autoincrement())
   title                    String

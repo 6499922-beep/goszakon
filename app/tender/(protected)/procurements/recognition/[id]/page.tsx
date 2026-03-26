@@ -610,6 +610,17 @@ export default async function TenderRecognitionDetailPage({
   if (!procurement) {
     redirect("/procurements/new");
   }
+  const normalizedCustomerInn = procurement.customerInn?.replace(/\D+/g, "").trim() ?? "";
+  const innRegistryRecord = normalizedCustomerInn
+    ? await prisma.tenderInnRegistry.findFirst({
+        where: { isActive: true, inn: normalizedCustomerInn },
+        select: {
+          inn: true,
+          label: true,
+          description: true,
+        },
+      })
+    : null;
 
   const requiredDocuments = jsonListToStrings(procurement.requiredDocuments);
   const nonstandardRequirements = jsonListToStrings(procurement.nonstandardRequirements);
@@ -818,6 +829,30 @@ export default async function TenderRecognitionDetailPage({
                     </div>
                   )}
                 </div>
+
+                {innRegistryRecord ? (
+                  <div className="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-rose-900">
+                    <div className="text-sm font-semibold uppercase tracking-[0.12em] text-rose-700">
+                      Реестр ИНН
+                    </div>
+                    <div className="mt-2 text-lg font-bold">
+                      Компания найдена в реестре
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex rounded-full bg-white px-3 py-1 text-sm font-semibold text-rose-700">
+                        {innRegistryRecord.label}
+                      </span>
+                      <span className="inline-flex rounded-full bg-white px-3 py-1 text-sm text-rose-700">
+                        ИНН: {innRegistryRecord.inn}
+                      </span>
+                    </div>
+                    {innRegistryRecord.description ? (
+                      <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-rose-900">
+                        {innRegistryRecord.description}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-4">

@@ -148,6 +148,22 @@ export default async function NewTenderProcurementPage({
       createdAt: true,
     },
   });
+  const inns = Array.from(
+    new Set(
+      recentProcurements
+        .map((item) => item.customerInn?.replace(/\D+/g, "").trim())
+        .filter((value): value is string => Boolean(value))
+    )
+  );
+  const registryRecords = inns.length
+    ? await prisma.tenderInnRegistry.findMany({
+        where: { isActive: true, inn: { in: inns } },
+        select: { inn: true, label: true },
+      })
+    : [];
+  const registryByInn = new Map(
+    registryRecords.map((item) => [item.inn, item.label])
+  );
   const firstQueuedProcurement =
     recentProcurements.find((item) => item.aiAnalysisStatus === "queued") ?? null;
   const queueRunnerProcurementId =
@@ -216,6 +232,10 @@ export default async function NewTenderProcurementPage({
                 </tr>
               ) : (
                 recentProcurements.map((item) => {
+                  const normalizedInn = item.customerInn?.replace(/\D+/g, "").trim() ?? "";
+                  const registryLabel = normalizedInn
+                    ? registryByInn.get(normalizedInn) ?? null
+                    : null;
                   const recognitionMeta = getRecognitionStatusMeta(
                     item.aiAnalysisStatus,
                     item.aiAnalysisError,
@@ -266,7 +286,14 @@ export default async function NewTenderProcurementPage({
                           href={buildTenderCustomerHref(item.customerName, item.customerInn)}
                           className="block -mx-4 -my-4 px-4 py-4 font-medium transition hover:text-[#0d5bd7]"
                         >
-                          {item.customerName ?? "Не определён"}
+                          <div>{item.customerName ?? "Не определён"}</div>
+                          {registryLabel ? (
+                            <div className="mt-2">
+                              <span className="inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700">
+                                Реестр ИНН: {registryLabel}
+                              </span>
+                            </div>
+                          ) : null}
                         </Link>
                       </td>
                       <td className="px-4 py-4">

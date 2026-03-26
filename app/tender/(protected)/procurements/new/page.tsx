@@ -10,7 +10,7 @@ import { formatTenderMoscowShortDateTime } from "@/lib/tender-format";
 import { buildTenderCustomerHref } from "@/lib/tender-customers";
 
 export const dynamic = "force-dynamic";
-const STALE_ANALYSIS_MINUTES = 10;
+const STALE_ANALYSIS_MINUTES = 20;
 
 function formatCurrency(value: { toString(): string } | null | undefined) {
   if (value == null) return "Не определена";
@@ -26,11 +26,16 @@ function formatCurrency(value: { toString(): string } | null | undefined) {
 function getRecognitionStatusMeta(
   status: string | null,
   error: string | null,
-  createdAt: Date
+  createdAt: Date,
+  updatedAt: Date
 ) {
   const minutesFromCreation = Math.max(
     0,
     Math.round((Date.now() - createdAt.getTime()) / 60000)
+  );
+  const minutesFromUpdate = Math.max(
+    0,
+    Math.round((Date.now() - updatedAt.getTime()) / 60000)
   );
 
   if (status === "completed") {
@@ -42,19 +47,24 @@ function getRecognitionStatusMeta(
   }
 
   if (status === "running") {
-    if (minutesFromCreation >= 10) {
+    if (minutesFromUpdate >= STALE_ANALYSIS_MINUTES) {
       return {
-        label: "Зависло",
-        tone: "bg-amber-50 text-amber-800",
+        label: "Продлённый анализ",
+        tone: "bg-violet-50 text-violet-700",
         note:
-          "Анализ идёт слишком долго. Скорее всего, старая запись зависла и её лучше удалить или перезагрузить заново.",
+          "Анализ идёт дольше обычного, но ещё выполняется. Для крупных комплектов это может занимать до 15 минут.",
       };
     }
 
     return {
       label: "Идёт анализ",
       tone: "bg-blue-50 text-blue-700",
-      note: "Система сейчас обрабатывает документы.",
+      note:
+        minutesFromCreation <= 2
+          ? "Система обрабатывает документы. Обычно это занимает 1-3 минуты."
+          : minutesFromCreation <= 5
+            ? "Анализ продолжается. Для средних комплектов обычно нужно до 5 минут."
+            : "Идёт глубокий анализ. Для больших комплектов это может занимать до 10-15 минут.",
     };
   }
 
@@ -68,27 +78,27 @@ function getRecognitionStatusMeta(
 
   if (status === "needs_text") {
     return {
-      label: "Нужна ручная проверка",
+      label: "Не хватило текста",
       tone: "bg-amber-50 text-amber-700",
       note:
         error?.trim() ||
-        "Не хватило читаемого текста или часть файлов не удалось разобрать автоматически.",
+        "Из части файлов не удалось извлечь читаемый текст автоматически.",
     };
   }
 
-  if (status === "queued" && minutesFromCreation >= 10) {
+  if (status === "queued" && minutesFromUpdate >= STALE_ANALYSIS_MINUTES) {
     return {
-      label: "Зависло",
-      tone: "bg-amber-50 text-amber-800",
+      label: "Повторный запуск",
+      tone: "bg-indigo-50 text-indigo-700",
       note:
-        "Закупка давно стоит в очереди. Похоже, это старая незавершённая запись.",
+        "Система повторно запускает углублённый анализ после долгой обработки.",
     };
   }
 
   return {
     label: "В очереди",
     tone: "bg-amber-50 text-amber-700",
-    note: "Закупка принята, анализ ещё не стартовал.",
+    note: "Закупка принята. Обычно старт анализа занимает до 1 минуты.",
   };
 }
 
@@ -256,7 +266,8 @@ export default async function NewTenderProcurementPage({
                   const recognitionMeta = getRecognitionStatusMeta(
                     item.aiAnalysisStatus,
                     item.aiAnalysisError,
-                    item.createdAt
+                    item.createdAt,
+                    item.updatedAt
                   );
                   const stopTone =
                     item.status === "STOPPED"

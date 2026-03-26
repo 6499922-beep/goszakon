@@ -50,7 +50,7 @@ async function withAnalysisRetry<T>(
 
 const PRIMARY_ANALYSIS_TIMEOUT_MS = 5 * 60 * 1000;
 const PRIMARY_ANALYSIS_TIMEOUT_TEXT =
-  "Первичный анализ занял слишком много времени. Заявка сохранена, но нужен повторный запуск или ручная проверка.";
+  "Первичный анализ занял больше обычного. Система автоматически ставит закупку на повторный углублённый запуск.";
 
 function extractRelevantParagraphs(sourceText: string, patterns: RegExp[], limit = 3) {
   const blocks = sourceText
@@ -490,7 +490,7 @@ export async function executeTenderPrimaryAnalysisJob(input: {
     const isTimeoutError = /слишком много времени|aborted due to timeout|timeout/i.test(
       message ?? ""
     );
-    const nextStatus = isTimeoutError ? "needs_text" : "failed";
+    const nextStatus = isTimeoutError ? "queued" : "failed";
     const nextError = isTimeoutError ? PRIMARY_ANALYSIS_TIMEOUT_TEXT : message;
 
     try {
@@ -512,7 +512,7 @@ export async function executeTenderPrimaryAnalysisJob(input: {
       procurementId,
       actionType: TenderActionType.NOTE_ADDED,
       title: isTimeoutError
-        ? "Первичный анализ переведён на ручную проверку"
+        ? "Первичный анализ поставлен на повторный запуск"
         : "Первичный анализ не завершён",
       description:
         nextError ||

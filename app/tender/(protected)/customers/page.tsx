@@ -37,7 +37,7 @@ function getRecognitionLabel(status: string | null) {
     case "failed":
       return "Ошибка";
     case "needs_text":
-      return "Нужна ручная проверка";
+      return "Не хватило текста";
     case "running":
       return "Идёт анализ";
     case "queued":

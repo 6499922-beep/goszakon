@@ -230,6 +230,59 @@ function mergeHeaderRows(headerRows: string[][]) {
   });
 }
 
+function normalizeWorkbookNumeric(value: string) {
+  const normalized = value.replace(/\s+/g, "").replace(",", ".").trim();
+  if (!normalized) return "";
+  return /^\d+(?:\.\d+)?$/.test(normalized) ? normalized : value;
+}
+
+function getWorkbookColumnIndexes(headers: string[]) {
+  const findIndex = (pattern: RegExp) =>
+    headers.findIndex((header) => pattern.test(header.toLowerCase()));
+
+  return {
+    ordinal: findIndex(/^(п\/п|№|номер|n)$/i),
+    name: findIndex(/наимен|товар|продукц|оборуд|материал|работ|услуг|позици|номенклатур/i),
+    unit: findIndex(/ед\.? ?изм|единиц|unit|ед\./i),
+    quantity: findIndex(/колич|объем|объ[её]м|qty/i),
+    price: findIndex(/цена|стоим.*ед|unit.?price|за единиц/i),
+    amount: findIndex(/сумм|стоим(?!.*ед)|итого|total/i),
+  };
+}
+
+function buildWorkbookTableLines(headers: string[], rows: string[][]) {
+  const columns = getWorkbookColumnIndexes(headers);
+  const selectedColumns = [
+    columns.ordinal,
+    columns.name,
+    columns.unit,
+    columns.quantity,
+    columns.price,
+    columns.amount,
+  ].filter((index) => index >= 0);
+
+  if (selectedColumns.length < 2 || columns.name < 0) return [];
+
+  const headerLine = selectedColumns.map((index) => headers[index]).join(" | ");
+  const lines = [`Таблица позиций: ${headerLine}`];
+
+  rows.forEach((row) => {
+    const nameValue = row[columns.name] ?? "";
+    if (!nameValue) return;
+
+    const values = selectedColumns
+      .map((index) => normalizeWorkbookNumeric(row[index] ?? ""))
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    if (values.length > 0) {
+      lines.push(values.join(" | "));
+    }
+  });
+
+  return lines.slice(0, 160);
+}
+
 function collectWorkbookPositionLines(headers: string[], rows: string[][]) {
   const headerHaystack = headers.join(" | ").toLowerCase();
   const likelyPositionTable =
@@ -306,6 +359,7 @@ function extractStructuredTextFromWorkbook(buffer: Buffer) {
     ];
 
     const positionLines = collectWorkbookPositionLines(headers, dataRows);
+    const tableLines = buildWorkbookTableLines(headers, dataRows);
 
     if (dataRows.length > 0) {
       summaryLines.push("Строки таблицы:");
@@ -328,6 +382,11 @@ function extractStructuredTextFromWorkbook(buffer: Buffer) {
     if (positionLines.length > 0) {
       summaryLines.push("Позиции для анализа:");
       summaryLines.push(...positionLines);
+    }
+
+    if (tableLines.length > 0) {
+      summaryLines.push("Компактная таблица позиций:");
+      summaryLines.push(...tableLines);
     }
 
     return summaryLines.join("\n");

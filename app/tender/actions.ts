@@ -206,130 +206,13 @@ async function persistTenderUpload(file: File) {
 }
 
 async function extractTextFromTenderUpload(file: File) {
-  const type = (file.type || "").toLowerCase();
-  const name = (file.name || "").toLowerCase();
   const buffer = Buffer.from(await file.arrayBuffer());
-
-  const isPlainText =
-    type.startsWith("text/") ||
-    type.includes("json") ||
-    name.endsWith(".txt") ||
-    name.endsWith(".md") ||
-    name.endsWith(".csv") ||
-    name.endsWith(".json");
-
-  if (!isPlainText) {
-    if (name.endsWith(".docx")) {
-      const docxResult = await mammoth.extractRawText({ buffer });
-      const extractedText = docxResult.value.trim();
-
-      return {
-        extractedText: extractedText.length > 0 ? extractedText : null,
-        extractionNote:
-          extractedText.length > 0
-            ? "Текст из DOCX удалось извлечь автоматически."
-            : "DOCX загружен, но текст для анализа извлечь не удалось.",
-      };
-    }
-
-    if (name.endsWith(".doc")) {
-      try {
-        try {
-          const extractor = new WordExtractor();
-          const extractedDocument = await extractor.extract(buffer);
-          const extractedText = extractedDocument.getBody().trim();
-
-          if (extractedText.length > 0) {
-            return {
-              extractedText,
-              extractionNote: "Текст из DOC удалось извлечь автоматически.",
-            };
-          }
-        } catch {
-          // fallback below
-        }
-
-        const tempDir = path.join(os.tmpdir(), `tender-doc-${Date.now()}`);
-        const absolutePath = path.join(tempDir, file.name || "document.doc");
-
-        try {
-          await mkdir(tempDir, { recursive: true });
-          await writeFile(absolutePath, buffer);
-          const { stdout } = await execFileAsync("antiword", [absolutePath], {
-            maxBuffer: 20 * 1024 * 1024,
-          });
-          const extractedText = String(stdout ?? "").replace(/\u0000/g, "").trim();
-
-          return {
-            extractedText: extractedText.length > 0 ? extractedText : null,
-            extractionNote:
-              extractedText.length > 0
-                ? "Текст из DOC удалось извлечь автоматически."
-                : "DOC загружен, но текст для анализа извлечь не удалось.",
-          };
-        } finally {
-          await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
-        }
-      } catch {
-        return {
-          extractedText: null,
-          extractionNote:
-            "Файл DOC сохранён, но его не удалось автоматически разобрать. Нужна ручная проверка или версия в DOCX.",
-        };
-      }
-    }
-
-    if (name.endsWith(".pdf")) {
-      const parser = new PDFParse({ data: buffer });
-      const pdfResult = await parser.getText();
-      await parser.destroy();
-      const extractedText = pdfResult.text.trim();
-
-      return {
-        extractedText: extractedText.length > 0 ? extractedText : null,
-        extractionNote:
-          extractedText.length > 0
-            ? "Текст из PDF удалось извлечь автоматически."
-            : "PDF загружен, но текст для анализа извлечь не удалось.",
-      };
-    }
-
-    if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
-      const workbook = XLSX.read(buffer, { type: "buffer" });
-      const extractedText = workbook.SheetNames.map((sheetName) => {
-        const worksheet = workbook.Sheets[sheetName];
-        const csv = XLSX.utils.sheet_to_csv(worksheet, { blankrows: false }).trim();
-        return csv ? `Лист: ${sheetName}\n${csv}` : "";
-      })
-        .filter(Boolean)
-        .join("\n\n")
-        .trim();
-
-      return {
-        extractedText: extractedText.length > 0 ? extractedText : null,
-        extractionNote:
-          extractedText.length > 0
-            ? "Текст из Excel удалось извлечь автоматически."
-            : "Excel-файл загружен, но данных для анализа извлечь не удалось.",
-      };
-    }
-
-    return {
-      extractedText: null,
-      extractionNote:
-        "Файл сохранён в системе, но этот формат пока не удалось разобрать автоматически. Его можно использовать дальше как исходный документ закупки.",
-    };
-  }
-
-  const extractedText = buffer.toString("utf-8").trim();
-
-  return {
-    extractedText: extractedText.length > 0 ? extractedText : null,
-    extractionNote:
-      extractedText.trim().length > 0
-        ? "Текст из файла удалось извлечь автоматически."
-        : "Файл загружен, но текста для анализа внутри не найдено.",
-  };
+  return extractTextFromTenderUploadHelper({
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    buffer,
+  });
 }
 
 async function runTenderPrimaryAnalysis(prisma: ReturnType<typeof getPrisma>, input: {

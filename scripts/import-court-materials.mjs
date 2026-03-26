@@ -3,10 +3,11 @@ import {
   filterByOnlySlugs,
   upsertMaterials,
 } from "./import-runtime.mjs";
+import { pathToFileURL } from "node:url";
 
 const prisma = createPrisma();
 
-const materials = [
+export const materials = [
   {
     slug: "chelyabinskoe-ufas-shtraf-za-prosrochku-oplaty-chemk-074-04-7-30-4-1927-2025",
     title:
@@ -568,16 +569,22 @@ const materials = [
   },
 ];
 
-async function main() {
+export async function main() {
   const itemsToImport = filterByOnlySlugs(materials);
   await upsertMaterials(prisma, itemsToImport);
 }
 
-main()
-  .catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+const isDirectRun =
+  Boolean(process.argv[1]) &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isDirectRun) {
+  main()
+    .catch((error) => {
+      console.error(error);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

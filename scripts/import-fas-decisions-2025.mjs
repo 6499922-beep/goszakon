@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   buildCategoryMap,
   createPrisma,
@@ -14,7 +14,7 @@ const repoRoot = path.resolve(__dirname, "..");
 
 const prisma = createPrisma();
 
-const cases = [
+export const cases = [
   {
     slug: "rosseti-yantar-ne-razmestila-perenos-srokov-zakupki",
     title:
@@ -833,7 +833,7 @@ const cases = [
   },
 ];
 
-async function main() {
+export async function main() {
   const itemsToImport = filterByOnlySlugs(cases);
 
   if (itemsToImport.length === 0) {
@@ -856,8 +856,14 @@ async function main() {
   await upsertCases(prisma, itemsToImport, categoryMap);
 }
 
-try {
-  await main();
-} finally {
-  await prisma.$disconnect();
+const isDirectRun =
+  Boolean(process.argv[1]) &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isDirectRun) {
+  try {
+    await main();
+  } finally {
+    await prisma.$disconnect();
+  }
 }

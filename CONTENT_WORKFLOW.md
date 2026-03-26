@@ -22,6 +22,23 @@ Avoid manual one-off production fixes by separating:
    - `./scripts/run-prod-script.sh scripts/import-fas-decisions-2025.mjs`
    - `./scripts/run-prod-script.sh scripts/import-court-materials.mjs`
 
+## Unified import entrypoint
+
+There is now a shared import entrypoint for content:
+
+- `npm run import:content:fas`
+- `npm run import:content:court`
+- `npm run import:content:all`
+
+This entrypoint reuses the same runtime helpers for:
+
+- Prisma connection;
+- `ONLY_SLUGS` filtering;
+- case upsert;
+- material upsert.
+
+Older scripts are still valid, but now act as specialized wrappers around the same shared import layer.
+
 ## Why this is safer
 
 - `deploy-prod.sh` now targets the active production host by default.

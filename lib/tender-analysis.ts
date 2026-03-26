@@ -1307,10 +1307,18 @@ export async function runTenderAiAnalysis(input: {
     categories: ["notice", "other"],
     maxTotalLength: hyperCompactMode ? 2500 : ultraCompactMode ? 4000 : compactMode ? 7000 : 28000,
   });
-  const pricingSourcePack = buildPackedScopeSelection(scopes, {
-    categories: ["pricing", "notice", "forms"],
-    maxTotalLength: hyperCompactMode ? 3000 : ultraCompactMode ? 5000 : compactMode ? 9000 : 32000,
+  const pricingOnlySourcePack = buildPackedScopeSelection(scopes, {
+    categories: ["pricing"],
+    maxTotalLength: hyperCompactMode ? 3500 : ultraCompactMode ? 5500 : compactMode ? 10000 : 36000,
   });
+  const hasPricingOnlySource =
+    pricingOnlySourcePack.includedIds.length > 0 && pricingOnlySourcePack.text.trim().length > 0;
+  const pricingSourcePack = hasPricingOnlySource
+    ? pricingOnlySourcePack
+    : buildPackedScopeSelection(scopes, {
+        categories: ["pricing", "forms", "notice"],
+        maxTotalLength: hyperCompactMode ? 3000 : ultraCompactMode ? 5000 : compactMode ? 9000 : 32000,
+      });
   const requirementsSourcePack = buildPackedScopeSelection(scopes, {
     categories: ["notice", "forms", "spec", "other"],
     maxTotalLength: hyperCompactMode ? 3500 : ultraCompactMode ? 6000 : compactMode ? 10000 : 36000,
@@ -1362,6 +1370,7 @@ ${metaSourceText}
 
   const pricingPrompt = `
 Ты разбираешь только цену и обеспечение по закупке.
+Ниже приоритетно даны ценовые документы и Excel/НМЦК-материалы. Не уходи в другие вопросы закупки.
 Нужны только факты без воды и без ссылок на документы.
 Если чего-то нет, верни пустую строку.
 НДС = 22%, только если явно не указано иное и это приходится рассчитывать.
@@ -1378,6 +1387,8 @@ ${metaSourceText}
 - ищи НМЦК/НМЦД/начальную (максимальную) цену договора/цену лота;
 - не путай общую цену закупки с ценой отдельной позиции;
 - если в таблице есть итог/итого/всего по закупке, это важнее цены отдельной строки;
+- если документ табличный, в первую очередь смотри строки с ИТОГО/ВСЕГО/НМЦК/НМЦД/Стоимость/Сумма договора;
+- игнорируй даты, коды товаров, артикулы и номера строк, даже если они похожи на сумму;
 - если есть обе суммы, верни отдельно "без НДС" и "с НДС";
 - если явно указано только значение с НДС, можешь рассчитать без НДС по ставке 22%.
 

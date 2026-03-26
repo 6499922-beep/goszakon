@@ -95,6 +95,25 @@ function parseTenderSourceSections(sourceText: string) {
   return sections;
 }
 
+function isLikelyContractSection(section: TenderSourceSection) {
+  const titleHaystack = section.title.toLowerCase();
+  const bodyHaystack = section.body.slice(0, 2000).toLowerCase();
+
+  return (
+    /договор|контракт|проект договора|условия договора/i.test(titleHaystack) ||
+    /договор|контракт|проект договора|покупатель|заказчик|стороны договора/i.test(bodyHaystack)
+  );
+}
+
+function buildContractSectionsText(sourceText: string) {
+  const sections = parseTenderSourceSections(sourceText).filter(isLikelyContractSection);
+  if (sections.length === 0) return "";
+  return sections
+    .map((section) => `Файл: ${section.title}\n${section.body}`)
+    .join("\n\n")
+    .trim();
+}
+
 function buildPenaltyFallback(sourceText: string) {
   const matches = extractRelevantParagraphs(sourceText, [
     /штраф/i,
@@ -108,6 +127,12 @@ function buildPenaltyFallback(sourceText: string) {
   ]);
 
   return matches.length > 0 ? matches.join("\n\n") : null;
+}
+
+function buildContractPenaltyFallback(sourceText: string) {
+  const contractText = buildContractSectionsText(sourceText);
+  if (!contractText) return null;
+  return buildPenaltyFallback(contractText);
 }
 
 function extractPricingLines(body: string) {
@@ -595,6 +620,12 @@ function buildCustomerInnFallback(sourceText: string) {
   return best?.[0] ?? null;
 }
 
+function buildContractCustomerInnFallback(sourceText: string) {
+  const contractText = buildContractSectionsText(sourceText);
+  if (!contractText) return null;
+  return buildCustomerInnFallback(contractText);
+}
+
 function buildCustomerKppFallback(sourceText: string) {
   const normalizedText = sourceText.replace(/\u00A0/g, " ");
   const patterns = [
@@ -665,6 +696,24 @@ function buildCustomerNameFallback(sourceText: string) {
   return explicit?.[1]?.trim() ?? null;
 }
 
+function buildContractCustomerNameFallback(sourceText: string) {
+  const contractText = buildContractSectionsText(sourceText);
+  if (!contractText) return null;
+
+  const explicitPatterns = [
+    /(?:заказчик|покупатель)\s*[:\-]?\s*([^\n]{4,240})/i,
+    /(?:именуем[а-я\s]+в дальнейшем\s+["«]?(?:заказчик|покупатель)["»]?)[,:\s-]*([^\n]{4,240})/i,
+  ];
+
+  for (const pattern of explicitPatterns) {
+    const match = contractText.match(pattern);
+    const value = match?.[1]?.replace(/\s+/g, " ").trim();
+    if (value) return value.slice(0, 240);
+  }
+
+  return buildCustomerNameFallback(contractText);
+}
+
 function buildItemsCountFallback(sourceText: string) {
   const matches = [...sourceText.matchAll(/(\d+)\s*(?:позиц|наименован|товар|лотов?|шт\.)/gi)];
   const values = matches
@@ -723,10 +772,12 @@ function buildQuickTenderFallback(input: {
     "";
   const customerName =
     input.procurement.customerName ||
+    buildContractCustomerNameFallback(input.sourceText) ||
     buildCustomerNameFallback(input.sourceText) ||
     "";
   const customerInn =
     input.procurement.customerInn ||
+    buildContractCustomerInnFallback(input.sourceText) ||
     buildCustomerInnFallback(input.sourceText) ||
     "";
   const customerKpp = buildCustomerKppFallback(input.sourceText) || "";
@@ -742,7 +793,10 @@ function buildQuickTenderFallback(input: {
   const deliveryTerms = buildDeliveryFallback(input.sourceText) || "";
   const paymentTerms = buildPaymentFallback(input.sourceText) || "";
   const contractTerm = buildContractTermFallback(input.sourceText) || "";
-  const penaltyTerms = buildPenaltyFallback(input.sourceText) || "";
+  const penaltyTerms =
+    buildContractPenaltyFallback(input.sourceText) ||
+    buildPenaltyFallback(input.sourceText) ||
+    "";
   const terminationReasons = buildTerminationFallback(input.sourceText);
   const nmckMentions = extractRelevantParagraphs(
     input.sourceText,
@@ -981,7 +1035,9 @@ export async function runTenderPrimaryAnalysis(input: {
     };
   }
 
-  const penaltyFallback = buildPenaltyFallback(sourceText);
+  const penaltyFallback =
+    buildContractPenaltyFallback(sourceText) ||
+    buildPenaltyFallback(sourceText);
   const terminationFallback = buildTerminationFallback(sourceText);
   const priceFallback = buildPriceFallbackFromMentions(
     dossier.nmck_mentions,
@@ -1084,8 +1140,16 @@ export async function runTenderPrimaryAnalysis(input: {
         procurement.procurementNumber ||
         procurementNumberFallback ||
         null,
-      customerName: result.customer_name?.trim() || procurement.customerName || null,
-      customerInn: result.customer_inn?.trim() || procurement.customerInn || null,
+      customerName:
+        result.customer_name?.trim() ||
+        buildContractCustomerNameFallback(sourceText) ||
+        procurement.customerName ||
+        null,
+      customerInn:
+        result.customer_inn?.trim() ||
+        buildContractCustomerInnFallback(sourceText) ||
+        procurement.customerInn ||
+        null,
       platform: result.platform?.trim() || procurement.platform || null,
       nmck: nmckWithVatRaw
         ? nmckWithVatValue ?? null

@@ -106,21 +106,19 @@ function normalizeDecimalForDb(value: string | null | undefined) {
   if (!text) return null;
 
   const compact = text.replace(/[^\d,.\- ]/g, "").replace(/\s+/g, "").trim();
-  if (!compact) return null;
+  const sanitized = compact.replace(/[.,]+$/g, "");
+  if (!sanitized) return null;
 
-  const lastComma = compact.lastIndexOf(",");
-  const lastDot = compact.lastIndexOf(".");
-  const decimalIndex = Math.max(lastComma, lastDot);
+  const decimalMatch = sanitized.match(/([.,])(\d{1,2})$/);
+  let normalized = sanitized;
 
-  let normalized = compact;
-
-  if (decimalIndex >= 0) {
-    const integerPart = compact.slice(0, decimalIndex).replace(/[.,]/g, "");
-    const fractionalPart = compact.slice(decimalIndex + 1).replace(/[^\d]/g, "");
-
+  if (decimalMatch && decimalMatch.index != null) {
+    const decimalIndex = decimalMatch.index;
+    const integerPart = sanitized.slice(0, decimalIndex).replace(/[.,]/g, "");
+    const fractionalPart = decimalMatch[2].replace(/[^\d]/g, "");
     normalized = fractionalPart.length > 0 ? `${integerPart}.${fractionalPart}` : integerPart;
   } else {
-    normalized = compact.replace(/[.,]/g, "");
+    normalized = sanitized.replace(/[.,]/g, "");
   }
 
   normalized = normalized.replace(/(?!^)-/g, "");

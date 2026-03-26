@@ -658,6 +658,7 @@ function buildMissingFields(procurement: {
   procurementNumber: string | null;
   customerName: string | null;
   customerInn: string | null;
+  nmck: { toString(): string } | null;
   nmckWithoutVat: { toString(): string } | null;
   sourceDocuments: Array<{
     id: number;
@@ -699,7 +700,7 @@ function buildMissingFields(procurement: {
     });
   }
 
-  if (!procurement.nmckWithoutVat) {
+  if (!procurement.nmck && !procurement.nmckWithoutVat) {
     missing.push({
       title: "НМЦ без НДС не определена",
       description: "В документации не нашлось уверенного значения НМЦ без НДС.",
@@ -973,8 +974,8 @@ export async function renderTenderRecognitionDetailPage({
             .join(" • ");
           const amountLabel = item.approximateUnitPrice
             ? formatCurrency(item.approximateUnitPrice)
-            : equipmentCount <= 1 && procurement.nmckWithoutVat
-              ? formatCurrency(procurement.nmckWithoutVat)
+            : equipmentCount <= 1 && (procurement.nmck ?? procurement.nmckWithoutVat)
+              ? formatCurrency(procurement.nmck ?? procurement.nmckWithoutVat)
               : "Не выделено из НМЦК";
 
           return {
@@ -993,8 +994,8 @@ export async function renderTenderRecognitionDetailPage({
           quantityLabel: "Не указано",
           details: "",
           amountLabel:
-            equipmentItems.length <= 1 && procurement.nmckWithoutVat
-              ? formatCurrency(procurement.nmckWithoutVat)
+            equipmentItems.length <= 1 && (procurement.nmck ?? procurement.nmckWithoutVat)
+              ? formatCurrency(procurement.nmck ?? procurement.nmckWithoutVat)
               : "Не выделено из НМЦК",
         }));
   const stopFactorState = procurement.ruleMatches.length > 0 ? "stop" : "ok";
@@ -1541,114 +1542,71 @@ export async function renderTenderRecognitionDetailPage({
                                 </div>
                               </div>
 
-                              <div className="border-b border-slate-200 px-4 py-4">
-                                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                                  Главный документ
-                                </div>
-                                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                  <div className="flex flex-wrap items-start justify-between gap-4">
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <span className="rounded-full bg-[#081a4b]/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#081a4b]">
-                                          {primaryItem.kindLabel}
-                                        </span>
-                                        {primaryItem.href ? (
-                                          <a
-                                            href={primaryItem.href}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="text-sm font-semibold text-[#081a4b] underline-offset-2 hover:text-[#0b2a72] hover:underline"
-                                            title={primaryItem.title}
-                                          >
-                                            {primaryItem.title}
-                                          </a>
-                                        ) : (
-                                          <span className="text-sm font-semibold text-[#081a4b]" title={primaryItem.title}>
-                                            {primaryItem.title}
-                                          </span>
-                                        )}
-                                      </div>
-                                      <div className="mt-3 flex flex-wrap gap-2">
-                                        {renderStatusChip(primaryItem)}
-                                        {renderCoverageChip(primaryItem)}
-                                      </div>
-                                      <div className="mt-2 text-xs leading-5 text-slate-500">
-                                        {primaryItem.status.description}
-                                      </div>
-                                      <div className="mt-1 text-xs leading-5 text-slate-500">
-                                        {primaryItem.coverage.description}
-                                      </div>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-2">
-                                      {primaryItem.href ? (
-                                        <a
-                                          href={primaryItem.href}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#081a4b] transition hover:border-slate-300 hover:bg-slate-50 hover:text-[#0b2a72]"
-                                        >
-                                          Открыть
-                                        </a>
-                                      ) : (
-                                        <span className="text-xs text-slate-400">Нет ссылки</span>
-                                      )}
-                                      {primaryItem.status.label !== "Текст извлечён" ? (
-                                        <TenderSourceDocumentRerunButton
-                                          sourceDocumentId={primaryItem.id}
-                                          procurementId={procurement.id}
-                                          actorName={actorName}
-                                        />
-                                      ) : null}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {additionalItems.length > 0 ? (
-                                <div className="px-4 py-4">
-                                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                                    Дополнительные файлы
-                                  </div>
-                                  <div className="overflow-hidden rounded-2xl border border-slate-200">
-                                    <table className="min-w-full divide-y divide-slate-200 text-sm">
-                                      <thead className="bg-white text-left text-slate-500">
-                                        <tr>
-                                          <th className="px-4 py-3 font-medium">Документ</th>
-                                          <th className="px-4 py-3 font-medium">Статус</th>
-                                          <th className="px-4 py-3 font-medium">Участие в анализе</th>
-                                          <th className="px-4 py-3 text-right font-medium">Открыть</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-slate-200 bg-white">
-                                        {additionalItems.map((item, index) => (
+                              <div className="px-4 py-4">
+                                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                                  <table className="min-w-full divide-y divide-slate-200 text-sm">
+                                    <thead className="bg-white text-left text-slate-500">
+                                      <tr>
+                                        <th className="px-4 py-3 font-medium">Роль</th>
+                                        <th className="px-4 py-3 font-medium">Документ</th>
+                                        <th className="px-4 py-3 font-medium">Статус</th>
+                                        <th className="px-4 py-3 font-medium">Участие в анализе</th>
+                                        <th className="px-4 py-3 text-right font-medium">Открыть</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200 bg-white">
+                                      {[primaryItem, ...additionalItems].map((item, index) => {
+                                        const isPrimary = item.id === primaryItem.id;
+                                        return (
                                           <tr key={`${section.key}-${item.title}-${index}`} className="align-top">
                                             <td className="px-4 py-4">
-                                              <div className="flex flex-wrap items-center gap-2">
+                                              <div className="flex flex-col gap-2">
+                                                <span
+                                                  className={`inline-flex w-fit rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${
+                                                    isPrimary
+                                                      ? "bg-emerald-100 text-emerald-700"
+                                                      : "bg-slate-100 text-slate-600"
+                                                  }`}
+                                                >
+                                                  {isPrimary ? "Основной" : "Доп."}
+                                                </span>
                                                 <span className="rounded-full bg-[#081a4b]/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#081a4b]">
                                                   {item.kindLabel}
                                                 </span>
-                                                {item.href ? (
-                                                  <a
-                                                    href={item.href}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-sm font-semibold text-[#081a4b] underline-offset-2 hover:text-[#0b2a72] hover:underline"
-                                                    title={item.title}
-                                                  >
-                                                    {item.title}
-                                                  </a>
-                                                ) : (
-                                                  <span className="text-sm font-semibold text-[#081a4b]" title={item.title}>
-                                                    {item.title}
-                                                  </span>
-                                                )}
                                               </div>
                                             </td>
                                             <td className="px-4 py-4">
-                                              {renderStatusChip(item)}
+                                              {item.href ? (
+                                                <a
+                                                  href={item.href}
+                                                  target="_blank"
+                                                  rel="noreferrer"
+                                                  className="text-sm font-semibold text-[#081a4b] underline-offset-2 hover:text-[#0b2a72] hover:underline"
+                                                  title={item.title}
+                                                >
+                                                  {item.title}
+                                                </a>
+                                              ) : (
+                                                <span className="text-sm font-semibold text-[#081a4b]" title={item.title}>
+                                                  {item.title}
+                                                </span>
+                                              )}
                                             </td>
                                             <td className="px-4 py-4">
-                                              {renderCoverageChip(item)}
+                                              <div className="flex flex-col gap-2">
+                                                {renderStatusChip(item)}
+                                                <div className="text-xs leading-5 text-slate-500">
+                                                  {item.status.description}
+                                                </div>
+                                              </div>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                              <div className="flex flex-col gap-2">
+                                                {renderCoverageChip(item)}
+                                                <div className="text-xs leading-5 text-slate-500">
+                                                  {item.coverage.description}
+                                                </div>
+                                              </div>
                                             </td>
                                             <td className="px-4 py-4 text-right">
                                               <div className="flex flex-col items-end gap-2">
@@ -1674,12 +1632,12 @@ export async function renderTenderRecognitionDetailPage({
                                               </div>
                                             </td>
                                           </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
                                 </div>
-                              ) : null}
+                              </div>
                             </div>
                           );
                         })()
@@ -1758,7 +1716,7 @@ export async function renderTenderRecognitionDetailPage({
                     </div>
                     <div className="flex items-center gap-3 text-sm">
                       <div className="rounded-full bg-white px-3 py-1.5 text-slate-600">
-                        НМЦК: {formatCurrency(procurement.nmckWithoutVat)}
+                        НМЦК: {formatCurrency(procurement.nmck ?? procurement.nmckWithoutVat)}
                       </div>
                       <Link
                         href={equipmentHref}

@@ -146,7 +146,7 @@ async function updateProcurementAnalysisSafely(
 
     const fallbackData = {
       ...data,
-      nmckWithoutVat: undefined,
+      nmckWithoutVat: null,
     };
 
     await prisma.tenderProcurement.update({
@@ -663,8 +663,12 @@ export async function runTenderPrimaryAnalysis(input: {
   const bidSecurityFallback = buildSecurityFallback(dossier.security_mentions, "заявк");
   const contractSecurityFallback = buildSecurityFallback(dossier.security_mentions, "исполн");
   const procurementNumberFallback = buildProcurementNumberFallback(sourceText);
+  const nmckWithVatRaw = result.nmck_with_vat?.trim() || priceFallback.withVat || "";
+  const nmckWithoutVatRaw =
+    result.nmck_without_vat?.trim() || priceFallback.withoutVat || "";
+  const nmckWithVatValue = normalizeDecimalForDb(nmckWithVatRaw);
   const nmckWithoutVatValue = normalizeDecimalForDb(
-    result.nmck_without_vat?.trim() || priceFallback.withoutVat
+    nmckWithoutVatRaw
   );
 
   await updateProcurementAnalysisSafely(prisma, procurementId, {
@@ -712,11 +716,16 @@ export async function runTenderPrimaryAnalysis(input: {
       customerName: result.customer_name?.trim() || procurement.customerName || null,
       customerInn: result.customer_inn?.trim() || procurement.customerInn || null,
       platform: result.platform?.trim() || procurement.platform || null,
+      nmck: nmckWithVatRaw
+        ? nmckWithVatValue ?? null
+        : procurement.nmck,
       itemsCount:
         Number.isFinite(result.items_count) && result.items_count > 0
           ? result.items_count
           : procurement.itemsCount,
-      nmckWithoutVat: nmckWithoutVatValue ?? procurement.nmckWithoutVat,
+      nmckWithoutVat: nmckWithoutVatRaw
+        ? nmckWithoutVatValue ?? null
+        : procurement.nmckWithoutVat,
       purchaseType: result.procurement_type?.trim() || procurement.purchaseType || null,
       title:
         procurement.title.startsWith("Закупка по файлам:") &&

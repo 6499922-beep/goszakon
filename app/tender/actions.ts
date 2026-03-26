@@ -144,6 +144,31 @@ function extractStoredPathsFromNote(note: string | null | undefined) {
   return matches.map((match) => match[1]).filter(Boolean);
 }
 
+function normalizeDecimalForDb(value: string | null | undefined) {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+
+  const compact = text.replace(/[^\d,.\- ]/g, "").replace(/\s+/g, "").trim();
+  if (!compact) return null;
+
+  const lastComma = compact.lastIndexOf(",");
+  const lastDot = compact.lastIndexOf(".");
+  const decimalIndex = Math.max(lastComma, lastDot);
+
+  let normalized = compact;
+
+  if (decimalIndex >= 0) {
+    const integerPart = compact.slice(0, decimalIndex).replace(/[.,]/g, "");
+    const fractionalPart = compact.slice(decimalIndex + 1).replace(/[^\d]/g, "");
+    normalized = fractionalPart.length > 0 ? `${integerPart}.${fractionalPart}` : integerPart;
+  } else {
+    normalized = compact.replace(/[.,]/g, "");
+  }
+
+  normalized = normalized.replace(/(?!^)-/g, "");
+  return /^-?\d+(?:\.\d{1,2})?$/.test(normalized) ? normalized : null;
+}
+
 function upsertTenderSourceBlock(sourceText: string, title: string, text: string) {
   const normalizedTitle = String(title ?? "").trim();
   const normalizedText = String(text ?? "").trim();
@@ -278,6 +303,10 @@ async function runTenderPrimaryAnalysis(prisma: ReturnType<typeof getPrisma>, in
 
   const penaltyFallback = buildPenaltyFallback(sourceText);
   const terminationFallback = buildTerminationFallback(sourceText);
+  const nmckWithVatRaw = result.nmck_with_vat?.trim() || "";
+  const nmckWithoutVatRaw = result.nmck_without_vat?.trim() || "";
+  const nmckWithVatValue = normalizeDecimalForDb(nmckWithVatRaw);
+  const nmckWithoutVatValue = normalizeDecimalForDb(nmckWithoutVatRaw);
 
   await prisma.tenderProcurement.update({
     where: { id: procurementId },
@@ -292,32 +321,14 @@ async function runTenderPrimaryAnalysis(prisma: ReturnType<typeof getPrisma>, in
       customerName: result.customer_name?.trim() || procurement.customerName || null,
       customerInn: result.customer_inn?.trim() || procurement.customerInn || null,
       platform: result.platform?.trim() || procurement.platform || null,
+      nmck: nmckWithVatRaw ? nmckWithVatValue ?? null : procurement.nmck,
       itemsCount:
         Number.isFinite(result.items_count) && result.items_count > 0
           ? result.items_count
           : procurement.itemsCount,
-      nmckWithoutVat:
-        (() => {
-          const rawValue = result.nmck_without_vat?.trim() || "";
-          if (!rawValue) return procurement.nmckWithoutVat;
-
-          const compact = rawValue.replace(/[^\d,.\- ]/g, "").replace(/\s+/g, "").trim();
-          const lastComma = compact.lastIndexOf(",");
-          const lastDot = compact.lastIndexOf(".");
-          const decimalIndex = Math.max(lastComma, lastDot);
-
-          if (decimalIndex >= 0) {
-            const integerPart = compact.slice(0, decimalIndex).replace(/[.,]/g, "");
-            const fractionalPart = compact.slice(decimalIndex + 1).replace(/[^\d]/g, "");
-            const normalized = fractionalPart.length > 0 ? `${integerPart}.${fractionalPart}` : integerPart;
-            return /^-?\d+(?:\.\d{1,2})?$/.test(normalized)
-              ? normalized
-              : procurement.nmckWithoutVat;
-          }
-
-          const normalized = compact.replace(/[.,]/g, "");
-          return /^-?\d+$/.test(normalized) ? normalized : procurement.nmckWithoutVat;
-        })(),
+      nmckWithoutVat: nmckWithoutVatRaw
+        ? nmckWithoutVatValue ?? null
+        : procurement.nmckWithoutVat,
       purchaseType: result.procurement_type?.trim() || procurement.purchaseType || null,
       title:
         procurement.title.startsWith("Закупка по файлам:") &&

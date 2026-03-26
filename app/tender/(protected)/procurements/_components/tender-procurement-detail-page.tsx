@@ -102,11 +102,34 @@ function buildCompactDocumentName(
 function inferDocumentKind(
   title: string | null | undefined,
   fileLabel: string | null | undefined,
-  note: string | null | undefined
+  note: string | null | undefined,
+  contentSnippet?: string | null | undefined,
+  documentKind?: string | null | undefined,
+  formType?: string | null | undefined
 ) {
   const haystack = normalizeSearchText(
-    `${title ?? ""} ${fileLabel ?? ""} ${extractStoredDocumentPath(note) ?? ""}`
+    `${title ?? ""} ${fileLabel ?? ""} ${extractStoredDocumentPath(note) ?? ""} ${contentSnippet ?? ""} ${documentKind ?? ""} ${formType ?? ""}`
   );
+
+  if (formType === "PRICE_FORM") return "Ценовая таблица";
+  if (formType === "TECHNICAL_SPEC") return "Товарная таблица";
+  if (formType === "CONTRACT_DRAFT") return "Договор";
+  if (formType === "APPLICATION_FORM") return "Форма заявки";
+  if (formType === "TECHNICAL_PROPOSAL") return "Техническое предложение";
+  if (formType === "QUESTIONNAIRE") return "Анкета";
+  if (formType === "DECLARATION") return "Декларация";
+
+  if (
+    /компактная таблица позиций|позиции для анализа|наименован|ед\.? ?изм|колич|цена|сумм/i.test(
+      haystack
+    )
+  ) {
+    if (/нмц|цена|стоим|итого|ндс|обеспеч|обоснован/i.test(haystack)) {
+      return "Ценовая таблица";
+    }
+
+    return "Товарная таблица";
+  }
 
   if (haystack.includes("извещ")) return "Извещение";
   if (haystack.includes("техническ") || haystack.includes("тз")) return "ТЗ";
@@ -129,20 +152,24 @@ function getDocumentKindOrder(kindLabel: string) {
       return 1;
     case "ТЗ":
       return 2;
-    case "Договор":
+    case "Товарная таблица":
       return 3;
-    case "Коммерческая часть":
+    case "Договор":
       return 4;
-    case "Ценовая форма":
+    case "Коммерческая часть":
       return 5;
-    case "НМЦК":
+    case "Ценовая таблица":
       return 6;
-    case "Форма заявки":
+    case "Ценовая форма":
       return 7;
-    case "Спецификация":
+    case "НМЦК":
       return 8;
-    case "Приложение":
+    case "Форма заявки":
       return 9;
+    case "Спецификация":
+      return 10;
+    case "Приложение":
+      return 11;
     default:
       return 20;
   }
@@ -607,6 +634,8 @@ export async function renderTenderRecognitionDetailPage({
           id: true,
           title: true,
           fileName: true,
+          documentKind: true,
+          formType: true,
           note: true,
           contentSnippet: true,
         },
@@ -700,7 +729,14 @@ export async function renderTenderRecognitionDetailPage({
       id: item.id,
       title: compactTitle,
       fileLabel: item.fileName || item.title || "Документ",
-      kindLabel: inferDocumentKind(item.title, item.fileName, item.note),
+      kindLabel: inferDocumentKind(
+        item.title,
+        item.fileName,
+        item.note,
+        item.contentSnippet,
+        item.documentKind,
+        item.formType
+      ),
       href: buildSourceDocumentHref(item.id, storagePath),
       excerpt: item.contentSnippet ? buildRuleDocumentExcerpt(
         {

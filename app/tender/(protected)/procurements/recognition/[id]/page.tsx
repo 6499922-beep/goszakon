@@ -1223,6 +1223,10 @@ export default async function TenderRecognitionDetailPage({
               <TenderProcurementChat
                 procurementId={procurement.id}
                 initialMessages={procurementChatMessages}
+                sourceDocuments={finalSourceDocuments.map((item) => ({
+                  title: item.title,
+                  href: item.href,
+                }))}
               />
             }
           />

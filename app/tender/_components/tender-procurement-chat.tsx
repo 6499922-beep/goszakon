@@ -13,15 +13,37 @@ type ChatMessage = {
 type TenderProcurementChatProps = {
   procurementId: number;
   initialMessages: ChatMessage[];
+  sourceDocuments?: Array<{
+    title: string;
+    href: string | null;
+  }>;
 };
+
+const QUICK_PROMPTS = [
+  "Что главное в этой закупке?",
+  "Какие риски ты видишь по этой закупке?",
+  "На что нужно обратить внимание в договоре?",
+  "Какие документы до подачи самые важные?",
+];
+
+function normalizeSearchText(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .replace(/[^a-zа-я0-9.\s_-]+/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 export function TenderProcurementChat({
   procurementId,
   initialMessages,
+  sourceDocuments = [],
 }: TenderProcurementChatProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isPending, startTransition] = useTransition();
   const viewportRef = useRef<HTMLDivElement | null>(null);
 
@@ -33,6 +55,22 @@ export function TenderProcurementChat({
       ),
     [messages]
   );
+  const documentHints = useMemo(
+    () =>
+      sourceDocuments
+        .filter((item) => item.href)
+        .map((item) => ({
+          title: item.title,
+          href: item.href as string,
+          normalized: normalizeSearchText(item.title),
+        })),
+    [sourceDocuments]
+  );
+
+  function askQuestion(question: string) {
+    if (isPending) return;
+    setDraft(question);
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -103,68 +141,124 @@ export function TenderProcurementChat({
           История сохраняется
         </div>
       </div>
-
-      <div
-        ref={viewportRef}
-        className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3"
-      >
-        {hasMessages ? (
-          sortedMessages.map((message) => {
-            const isAssistant = message.role === "assistant";
-            return (
-              <div
-                key={message.id}
-                className={`rounded-2xl px-4 py-3 text-sm leading-6 ${
-                  isAssistant
-                    ? "border border-[#0d5bd7]/15 bg-white text-slate-700"
-                    : "bg-[#0d5bd7] text-white"
-                }`}
-              >
-                <div
-                  className={`text-xs font-semibold uppercase tracking-[0.12em] ${
-                    isAssistant ? "text-[#0d5bd7]" : "text-white/80"
-                  }`}
-                >
-                  {isAssistant ? "GPT" : message.authorName || "Сотрудник"}
-                </div>
-                <div className="mt-2 whitespace-pre-wrap">{message.body}</div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-6 text-sm leading-6 text-slate-500">
-            История по этой закупке пока пустая. Можно сразу спросить, что найдено в документах,
-            почему сработал стоп-фактор или где искать нужное условие.
-          </div>
-        )}
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="text-xs text-slate-400">
+          Можно писать по документам, условиям, рискам и стоп-факторам.
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsCollapsed((current) => !current)}
+          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+        >
+          {isCollapsed ? "Развернуть" : "Свернуть"}
+        </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-        <textarea
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          rows={4}
-          placeholder="Напиши вопрос по этой закупке..."
-          className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#0d5bd7] focus:ring-2 focus:ring-[#0d5bd7]/10"
-        />
-        {error ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {error}
+      {!isCollapsed ? (
+        <>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {QUICK_PROMPTS.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => askQuestion(prompt)}
+                className="rounded-full border border-[#0d5bd7]/15 bg-[#0d5bd7]/5 px-3 py-2 text-xs font-medium text-[#0d5bd7] transition hover:border-[#0d5bd7]/30 hover:bg-[#0d5bd7]/10"
+              >
+                {prompt}
+              </button>
+            ))}
           </div>
-        ) : null}
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-xs text-slate-400">
-            GPT отвечает в контексте именно этой закупки и её файлов.
-          </div>
-          <button
-            type="submit"
-            disabled={isPending || !draft.trim()}
-            className="inline-flex items-center rounded-full bg-[#0d5bd7] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0b4fc0] disabled:cursor-not-allowed disabled:bg-slate-300"
+          <div
+            ref={viewportRef}
+            className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3"
           >
-            {isPending ? "Думаю..." : "Спросить"}
-          </button>
+            {hasMessages ? (
+              sortedMessages.map((message) => {
+                const isAssistant = message.role === "assistant";
+                const normalizedBody = normalizeSearchText(message.body);
+                const matchedDocuments = isAssistant
+                  ? documentHints.filter(
+                      (item) =>
+                        item.normalized.length >= 4 &&
+                        normalizedBody.includes(item.normalized)
+                    )
+                  : [];
+
+                return (
+                  <div
+                    key={message.id}
+                    className={`rounded-2xl px-4 py-3 text-sm leading-6 ${
+                      isAssistant
+                        ? "border border-[#0d5bd7]/15 bg-white text-slate-700"
+                        : "bg-[#0d5bd7] text-white"
+                    }`}
+                  >
+                    <div
+                      className={`text-xs font-semibold uppercase tracking-[0.12em] ${
+                        isAssistant ? "text-[#0d5bd7]" : "text-white/80"
+                      }`}
+                    >
+                      {isAssistant ? "GPT" : message.authorName || "Сотрудник"}
+                    </div>
+                    <div className="mt-2 whitespace-pre-wrap">{message.body}</div>
+                    {matchedDocuments.length > 0 ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {matchedDocuments.map((item) => (
+                          <a
+                            key={`${message.id}-${item.href}`}
+                            href={item.href}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-[#081a4b] transition hover:border-slate-300 hover:bg-slate-100"
+                          >
+                            {item.title}
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-6 text-sm leading-6 text-slate-500">
+                История по этой закупке пока пустая. Можно сразу спросить, что найдено в
+                документах, почему сработал стоп-фактор или где искать нужное условие.
+              </div>
+            )}
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+            <textarea
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              rows={4}
+              placeholder="Напиши вопрос по этой закупке..."
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#0d5bd7] focus:ring-2 focus:ring-[#0d5bd7]/10"
+            />
+            {error ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {error}
+              </div>
+            ) : null}
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-xs text-slate-400">
+                GPT отвечает в контексте именно этой закупки и её файлов.
+              </div>
+              <button
+                type="submit"
+                disabled={isPending || !draft.trim()}
+                className="inline-flex items-center rounded-full bg-[#0d5bd7] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0b4fc0] disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                {isPending ? "Думаю..." : "Спросить"}
+              </button>
+            </div>
+          </form>
+        </>
+      ) : (
+        <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">
+          Чат свёрнут. Разверни панель, чтобы задать вопрос по этой закупке.
         </div>
-      </form>
+      )}
     </aside>
   );
 }

@@ -347,14 +347,19 @@ export default async function NewTenderProcurementPage({
                         </a>
                       </td>
                       <td className="px-4 py-4 text-slate-600">
-                        <Link
-                          href={buildTenderCustomerHref(item.customerName, item.customerInn)}
-                          className="block -mx-4 -my-4 px-4 py-4 font-medium transition hover:text-[#0d5bd7]"
-                        >
-                          <div>{item.customerName ?? "Не определён"}</div>
-                          <div className="mt-2 max-w-[420px] text-sm leading-5 text-slate-500">
+                        <div className="-mx-4 -my-4 px-4 py-4">
+                          <Link
+                            href={buildTenderCustomerHref(item.customerName, item.customerInn)}
+                            className="block font-medium transition hover:text-[#0d5bd7]"
+                          >
+                            {item.customerName ?? "Не определён"}
+                          </Link>
+                          <a
+                            href={rowHref}
+                            className="mt-2 block max-w-[420px] text-sm leading-5 text-slate-500 transition hover:text-slate-700"
+                          >
                             {procurementSubject}
-                          </div>
+                          </a>
                           {registryRecord ? (
                             <div className="mt-2">
                               <Link
@@ -365,7 +370,7 @@ export default async function NewTenderProcurementPage({
                               </Link>
                             </div>
                           ) : null}
-                        </Link>
+                        </div>
                       </td>
                       <td className="px-4 py-4">
                         <a href={rowHref} className="block -mx-4 -my-4 px-4 py-4">

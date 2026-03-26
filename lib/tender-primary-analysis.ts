@@ -63,6 +63,38 @@ function extractRelevantParagraphs(sourceText: string, patterns: RegExp[], limit
   return matches.slice(0, limit);
 }
 
+type TenderSourceSection = {
+  title: string;
+  body: string;
+};
+
+function parseTenderSourceSections(sourceText: string) {
+  const chunks = sourceText
+    .split(/\n{2,}(?=Файл:\s*)/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const sections: TenderSourceSection[] = [];
+
+  for (const chunk of chunks) {
+    const match = chunk.match(/^Файл:\s*(.+?)\n([\s\S]*)$/);
+    if (match) {
+      sections.push({
+        title: match[1].trim(),
+        body: match[2].trim(),
+      });
+      continue;
+    }
+
+    sections.push({
+      title: "Документация",
+      body: chunk,
+    });
+  }
+
+  return sections;
+}
+
 function buildPenaltyFallback(sourceText: string) {
   const matches = extractRelevantParagraphs(sourceText, [
     /штраф/i,
@@ -76,6 +108,19 @@ function buildPenaltyFallback(sourceText: string) {
   ]);
 
   return matches.length > 0 ? matches.join("\n\n") : null;
+}
+
+function extractPricingLines(body: string) {
+  return body
+    .split(/\n+/)
+    .map((item) => item.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .filter((line) =>
+      /нмцк|нмцд|нмц|начальн.*максимальн.*цен|начальн.*цен.*договор|цена договора|цена лота|итого|всего|общ(?:ая|ей).*сумм|стоим|руб|ндс|без ндс|с ндс|включая ндс|налог|обеспеч/i.test(
+        line
+      )
+    )
+    .slice(0, 40);
 }
 
 function buildTerminationFallback(sourceText: string) {
@@ -211,6 +256,13 @@ function deriveWithoutVatFromWithVat(withVatValue: string | null | undefined) {
   const numeric = Number(normalized);
   if (!Number.isFinite(numeric) || numeric <= 0) return null;
   return (numeric / 1.22).toFixed(2);
+}
+
+function getAnalysisExtraString(value: unknown, key: string) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "";
+  const record = value as Record<string, unknown>;
+  const raw = record[key];
+  return typeof raw === "string" ? raw.trim() : "";
 }
 
 async function updateProcurementAnalysisSafely(
@@ -387,6 +439,87 @@ function buildPriceFallbackFromMentions(
   };
 }
 
+function buildPriceFallbackFromSourceSections(
+  sourceText: string,
+  currentWithoutVat: string | null,
+  currentWithVat: string | null
+) {
+  const withVatVotes = new Map<string, { count: number; note: string; numeric: number }>();
+  const withoutVatVotes = new Map<string, { count: number; note: string; numeric: number }>();
+
+  const addVote = (
+    bucket: Map<string, { count: number; note: string; numeric: number }>,
+    value: string | null | undefined,
+    note: string
+  ) => {
+    const normalized = normalizeDecimalForDb(value);
+    if (!normalized) return;
+    const numeric = Number(normalized);
+    if (!Number.isFinite(numeric) || numeric <= 0) return;
+    const existing = bucket.get(normalized);
+    if (existing) {
+      existing.count += 1;
+      return;
+    }
+    bucket.set(normalized, { count: 1, note, numeric });
+  };
+
+  for (const section of parseTenderSourceSections(sourceText)) {
+    const titleHaystack = section.title.toLowerCase();
+    const bodyHaystack = section.body.toLowerCase();
+    const isLikelyPriceSource =
+      /нмц|цена|стоим|коммерч|обоснован|калькул|итого|xlsx|xls/i.test(titleHaystack) ||
+      /нмцк|нмцд|начальн.*цен|цена договора|цена лота|итого|всего/i.test(bodyHaystack);
+
+    if (!isLikelyPriceSource) continue;
+
+    const sectionMentions = extractPricingLines(section.body);
+    if (sectionMentions.length === 0) continue;
+
+    const sectionFallback = buildPriceFallbackFromMentions(sectionMentions, null, null);
+    const note =
+      sectionMentions.find((item) =>
+        /нмцк|нмцд|начальн.*цен|цена договора|цена лота|итого|всего/i.test(item.toLowerCase())
+      ) ||
+      sectionMentions[0] ||
+      section.title;
+
+    addVote(withVatVotes, sectionFallback.withVat, `${section.title}: ${note}`);
+    addVote(withoutVatVotes, sectionFallback.withoutVat, `${section.title}: ${note}`);
+  }
+
+  const pickBestVote = (
+    bucket: Map<string, { count: number; note: string; numeric: number }>
+  ) =>
+    [...bucket.entries()]
+      .sort((left, right) => {
+        if (right[1].count !== left[1].count) return right[1].count - left[1].count;
+        return right[1].numeric - left[1].numeric;
+      })
+      .at(0);
+
+  const bestWithVat = pickBestVote(withVatVotes);
+  const bestWithoutVat = pickBestVote(withoutVatVotes);
+
+  const withoutVat = choosePreferablePriceValue(
+    bestWithoutVat?.[0] ?? currentWithoutVat,
+    currentWithoutVat
+  );
+  const withVat = choosePreferablePriceValue(
+    bestWithVat?.[0] ?? currentWithVat,
+    currentWithVat
+  );
+
+  return {
+    withoutVat,
+    withVat,
+    note:
+      bestWithVat?.[1].note ||
+      bestWithoutVat?.[1].note ||
+      null,
+  };
+}
+
 function buildSecurityFallback(mentions: string[], keyword: "заявк" | "исполн") {
   const relevant = mentions.find((item) => item.toLowerCase().includes(keyword));
   if (!relevant) return null;
@@ -460,6 +593,54 @@ function buildCustomerInnFallback(sourceText: string) {
 
   const best = [...candidateScores.entries()].sort((left, right) => right[1] - left[1])[0];
   return best?.[0] ?? null;
+}
+
+function buildCustomerKppFallback(sourceText: string) {
+  const normalizedText = sourceText.replace(/\u00A0/g, " ");
+  const patterns = [
+    /(?:заказчик|сведения о заказчике|информация о заказчике)[\s\S]{0,180}?\bкпп\b[^\d]{0,12}(\d{9})/i,
+    /\bкпп\b[^\d]{0,12}(\d{9})[\s\S]{0,80}?(?:заказчик|покупатель|организатор)/i,
+    /\bкпп\b[^\d]{0,12}(\d{9})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = normalizedText.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+
+  return null;
+}
+
+function buildCustomerOgrnFallback(sourceText: string) {
+  const normalizedText = sourceText.replace(/\u00A0/g, " ");
+  const patterns = [
+    /(?:заказчик|сведения о заказчике|информация о заказчике)[\s\S]{0,220}?\bогрн\b[^\d]{0,12}(\d{13}|\d{15})/i,
+    /\bогрн\b[^\d]{0,12}(\d{13}|\d{15})[\s\S]{0,80}?(?:заказчик|покупатель|организатор)/i,
+    /\bогрн\b[^\d]{0,12}(\d{13}|\d{15})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = normalizedText.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+
+  return null;
+}
+
+function buildCustomerAddressFallback(sourceText: string) {
+  const normalizedText = sourceText.replace(/\u00A0/g, " ");
+  const patterns = [
+    /(?:заказчик|сведения о заказчике|информация о заказчике)[\s\S]{0,260}?(?:адрес|местонахождени[ея]|юридическ(?:ий|ого) адрес)\s*[:\-]?\s*([^\n]{10,240})/i,
+    /(?:адрес|местонахождени[ея]|юридическ(?:ий|ого) адрес)\s*[:\-]?\s*([^\n]{10,240})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = normalizedText.match(pattern);
+    const value = match?.[1]?.replace(/\s+/g, " ").trim();
+    if (value) return value.slice(0, 240);
+  }
+
+  return null;
 }
 
 function buildPlatformFallback(sourceText: string) {
@@ -548,6 +729,9 @@ function buildQuickTenderFallback(input: {
     input.procurement.customerInn ||
     buildCustomerInnFallback(input.sourceText) ||
     "";
+  const customerKpp = buildCustomerKppFallback(input.sourceText) || "";
+  const customerOgrn = buildCustomerOgrnFallback(input.sourceText) || "";
+  const customerAddress = buildCustomerAddressFallback(input.sourceText) || "";
   const platform = input.procurement.platform || buildPlatformFallback(input.sourceText) || "";
   const itemsCount =
     input.procurement.itemsCount ||
@@ -586,6 +770,11 @@ function buildQuickTenderFallback(input: {
     input.procurement.nmckWithoutVat?.toString() ?? null,
     null
   );
+  const sectionPriceFallback = buildPriceFallbackFromSourceSections(
+    input.sourceText,
+    priceFallback.withoutVat,
+    priceFallback.withVat
+  );
   const bidSecurity = buildSecurityFallback(securityMentions, "заявк") || "";
   const contractSecurity = buildSecurityFallback(securityMentions, "исполн") || "";
 
@@ -594,6 +783,9 @@ function buildQuickTenderFallback(input: {
       procurement_number: procurementNumber,
       customer_name: customerName,
       customer_inn: customerInn,
+      customer_kpp: customerKpp,
+      customer_ogrn: customerOgrn,
+      customer_address: customerAddress,
       platform,
       items_count: itemsCount,
       procurement_type: "",
@@ -621,12 +813,17 @@ function buildQuickTenderFallback(input: {
       procurement_number: procurementNumber,
       customer_name: customerName,
       customer_inn: customerInn,
+      customer_kpp: customerKpp,
+      customer_ogrn: customerOgrn,
+      customer_address: customerAddress,
       platform,
       items_count: itemsCount,
       procurement_type: "",
-      nmck_without_vat: priceFallback.withoutVat || "",
-      nmck_with_vat: priceFallback.withVat || "",
-      price_tax_note: priceFallback.note || "",
+      nmck_without_vat:
+        choosePreferablePriceValue(sectionPriceFallback.withoutVat, priceFallback.withoutVat) || "",
+      nmck_with_vat:
+        choosePreferablePriceValue(sectionPriceFallback.withVat, priceFallback.withVat) || "",
+      price_tax_note: sectionPriceFallback.note || priceFallback.note || "",
       bid_security: bidSecurity,
       contract_security: contractSecurity,
       summary,
@@ -791,15 +988,20 @@ export async function runTenderPrimaryAnalysis(input: {
     result.nmck_without_vat,
     result.nmck_with_vat
   );
+  const sectionPriceFallback = buildPriceFallbackFromSourceSections(
+    sourceText,
+    priceFallback.withoutVat,
+    priceFallback.withVat
+  );
   const bidSecurityFallback = buildSecurityFallback(dossier.security_mentions, "заявк");
   const contractSecurityFallback = buildSecurityFallback(dossier.security_mentions, "исполн");
   const procurementNumberFallback = buildProcurementNumberFallback(sourceText);
   const nmckWithVatRaw = choosePreferablePriceValue(
-    result.nmck_with_vat?.trim(),
+    choosePreferablePriceValue(result.nmck_with_vat?.trim(), sectionPriceFallback.withVat),
     priceFallback.withVat
   );
   let nmckWithoutVatRaw = choosePreferablePriceValue(
-    result.nmck_without_vat?.trim(),
+    choosePreferablePriceValue(result.nmck_without_vat?.trim(), sectionPriceFallback.withoutVat),
     priceFallback.withoutVat
   );
   const nmckWithVatNormalized = normalizeDecimalForDb(nmckWithVatRaw);
@@ -825,9 +1027,28 @@ export async function runTenderPrimaryAnalysis(input: {
       sourceText,
       aiAnalysis: {
         ...result,
+        customer_kpp:
+          getAnalysisExtraString(result, "customer_kpp") ||
+          getAnalysisExtraString(dossier, "customer_kpp") ||
+          buildCustomerKppFallback(sourceText) ||
+          "",
+        customer_ogrn:
+          getAnalysisExtraString(result, "customer_ogrn") ||
+          getAnalysisExtraString(dossier, "customer_ogrn") ||
+          buildCustomerOgrnFallback(sourceText) ||
+          "",
+        customer_address:
+          getAnalysisExtraString(result, "customer_address") ||
+          getAnalysisExtraString(dossier, "customer_address") ||
+          buildCustomerAddressFallback(sourceText) ||
+          "",
         nmck_without_vat: nmckWithoutVatRaw || "",
         nmck_with_vat: nmckWithVatRaw || "",
-        price_tax_note: result.price_tax_note?.trim() || priceFallback.note || "",
+        price_tax_note:
+          result.price_tax_note?.trim() ||
+          sectionPriceFallback.note ||
+          priceFallback.note ||
+          "",
         bid_security: result.bid_security?.trim() || bidSecurityFallback || "",
         contract_security: result.contract_security?.trim() || contractSecurityFallback || "",
         responsibility_terms:

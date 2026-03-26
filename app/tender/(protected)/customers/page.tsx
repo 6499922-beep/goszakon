@@ -15,6 +15,21 @@ import {
 
 export const dynamic = "force-dynamic";
 
+function getAiAnalysisObject(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function getAiAnalysisString(
+  value: Record<string, unknown> | null,
+  key: string
+) {
+  const raw = value?.[key];
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
 function getRecognitionTone(status: string | null) {
   switch (status) {
     case "completed":
@@ -89,6 +104,7 @@ export default async function TenderCustomerPage({
       procurementNumber: true,
       customerName: true,
       customerInn: true,
+      aiAnalysis: true,
       createdAt: true,
       aiAnalysisStatus: true,
       status: true,
@@ -107,6 +123,10 @@ export default async function TenderCustomerPage({
   const resolvedName =
     procurements.find((item) => item.customerName)?.customerName ?? customerName ?? "Заказчик";
   const resolvedInn = procurements.find((item) => item.customerInn)?.customerInn ?? customerInn;
+  const latestAi = procurements.map((item) => getAiAnalysisObject(item.aiAnalysis)).find(Boolean) ?? null;
+  const resolvedKpp = getAiAnalysisString(latestAi, "customer_kpp");
+  const resolvedOgrn = getAiAnalysisString(latestAi, "customer_ogrn");
+  const resolvedAddress = getAiAnalysisString(latestAi, "customer_address");
   const stopCount = procurements.filter(
     (item) => item.status === "STOPPED" || !!item.stopFactorsSummary?.trim()
   ).length;
@@ -167,6 +187,46 @@ export default async function TenderCustomerPage({
           </div>
           <div className="mt-3 text-lg font-bold text-[#081a4b]">
             {formatTenderCurrency(procurements[0]?.nmckWithoutVat?.toString())}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+          Реквизиты заказчика
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+              ИНН
+            </div>
+            <div className="mt-3 text-lg font-bold text-[#081a4b]">
+              {resolvedInn ?? "не определён"}
+            </div>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+              КПП
+            </div>
+            <div className="mt-3 text-lg font-bold text-[#081a4b]">
+              {resolvedKpp || "не определён"}
+            </div>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+              ОГРН
+            </div>
+            <div className="mt-3 text-lg font-bold text-[#081a4b]">
+              {resolvedOgrn || "не определён"}
+            </div>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Адрес
+            </div>
+            <div className="mt-3 text-base font-semibold leading-7 text-[#081a4b]">
+              {resolvedAddress || "не определён"}
+            </div>
           </div>
         </div>
       </section>

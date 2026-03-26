@@ -847,6 +847,9 @@ export async function renderTenderRecognitionDetailPage({
   const lotStructure = getAiAnalysisString(aiAnalysis, "lot_structure");
   const militaryAcceptance = getAiAnalysisString(aiAnalysis, "military_acceptance");
   const responsibilityTerms = getAiAnalysisString(aiAnalysis, "responsibility_terms");
+  const customerKpp = getAiAnalysisString(aiAnalysis, "customer_kpp");
+  const customerOgrn = getAiAnalysisString(aiAnalysis, "customer_ogrn");
+  const customerAddress = getAiAnalysisString(aiAnalysis, "customer_address");
   const terminationReasons = getAiAnalysisList(aiAnalysis, "termination_reasons");
   const missingFields = buildMissingFields(procurement);
   const analysisCoverage = getAiAnalysisCoverageList(aiAnalysis);
@@ -1323,6 +1326,44 @@ export async function renderTenderRecognitionDetailPage({
                         ) : (
                           <span>Позиций: {procurement.itemsCount ?? "не определено"}</span>
                         )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">Реквизиты заказчика</div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                      <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                        ИНН
+                      </div>
+                      <div className="mt-1 font-semibold text-[#081a4b]">
+                        {procurement.customerInn ?? "не определён"}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                      <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                        КПП
+                      </div>
+                      <div className="mt-1 font-semibold text-[#081a4b]">
+                        {customerKpp || "не определён"}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                      <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                        ОГРН
+                      </div>
+                      <div className="mt-1 font-semibold text-[#081a4b]">
+                        {customerOgrn || "не определён"}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-700 md:col-span-2 xl:col-span-1">
+                      <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                        Адрес
+                      </div>
+                      <div className="mt-1 font-semibold text-[#081a4b]">
+                        {customerAddress || "не определён"}
                       </div>
                     </div>
                   </div>

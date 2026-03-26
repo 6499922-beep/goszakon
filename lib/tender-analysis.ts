@@ -11,6 +11,9 @@ export const tenderAnalysisSchema = {
       "procurement_number",
       "customer_name",
       "customer_inn",
+      "customer_kpp",
+      "customer_ogrn",
+      "customer_address",
       "platform",
       "items_count",
       "procurement_type",
@@ -41,6 +44,9 @@ export const tenderAnalysisSchema = {
       procurement_number: { type: "string" },
       customer_name: { type: "string" },
       customer_inn: { type: "string" },
+      customer_kpp: { type: "string" },
+      customer_ogrn: { type: "string" },
+      customer_address: { type: "string" },
       platform: { type: "string" },
       items_count: { type: "number" },
       procurement_type: { type: "string" },
@@ -103,6 +109,9 @@ export const tenderSourceDossierSchema = {
       "procurement_number",
       "customer_name",
       "customer_inn",
+      "customer_kpp",
+      "customer_ogrn",
+      "customer_address",
       "platform",
       "items_count",
       "procurement_type",
@@ -130,6 +139,9 @@ export const tenderSourceDossierSchema = {
       procurement_number: { type: "string" },
       customer_name: { type: "string" },
       customer_inn: { type: "string" },
+      customer_kpp: { type: "string" },
+      customer_ogrn: { type: "string" },
+      customer_address: { type: "string" },
       platform: { type: "string" },
       items_count: { type: "number" },
       procurement_type: { type: "string" },
@@ -214,6 +226,9 @@ type TenderAnalysisResult = {
   procurement_number: string;
   customer_name: string;
   customer_inn: string;
+  customer_kpp: string;
+  customer_ogrn: string;
+  customer_address: string;
   platform: string;
   items_count: number;
   procurement_type: string;
@@ -255,6 +270,9 @@ type TenderSourceDossier = {
   procurement_number: string;
   customer_name: string;
   customer_inn: string;
+  customer_kpp: string;
+  customer_ogrn: string;
+  customer_address: string;
   platform: string;
   items_count: number;
   procurement_type: string;
@@ -480,6 +498,9 @@ const tenderMetaAnalysisSchema = {
       "procurement_number",
       "customer_name",
       "customer_inn",
+      "customer_kpp",
+      "customer_ogrn",
+      "customer_address",
       "platform",
       "procurement_type",
       "summary",
@@ -489,6 +510,9 @@ const tenderMetaAnalysisSchema = {
       procurement_number: { type: "string" },
       customer_name: { type: "string" },
       customer_inn: { type: "string" },
+      customer_kpp: { type: "string" },
+      customer_ogrn: { type: "string" },
+      customer_address: { type: "string" },
       platform: { type: "string" },
       procurement_type: { type: "string" },
       summary: { type: "string" },
@@ -615,6 +639,9 @@ type TenderMetaAnalysis = {
   procurement_number: string;
   customer_name: string;
   customer_inn: string;
+  customer_kpp: string;
+  customer_ogrn: string;
+  customer_address: string;
   platform: string;
   procurement_type: string;
   summary: string;
@@ -730,6 +757,21 @@ function normalizeTenderAnalysisResult(input: {
       metaAnalysis.customer_inn,
       dossier.customer_inn,
       fallback.customerInn
+    ),
+    customer_kpp: pickFirstNonEmptyString(
+      result.customer_kpp,
+      metaAnalysis.customer_kpp,
+      dossier.customer_kpp
+    ),
+    customer_ogrn: pickFirstNonEmptyString(
+      result.customer_ogrn,
+      metaAnalysis.customer_ogrn,
+      dossier.customer_ogrn
+    ),
+    customer_address: pickFirstNonEmptyString(
+      result.customer_address,
+      metaAnalysis.customer_address,
+      dossier.customer_address
     ),
     platform: pickFirstNonEmptyString(
       result.platform,
@@ -1306,6 +1348,9 @@ export async function runTenderAiAnalysis(input: {
 - номер закупки
 - заказчика
 - ИНН заказчика
+- КПП заказчика
+- ОГРН заказчика
+- адрес заказчика
 - площадку
 - вид закупки
 - краткую выжимку в 2-4 коротких смысловых фразах
@@ -1453,6 +1498,9 @@ ${equipmentSourceText}
     procurement_number: resolvedProcurementNumber,
     customer_name: resolvedCustomerName,
     customer_inn: resolvedCustomerInn,
+    customer_kpp: metaAnalysis.customer_kpp,
+    customer_ogrn: metaAnalysis.customer_ogrn,
+    customer_address: metaAnalysis.customer_address,
     platform: resolvedPlatform,
     items_count: resolvedItemsCount,
     procurement_type: metaAnalysis.procurement_type,
@@ -1488,6 +1536,9 @@ ${equipmentSourceText}
     procurement_number: resolvedProcurementNumber,
     customer_name: resolvedCustomerName,
     customer_inn: resolvedCustomerInn,
+    customer_kpp: metaAnalysis.customer_kpp,
+    customer_ogrn: metaAnalysis.customer_ogrn,
+    customer_address: metaAnalysis.customer_address,
     platform: resolvedPlatform,
     items_count: resolvedItemsCount,
     procurement_type: metaAnalysis.procurement_type,
@@ -1558,6 +1609,9 @@ ${equipmentSourceText}
 - Название: ${input.title}
 - Заказчик: ${resolvedCustomerName}
 - ИНН заказчика: ${resolvedCustomerInn}
+- КПП заказчика: ${metaAnalysis.customer_kpp}
+- ОГРН заказчика: ${metaAnalysis.customer_ogrn}
+- Адрес заказчика: ${metaAnalysis.customer_address}
 - Номер закупки: ${resolvedProcurementNumber}
 - Площадка: ${resolvedPlatform}
 - Количество позиций: ${resolvedItemsCount}
@@ -1646,6 +1700,9 @@ ${compactMode ? [metaSourceText, pricingSourceText, requirementsSourceText, cont
 - Название: ${input.title}
 - Заказчик: ${resolvedCustomerName}
 - ИНН заказчика: ${resolvedCustomerInn}
+- КПП заказчика: ${metaAnalysis.customer_kpp}
+- ОГРН заказчика: ${metaAnalysis.customer_ogrn}
+- Адрес заказчика: ${metaAnalysis.customer_address}
 - Номер закупки: ${resolvedProcurementNumber}
 - Площадка: ${resolvedPlatform}
 - Количество позиций: ${resolvedItemsCount}

@@ -10,6 +10,8 @@
     "lint": "next lint",
     "import:fas:batch": "node scripts/import-fas-decisions-2025.mjs",
     "import:court:batch": "node scripts/import-court-materials.mjs",
+    "import:prod:fas": "./scripts/run-prod-script.sh scripts/import-fas-decisions-2025.mjs",
+    "import:prod:court": "./scripts/run-prod-script.sh scripts/import-court-materials.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "seed": "node prisma/seed.ts",

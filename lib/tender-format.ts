@@ -87,7 +87,7 @@ export const tenderStatusLabels: Record<TenderProcurementStatus, string> = {
   ANALYSIS: "На анализе",
   STOPPED: "Стоп",
   PRICING: "На просчёте",
-  APPROVED: "Согласовано",
+  APPROVED: "На согласовании",
   IN_PREPARATION: "Подготовка",
   READY: "Пакет готов",
   SUBMITTED: "Подано",

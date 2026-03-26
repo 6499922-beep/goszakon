@@ -15,5 +15,9 @@ export default async function TenderProcurementsPage() {
     redirect("/procurements/pricing");
   }
 
+  if (currentUser && tenderHasCapability(currentUser.role, "procurement_decision")) {
+    redirect("/procurements/approval");
+  }
+
   redirect("/procurements/new");
 }

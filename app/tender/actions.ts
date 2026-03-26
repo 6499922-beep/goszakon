@@ -54,6 +54,11 @@ function revalidateTenderPricingPaths(procurementId: number) {
   revalidatePath(`/procurements/pricing/${procurementId}/equipment`);
 }
 
+function revalidateTenderApprovalPaths(procurementId: number) {
+  revalidatePath(`/procurements/approval/${procurementId}`);
+  revalidatePath(`/procurements/approval/${procurementId}/equipment`);
+}
+
 function extractRelevantParagraphs(sourceText: string, patterns: RegExp[], limit = 3) {
   const blocks = sourceText
     .split(/\n{2,}/)
@@ -1711,6 +1716,98 @@ export async function saveTenderPricingReviewAction(formData: FormData) {
   revalidatePath("/procurements/new");
   revalidatePath("/procurements/pricing");
   redirect(`/procurements/pricing/${procurementId}`);
+}
+
+export async function sendTenderToApprovalAction(formData: FormData) {
+  await requireTenderCapability("procurement_pricing");
+  const prisma = getPrisma();
+  const procurementId = Number(formData.get("procurementId"));
+  const actorName = normalizeString(formData.get("actorName")) ?? "Сотрудник";
+
+  if (!Number.isInteger(procurementId) || procurementId <= 0) {
+    redirect("/procurements/pricing");
+  }
+
+  await prisma.tenderProcurement.update({
+    where: { id: procurementId },
+    data: {
+      status: TenderProcurementStatus.APPROVED,
+      decision: null,
+      decisionComment: null,
+      decisionMadeAt: null,
+    },
+  });
+
+  await logTenderEvent({
+    procurementId,
+    actionType: TenderActionType.NOTE_ADDED,
+    title: "Закупка передана на согласование подачи",
+    description: "Карточка переведена на третий этап для решения руководителя.",
+    actorName,
+    metadata: {
+      nextStage: "approval",
+    },
+  });
+
+  revalidateTenderRecognitionPaths(procurementId);
+  revalidateTenderPricingPaths(procurementId);
+  revalidateTenderApprovalPaths(procurementId);
+  revalidatePath("/procurements/pricing");
+  revalidatePath("/procurements/approval");
+  revalidatePath("/procurements");
+  redirect(`/procurements/approval/${procurementId}`);
+}
+
+export async function declineTenderFromPricingAction(formData: FormData) {
+  await requireTenderCapability("procurement_pricing");
+  const prisma = getPrisma();
+  const procurementId = Number(formData.get("procurementId"));
+  const actorName = normalizeString(formData.get("actorName")) ?? "Сотрудник";
+  const comment =
+    normalizeString(formData.get("comment")) ?? "Нерентабельно, отказ.";
+
+  if (!Number.isInteger(procurementId) || procurementId <= 0) {
+    redirect("/procurements/pricing");
+  }
+
+  await prisma.tenderDecisionRecord.create({
+    data: {
+      procurementId,
+      decision: TenderDecision.DECLINE,
+      comment,
+      decidedBy: actorName,
+    },
+  });
+
+  await prisma.tenderProcurement.update({
+    where: { id: procurementId },
+    data: {
+      decision: TenderDecision.DECLINE,
+      decisionComment: comment,
+      decisionMadeAt: new Date(),
+      status: TenderProcurementStatus.ARCHIVED,
+    },
+  });
+
+  await logTenderEvent({
+    procurementId,
+    actionType: TenderActionType.DECISION_MADE,
+    title: "Зафиксирован отказ по нерентабельности",
+    description: comment,
+    actorName,
+    metadata: {
+      decision: TenderDecision.DECLINE,
+      sourceStage: "pricing",
+    },
+  });
+
+  revalidateTenderRecognitionPaths(procurementId);
+  revalidateTenderPricingPaths(procurementId);
+  revalidateTenderApprovalPaths(procurementId);
+  revalidatePath("/procurements/pricing");
+  revalidatePath("/procurements/approval");
+  revalidatePath("/procurements");
+  redirect("/procurements/pricing");
 }
 
 export async function saveTenderDecisionAction(formData: FormData) {

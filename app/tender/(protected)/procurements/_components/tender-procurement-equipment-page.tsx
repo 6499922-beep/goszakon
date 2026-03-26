@@ -28,7 +28,7 @@ function getAiAnalysisObject(value: unknown) {
   return value as Record<string, unknown>;
 }
 
-type TenderEquipmentViewMode = "analysis" | "pricing";
+type TenderEquipmentViewMode = "analysis" | "pricing" | "approval";
 
 export async function renderTenderRecognitionEquipmentPage({
   params,
@@ -39,9 +39,12 @@ export async function renderTenderRecognitionEquipmentPage({
 }) {
   const currentUser = await getCurrentTenderUser();
   const isPricingView = viewMode === "pricing";
-  const requiredCapability = isPricingView
-    ? "procurement_pricing"
-    : "procurement_create";
+  const isApprovalView = viewMode === "approval";
+  const requiredCapability = isApprovalView
+    ? "procurement_decision"
+    : isPricingView
+      ? "procurement_pricing"
+      : "procurement_create";
 
   if (!currentUser || !tenderHasCapability(currentUser.role, requiredCapability)) {
     redirect("/procurements/new");
@@ -114,9 +117,11 @@ export async function renderTenderRecognitionEquipmentPage({
           amount: "Не определено автоматически",
         }));
   const resolvedItemsCount = Math.max(procurement.itemsCount ?? 0, rows.length);
-  const backHref = isPricingView
-    ? `/procurements/pricing/${procurement.id}`
-    : `/procurements/recognition/${procurement.id}`;
+  const backHref = isApprovalView
+    ? `/procurements/approval/${procurement.id}`
+    : isPricingView
+      ? `/procurements/pricing/${procurement.id}`
+      : `/procurements/recognition/${procurement.id}`;
 
   return (
     <main className="space-y-4">

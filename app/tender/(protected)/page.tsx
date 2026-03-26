@@ -41,8 +41,8 @@ export default async function TenderDashboardPage() {
       { title: "Проверить карточки просчёта", description: "Открыть заявки второго этапа с теми же полями и документами.", href: "/procurements/pricing" },
     ],
     MANAGER: [
-      { title: "Принять решения по закупкам", description: "Открыть закупки, которые уже ждут согласования.", href: "/procurements?view=manager" },
-      { title: "Проверить проблемные сигналы", description: "Сначала посмотри, где срок горит или нужна ручная проверка.", href: "/procurements?view=all" },
+      { title: "Принять решения по закупкам", description: "Открыть закупки, которые уже ждут согласования.", href: "/procurements/approval" },
+      { title: "Проверить этап согласования", description: "Перейти в третий этап и выбрать: подаём или не подаём.", href: "/procurements/approval" },
     ],
     SUBMITTER: [
       { title: "Подготовить и подать пакеты", description: "Открыть закупки, дошедшие до подачи.", href: "/procurements?view=submission" },

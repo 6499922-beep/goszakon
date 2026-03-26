@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { TenderProcurementChat } from "@/app/tender/_components/tender-procurement-chat";
 import { TenderRecognitionTabs } from "@/app/tender/_components/tender-recognition-tabs";
 import {
+  declineTenderFromPricingAction,
   rerunTenderSourceDocumentDeepAnalysisAction,
+  sendTenderToApprovalAction,
   sendTenderToPricingAction,
 } from "@/app/tender/actions";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
@@ -546,7 +548,7 @@ function buildMissingFields(procurement: {
   return missing.slice(0, 12);
 }
 
-type TenderProcurementDetailViewMode = "analysis" | "pricing";
+type TenderProcurementDetailViewMode = "analysis" | "pricing" | "approval";
 
 export async function renderTenderRecognitionDetailPage({
   params,
@@ -557,9 +559,12 @@ export async function renderTenderRecognitionDetailPage({
 }) {
   const currentUser = await getCurrentTenderUser();
   const isPricingView = viewMode === "pricing";
-  const requiredCapability = isPricingView
-    ? "procurement_pricing"
-    : "procurement_create";
+  const isApprovalView = viewMode === "approval";
+  const requiredCapability = isApprovalView
+    ? "procurement_decision"
+    : isPricingView
+      ? "procurement_pricing"
+      : "procurement_create";
 
   if (!currentUser || !tenderHasCapability(currentUser.role, requiredCapability)) {
     redirect("/procurements/new");
@@ -689,17 +694,30 @@ export async function renderTenderRecognitionDetailPage({
     stopFactorState === "stop"
       ? "border-rose-200 bg-rose-50 text-rose-800"
       : "border-emerald-200 bg-emerald-50 text-emerald-800";
-  const backHref = isPricingView ? "/procurements/pricing" : "/procurements/new";
-  const backLabel = isPricingView
-    ? "Назад к заявкам на просчёт"
-    : "Назад к заявкам";
-  const equipmentHref = isPricingView
-    ? `/procurements/pricing/${procurement.id}/equipment`
-    : `/procurements/recognition/${procurement.id}/equipment`;
+  const backHref = isApprovalView
+    ? "/procurements/approval"
+    : isPricingView
+      ? "/procurements/pricing"
+      : "/procurements/new";
+  const backLabel = isApprovalView
+    ? "Назад к заявкам на согласование"
+    : isPricingView
+      ? "Назад к заявкам на просчёт"
+      : "Назад к заявкам";
+  const equipmentHref = isApprovalView
+    ? `/procurements/approval/${procurement.id}/equipment`
+    : isPricingView
+      ? `/procurements/pricing/${procurement.id}/equipment`
+      : `/procurements/recognition/${procurement.id}/equipment`;
   const canSendToPricing =
     !isPricingView &&
+    !isApprovalView &&
     tenderHasCapability(currentUser.role, "procurement_initial") &&
     procurement.status !== "PRICING";
+  const canSendToApproval =
+    isPricingView &&
+    tenderHasCapability(currentUser.role, "procurement_pricing") &&
+    procurement.status === "PRICING";
   const actorName =
     currentUser.name?.trim() || currentUser.email?.trim() || "Сотрудник";
 
@@ -714,7 +732,11 @@ export async function renderTenderRecognitionDetailPage({
             {backLabel}
           </Link>
           <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-            {isPricingView ? "Этап 2. Просчёт" : "Этап 1. Анализ"}
+            {isApprovalView
+              ? "Этап 3. Согласование"
+              : isPricingView
+                ? "Этап 2. Просчёт"
+                : "Этап 1. Анализ"}
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -729,6 +751,31 @@ export async function renderTenderRecognitionDetailPage({
                 Передать на просчёт
               </button>
             </form>
+          ) : null}
+          {canSendToApproval ? (
+            <>
+              <form action={sendTenderToApprovalAction}>
+                <input type="hidden" name="procurementId" value={procurement.id} />
+                <input type="hidden" name="actorName" value={actorName} />
+                <button
+                  type="submit"
+                  className="inline-flex items-center rounded-full bg-[#081a4b] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
+                >
+                  Передать на согласование подачи
+                </button>
+              </form>
+              <form action={declineTenderFromPricingAction}>
+                <input type="hidden" name="procurementId" value={procurement.id} />
+                <input type="hidden" name="actorName" value={actorName} />
+                <input type="hidden" name="comment" value="Нерентабельно, отказ." />
+                <button
+                  type="submit"
+                  className="inline-flex items-center rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+                >
+                  Нерентабельно, отказ
+                </button>
+              </form>
+            </>
           ) : null}
           <div className="text-sm text-slate-500">
             Добавлена: {formatDateTime(procurement.createdAt)}

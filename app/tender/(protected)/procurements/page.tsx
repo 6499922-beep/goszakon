@@ -354,7 +354,7 @@ export default async function TenderProcurementsPage({
                 </Link>
               ) : null}
               <Link
-                href={`/procurements/${uploadedProcurementId}`}
+                href={`/procurements/recognition/${uploadedProcurementId}`}
                 className="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
               >
                 Открыть карточку
@@ -456,7 +456,11 @@ export default async function TenderProcurementsPage({
                     <tr key={item.id} className="transition hover:bg-slate-50/80">
                       <td className="px-4 py-4 font-medium text-[#081a4b]">
                         <Link
-                          href={`/procurements/${item.id}`}
+                          href={
+                            item.status === "PRICING"
+                              ? `/procurements/recognition/${item.id}?stage=pricing`
+                              : `/procurements/recognition/${item.id}`
+                          }
                           className="transition hover:text-[#0d5bd7]"
                         >
                           {item.title}
@@ -489,7 +493,11 @@ export default async function TenderProcurementsPage({
                       </td>
                       <td className="px-4 py-4 text-slate-600">
                         <Link
-                          href={`/procurements/${item.id}`}
+                          href={
+                            item.status === "PRICING"
+                              ? `/procurements/recognition/${item.id}?stage=pricing`
+                              : `/procurements/recognition/${item.id}`
+                          }
                           className="inline-flex rounded-xl px-2 py-1 font-medium text-[#081a4b] transition hover:bg-slate-100 hover:text-[#0d5bd7]"
                         >
                           {nextStepLabel}
@@ -501,7 +509,11 @@ export default async function TenderProcurementsPage({
                             signals.map((signal) => (
                               <Link
                                 key={signal.label}
-                                href={`/procurements/${item.id}`}
+                                href={
+                                  item.status === "PRICING"
+                                    ? `/procurements/recognition/${item.id}?stage=pricing`
+                                    : `/procurements/recognition/${item.id}`
+                                }
                                 className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold transition hover:scale-[1.02] hover:opacity-90 ${signal.tone}`}
                               >
                                 {signal.label}

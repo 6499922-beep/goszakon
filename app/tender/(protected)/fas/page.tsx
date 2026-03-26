@@ -129,7 +129,7 @@ export default async function TenderFasPage() {
             fasItems.map((item) => (
               <a
                 key={item.id}
-                href={`/procurements/${item.id}`}
+                href={`/procurements/recognition/${item.id}`}
                 className="block rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:border-[#0d5bd7]"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">

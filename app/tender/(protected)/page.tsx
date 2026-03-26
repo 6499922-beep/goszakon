@@ -180,7 +180,7 @@ export default async function TenderDashboardPage() {
                 >
                   <div className="min-w-0">
                     <Link
-                      href={`/procurements/${item.id}`}
+                      href={`/procurements/recognition/${item.id}`}
                       className="font-semibold text-[#081a4b] transition hover:text-[#0d5bd7]"
                     >
                       {item.title}

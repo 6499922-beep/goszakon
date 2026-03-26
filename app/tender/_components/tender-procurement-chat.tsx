@@ -128,6 +128,21 @@ export function TenderProcurementChat({
     if (!question || isPending) return;
 
     setError(null);
+    const optimisticUserMessage: ChatMessage = {
+      id: -Date.now(),
+      role: "user",
+      authorName: "Вы",
+      body: question,
+      createdAt: new Date().toISOString(),
+    };
+    setDraft("");
+    setMessages((current) => [...current, optimisticUserMessage]);
+    requestAnimationFrame(() => {
+      viewportRef.current?.scrollTo({
+        top: viewportRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    });
 
     startTransition(async () => {
       try {
@@ -156,9 +171,8 @@ export function TenderProcurementChat({
           throw new Error(payload?.error || "Не удалось получить ответ по закупке.");
         }
 
-        setDraft("");
         setMessages((current) => [
-          ...current,
+          ...current.filter((item) => item.id !== optimisticUserMessage.id),
           payload.userMessage as ChatMessage,
           payload.assistantMessage as ChatMessage,
         ]);
@@ -170,6 +184,10 @@ export function TenderProcurementChat({
           });
         });
       } catch (submitError) {
+        setMessages((current) =>
+          current.filter((item) => item.id !== optimisticUserMessage.id)
+        );
+        setDraft(question);
         setError(
           submitError instanceof Error
             ? submitError.message

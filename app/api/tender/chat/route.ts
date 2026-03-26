@@ -61,6 +61,16 @@ function trimForPrompt(value: string | null | undefined, limit: number) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, limit);
 }
 
+function getDocumentPriority(kind: string | null | undefined, title: string | null | undefined) {
+  const haystack = `${kind ?? ""} ${title ?? ""}`.toLowerCase();
+  if (haystack.includes("извещ")) return 1;
+  if (haystack.includes("техничес") || haystack.includes("тз")) return 2;
+  if (haystack.includes("договор")) return 3;
+  if (haystack.includes("цен") || haystack.includes("нмц")) return 4;
+  if (haystack.includes("коммерчес")) return 5;
+  return 10;
+}
+
 export async function POST(request: Request) {
   try {
     const currentUser = await getCurrentTenderUser();
@@ -138,21 +148,27 @@ export async function POST(request: Request) {
 
     const model = process.env.OPENAI_CHAT_MODEL || process.env.OPENAI_MODEL || "gpt-5";
     const aiAnalysisText = procurement.aiAnalysis
-      ? JSON.stringify(procurement.aiAnalysis, null, 2).slice(0, 12000)
+      ? JSON.stringify(procurement.aiAnalysis, null, 2).slice(0, 6000)
       : "Распознанные поля пока отсутствуют.";
 
-    const documentsText = procurement.sourceDocuments
+    const documentsText = [...procurement.sourceDocuments]
+      .sort(
+        (left, right) =>
+          getDocumentPriority(left.documentKind, left.title) -
+          getDocumentPriority(right.documentKind, right.title)
+      )
       .map((document, index) => {
         const snippet =
-          trimForPrompt(document.contentSnippet, 1200) ||
-          trimForPrompt(document.note, 500) ||
+          trimForPrompt(document.contentSnippet, 700) ||
+          trimForPrompt(document.note, 300) ||
           "Текст не показан.";
         return `${index + 1}. ${document.title} [${document.documentKind || "Документ"}]\n${snippet}`;
       })
-      .slice(0, 12)
+      .slice(0, 8)
       .join("\n\n");
 
     const historyText = procurement.stageComments
+      .slice(-8)
       .map((item) => `${item.authorName || "Участник"}: ${trimForPrompt(item.body, 1000)}`)
       .join("\n");
 
@@ -195,7 +211,7 @@ ${message}
       body: JSON.stringify({
         model,
         reasoning: {
-          effort: "medium",
+          effort: "low",
         },
         ...(useWebSearch
           ? {

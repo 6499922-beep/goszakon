@@ -355,7 +355,8 @@ async function runStructuredResponse<T>({
   prompt,
   schema,
   reasoningEffort = "high",
-  attempts = 3,
+  attempts = 2,
+  timeoutMs = 60_000,
 }: {
   apiKey: string;
   model: string;
@@ -363,6 +364,7 @@ async function runStructuredResponse<T>({
   schema: unknown;
   reasoningEffort?: "low" | "medium" | "high";
   attempts?: number;
+  timeoutMs?: number;
 }) {
   let lastError: unknown = null;
 
@@ -370,7 +372,7 @@ async function runStructuredResponse<T>({
     try {
       const signal =
         typeof AbortSignal !== "undefined" && "timeout" in AbortSignal
-          ? AbortSignal.timeout(120_000)
+          ? AbortSignal.timeout(timeoutMs)
           : undefined;
       const response = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
@@ -1194,6 +1196,7 @@ ${equipmentSourceText}
         prompt: metaPrompt,
         schema: tenderMetaAnalysisSchema,
         reasoningEffort: "medium",
+        timeoutMs: 45_000,
       }),
       runStructuredResponse<TenderPricingAnalysis>({
         apiKey,
@@ -1201,6 +1204,7 @@ ${equipmentSourceText}
         prompt: pricingPrompt,
         schema: tenderPricingAnalysisSchema,
         reasoningEffort: "medium",
+        timeoutMs: 45_000,
       }),
       runStructuredResponse<TenderRequirementsAnalysis>({
         apiKey,
@@ -1208,6 +1212,7 @@ ${equipmentSourceText}
         prompt: requirementsPrompt,
         schema: tenderRequirementsAnalysisSchema,
         reasoningEffort: "medium",
+        timeoutMs: 45_000,
       }),
       runStructuredResponse<TenderContractAnalysis>({
         apiKey,
@@ -1215,6 +1220,7 @@ ${equipmentSourceText}
         prompt: contractPrompt,
         schema: tenderContractAnalysisSchema,
         reasoningEffort: "medium",
+        timeoutMs: 45_000,
       }),
       runStructuredResponse<TenderEquipmentAnalysis>({
         apiKey,
@@ -1222,6 +1228,7 @@ ${equipmentSourceText}
         prompt: equipmentPrompt,
         schema: tenderEquipmentAnalysisSchema,
         reasoningEffort: "medium",
+        timeoutMs: 45_000,
       }),
     ]);
 
@@ -1309,6 +1316,7 @@ ${packedSourceText}
     prompt: dossierPrompt,
     schema: tenderSourceDossierSchema,
     reasoningEffort: "high",
+    timeoutMs: 75_000,
   });
 
   const prompt = `
@@ -1373,6 +1381,7 @@ ${JSON.stringify(
     prompt,
     schema: tenderAnalysisSchema,
     reasoningEffort: "medium",
+    timeoutMs: 75_000,
   });
 
   const result = normalizeTenderAnalysisResult({

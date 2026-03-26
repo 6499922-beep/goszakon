@@ -481,6 +481,7 @@ type TenderDocumentCoverageEntry = {
   has_meaningful_text: boolean;
   included_in_primary_pack: boolean;
   included_in_meta_pack: boolean;
+  included_in_requisites_pack: boolean;
   included_in_pricing_pack: boolean;
   included_in_requirements_pack: boolean;
   included_in_contract_pack: boolean;
@@ -713,6 +714,7 @@ function normalizeTenderAnalysisResult(input: {
   result: TenderAnalysisResult;
   dossier: TenderSourceDossier;
   metaAnalysis: TenderMetaAnalysis;
+  requisitesAnalysis: TenderMetaAnalysis;
   pricingAnalysis: TenderPricingAnalysis;
   requirementsAnalysis: TenderRequirementsAnalysis;
   contractAnalysis: TenderContractAnalysis;
@@ -731,6 +733,7 @@ function normalizeTenderAnalysisResult(input: {
     result,
     dossier,
     metaAnalysis,
+    requisitesAnalysis,
     pricingAnalysis,
     requirementsAnalysis,
     contractAnalysis,
@@ -748,28 +751,33 @@ function normalizeTenderAnalysisResult(input: {
     ),
     customer_name: pickFirstNonEmptyString(
       result.customer_name,
+      requisitesAnalysis.customer_name,
       metaAnalysis.customer_name,
       dossier.customer_name,
       fallback.customerName
     ),
     customer_inn: pickFirstNonEmptyString(
       result.customer_inn,
+      requisitesAnalysis.customer_inn,
       metaAnalysis.customer_inn,
       dossier.customer_inn,
       fallback.customerInn
     ),
     customer_kpp: pickFirstNonEmptyString(
       result.customer_kpp,
+      requisitesAnalysis.customer_kpp,
       metaAnalysis.customer_kpp,
       dossier.customer_kpp
     ),
     customer_ogrn: pickFirstNonEmptyString(
       result.customer_ogrn,
+      requisitesAnalysis.customer_ogrn,
       metaAnalysis.customer_ogrn,
       dossier.customer_ogrn
     ),
     customer_address: pickFirstNonEmptyString(
       result.customer_address,
+      requisitesAnalysis.customer_address,
       metaAnalysis.customer_address,
       dossier.customer_address
     ),
@@ -1243,6 +1251,7 @@ function buildTenderDocumentCoverage(input: {
   scopes: TenderDocumentScope[];
   primaryPackIds: number[];
   metaPackIds: number[];
+  requisitesPackIds: number[];
   pricingPackIds: number[];
   requirementsPackIds: number[];
   contractPackIds: number[];
@@ -1252,6 +1261,7 @@ function buildTenderDocumentCoverage(input: {
     const included =
       input.primaryPackIds.includes(scope.id) ||
       input.metaPackIds.includes(scope.id) ||
+      input.requisitesPackIds.includes(scope.id) ||
       input.pricingPackIds.includes(scope.id) ||
       input.requirementsPackIds.includes(scope.id) ||
       input.contractPackIds.includes(scope.id) ||
@@ -1265,6 +1275,7 @@ function buildTenderDocumentCoverage(input: {
       has_meaningful_text: scope.hasMeaningfulBody,
       included_in_primary_pack: input.primaryPackIds.includes(scope.id),
       included_in_meta_pack: input.metaPackIds.includes(scope.id),
+      included_in_requisites_pack: input.requisitesPackIds.includes(scope.id),
       included_in_pricing_pack: input.pricingPackIds.includes(scope.id),
       included_in_requirements_pack: input.requirementsPackIds.includes(scope.id),
       included_in_contract_pack: input.contractPackIds.includes(scope.id),
@@ -1306,6 +1317,10 @@ export async function runTenderAiAnalysis(input: {
     categories: ["notice", "other"],
     maxTotalLength: hyperCompactMode ? 2500 : ultraCompactMode ? 4000 : compactMode ? 7000 : 28000,
   });
+  const requisitesSourcePack = buildPackedScopeSelection(scopes, {
+    categories: ["contract", "notice", "other"],
+    maxTotalLength: hyperCompactMode ? 3000 : ultraCompactMode ? 5000 : compactMode ? 9000 : 32000,
+  });
   const pricingOnlySourcePack = buildPackedScopeSelection(scopes, {
     categories: ["pricing"],
     maxTotalLength: hyperCompactMode ? 3500 : ultraCompactMode ? 5500 : compactMode ? 10000 : 36000,
@@ -1336,10 +1351,13 @@ export async function runTenderAiAnalysis(input: {
   const requirementsSourceText = requirementsSourcePack.text || packedSourceText;
   const contractSourceText = contractSourcePack.text || packedSourceText;
   const equipmentSourceText = equipmentSourcePack.text || packedSourceText;
+  const requisitesSourceText =
+    requisitesSourcePack.text || contractSourceText || metaSourceText || packedSourceText;
   const documentCoverage = buildTenderDocumentCoverage({
     scopes,
     primaryPackIds: primarySourcePack.includedIds,
     metaPackIds: metaSourcePack.includedIds,
+    requisitesPackIds: requisitesSourcePack.includedIds,
     pricingPackIds: pricingSourcePack.includedIds,
     requirementsPackIds: requirementsSourcePack.includedIds,
     contractPackIds: contractSourcePack.includedIds,
@@ -1365,6 +1383,27 @@ export async function runTenderAiAnalysis(input: {
 
 Текст документов:
 ${metaSourceText}
+`.trim();
+
+  const requisitesPrompt = `
+Ты разбираешь только реквизиты заказчика.
+Нужны только факты без воды и без ссылок на документы.
+Если данных нет, верни пустую строку.
+
+Определи:
+- полное наименование заказчика
+- ИНН заказчика
+- КПП заказчика
+- ОГРН заказчика
+- адрес заказчика
+
+Правила:
+- особенно доверяй разделам договора, проекта договора, реквизитам сторон, сведениям о заказчике и карточке организации;
+- не бери ИНН, КПП и ОГРН поставщика, участника, исполнителя или подрядчика;
+- если рядом явно указаны слова заказчик, покупатель, организатор закупки, сведения о заказчике — это приоритет.
+
+Текст документов:
+${requisitesSourceText}
 `.trim();
 
   const pricingPrompt = `
@@ -1450,12 +1489,20 @@ ${contractSourceText}
 ${equipmentSourceText}
 `.trim();
 
-  const [metaAnalysis, pricingAnalysis, requirementsAnalysis, contractAnalysis, equipmentAnalysis] =
+  const [metaAnalysis, requisitesAnalysis, pricingAnalysis, requirementsAnalysis, contractAnalysis, equipmentAnalysis] =
     await Promise.all([
       runStructuredResponse<TenderMetaAnalysis>({
         apiKey,
         model,
         prompt: metaPrompt,
+        schema: tenderMetaAnalysisSchema,
+        reasoningEffort: "medium",
+        timeoutMs: hyperCompactMode ? 28_000 : ultraCompactMode ? 36_000 : compactMode ? 45_000 : 55_000,
+      }),
+      runStructuredResponse<TenderMetaAnalysis>({
+        apiKey,
+        model,
+        prompt: requisitesPrompt,
         schema: tenderMetaAnalysisSchema,
         reasoningEffort: "medium",
         timeoutMs: hyperCompactMode ? 28_000 : ultraCompactMode ? 36_000 : compactMode ? 45_000 : 55_000,
@@ -1494,8 +1541,10 @@ ${equipmentSourceText}
       }),
     ]);
 
-  const resolvedCustomerName = metaAnalysis.customer_name || input.customerName || "";
-  const resolvedCustomerInn = metaAnalysis.customer_inn || input.customerInn || "";
+  const resolvedCustomerName =
+    requisitesAnalysis.customer_name || metaAnalysis.customer_name || input.customerName || "";
+  const resolvedCustomerInn =
+    requisitesAnalysis.customer_inn || metaAnalysis.customer_inn || input.customerInn || "";
   const resolvedProcurementNumber =
     metaAnalysis.procurement_number || input.procurementNumber || "";
   const resolvedPlatform = metaAnalysis.platform || input.platform || "";
@@ -1508,9 +1557,9 @@ ${equipmentSourceText}
     procurement_number: resolvedProcurementNumber,
     customer_name: resolvedCustomerName,
     customer_inn: resolvedCustomerInn,
-    customer_kpp: metaAnalysis.customer_kpp,
-    customer_ogrn: metaAnalysis.customer_ogrn,
-    customer_address: metaAnalysis.customer_address,
+    customer_kpp: requisitesAnalysis.customer_kpp || metaAnalysis.customer_kpp,
+    customer_ogrn: requisitesAnalysis.customer_ogrn || metaAnalysis.customer_ogrn,
+    customer_address: requisitesAnalysis.customer_address || metaAnalysis.customer_address,
     platform: resolvedPlatform,
     items_count: resolvedItemsCount,
     procurement_type: metaAnalysis.procurement_type,
@@ -1546,9 +1595,9 @@ ${equipmentSourceText}
     procurement_number: resolvedProcurementNumber,
     customer_name: resolvedCustomerName,
     customer_inn: resolvedCustomerInn,
-    customer_kpp: metaAnalysis.customer_kpp,
-    customer_ogrn: metaAnalysis.customer_ogrn,
-    customer_address: metaAnalysis.customer_address,
+    customer_kpp: requisitesAnalysis.customer_kpp || metaAnalysis.customer_kpp,
+    customer_ogrn: requisitesAnalysis.customer_ogrn || metaAnalysis.customer_ogrn,
+    customer_address: requisitesAnalysis.customer_address || metaAnalysis.customer_address,
     platform: resolvedPlatform,
     items_count: resolvedItemsCount,
     procurement_type: metaAnalysis.procurement_type,
@@ -1599,9 +1648,9 @@ ${equipmentSourceText}
 - Название: ${input.title}
 - Заказчик: ${resolvedCustomerName}
 - ИНН заказчика: ${resolvedCustomerInn}
-- КПП заказчика: ${metaAnalysis.customer_kpp}
-- ОГРН заказчика: ${metaAnalysis.customer_ogrn}
-- Адрес заказчика: ${metaAnalysis.customer_address}
+- КПП заказчика: ${requisitesAnalysis.customer_kpp || metaAnalysis.customer_kpp}
+- ОГРН заказчика: ${requisitesAnalysis.customer_ogrn || metaAnalysis.customer_ogrn}
+- Адрес заказчика: ${requisitesAnalysis.customer_address || metaAnalysis.customer_address}
 - Номер закупки: ${resolvedProcurementNumber}
 - Площадка: ${resolvedPlatform}
 - Количество позиций: ${resolvedItemsCount}
@@ -1611,6 +1660,7 @@ ${equipmentSourceText}
 ${JSON.stringify(
   {
     meta: metaAnalysis,
+    requisites: requisitesAnalysis,
     pricing: pricingAnalysis,
     requirements: requirementsAnalysis,
     contract: contractAnalysis,
@@ -1690,9 +1740,9 @@ ${compactMode ? [metaSourceText, pricingSourceText, requirementsSourceText, cont
 - Название: ${input.title}
 - Заказчик: ${resolvedCustomerName}
 - ИНН заказчика: ${resolvedCustomerInn}
-- КПП заказчика: ${metaAnalysis.customer_kpp}
-- ОГРН заказчика: ${metaAnalysis.customer_ogrn}
-- Адрес заказчика: ${metaAnalysis.customer_address}
+- КПП заказчика: ${requisitesAnalysis.customer_kpp || metaAnalysis.customer_kpp}
+- ОГРН заказчика: ${requisitesAnalysis.customer_ogrn || metaAnalysis.customer_ogrn}
+- Адрес заказчика: ${requisitesAnalysis.customer_address || metaAnalysis.customer_address}
 - Номер закупки: ${resolvedProcurementNumber}
 - Площадка: ${resolvedPlatform}
 - Количество позиций: ${resolvedItemsCount}
@@ -1705,6 +1755,7 @@ ${JSON.stringify(dossier, null, 2)}
 ${JSON.stringify(
   {
     meta: metaAnalysis,
+    requisites: requisitesAnalysis,
     pricing: pricingAnalysis,
     requirements: requirementsAnalysis,
     contract: contractAnalysis,
@@ -1728,6 +1779,7 @@ ${JSON.stringify(
     result: rawResult,
     dossier,
     metaAnalysis,
+    requisitesAnalysis,
     pricingAnalysis,
     requirementsAnalysis,
     contractAnalysis,

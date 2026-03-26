@@ -250,6 +250,53 @@ function getDocumentSectionMeta(kindLabel: string) {
   }
 }
 
+function getPrimaryDocumentScore(
+  sectionKey: string,
+  item: {
+    kindLabel: string;
+    title: string;
+    coverage: { included: boolean };
+  }
+) {
+  const title = normalizeSearchText(item.title);
+  let score = item.coverage.included ? 30 : 0;
+
+  switch (sectionKey) {
+    case "notice":
+      if (item.kindLabel === "Извещение") score += 120;
+      if (title.includes("извещ")) score += 60;
+      if (title.includes("документац")) score += 40;
+      break;
+    case "technical":
+      if (item.kindLabel === "ТЗ") score += 120;
+      if (title.includes("техническ") || title.includes("тз")) score += 60;
+      if (item.kindLabel === "Товарная таблица") score += 20;
+      break;
+    case "contract":
+      if (item.kindLabel === "Договор") score += 120;
+      if (title.includes("договор")) score += 60;
+      break;
+    case "pricing":
+      if (item.kindLabel === "НМЦК") score += 120;
+      if (item.kindLabel === "Ценовая таблица") score += 90;
+      if (item.kindLabel === "Ценовая форма") score += 80;
+      if (title.includes("нмц")) score += 60;
+      if (title.includes("обоснован")) score += 40;
+      if (title.includes("цен")) score += 30;
+      break;
+    case "forms":
+      if (item.kindLabel === "Форма заявки") score += 120;
+      if (title.includes("форма")) score += 40;
+      if (title.includes("заявк")) score += 30;
+      break;
+    default:
+      if (item.kindLabel === "Приложение") score += 20;
+      break;
+  }
+
+  return score;
+}
+
 function findMatchingSourceDocumentForRequirement(
   requirement: string,
   documents: Array<{
@@ -1441,87 +1488,99 @@ export async function renderTenderRecognitionDetailPage({
                   {finalSourceDocuments.length > 0 ? (
                     <div className="mt-4 space-y-4">
                       {sourceDocumentSections.map((section) => (
-                        <div
-                          key={section.key}
-                          className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
-                        >
-                          <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
-                            <div className="text-sm font-semibold text-[#081a4b]">{section.title}</div>
-                            <div className="text-xs font-medium text-slate-500">
-                              {section.items.length} {section.items.length === 1 ? "файл" : section.items.length < 5 ? "файла" : "файлов"}
-                            </div>
-                          </div>
-                          <table className="min-w-full divide-y divide-slate-200 text-sm">
-                            <thead className="bg-white text-left text-slate-500">
-                              <tr>
-                                <th className="px-4 py-3 font-medium">Документ</th>
-                                <th className="px-4 py-3 font-medium">Статус</th>
-                                <th className="px-4 py-3 font-medium">Участие в анализе</th>
-                                <th className="px-4 py-3 text-right font-medium">Открыть</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-200 bg-white">
-                              {section.items.map((item, index) => (
-                                <tr key={`${section.key}-${item.title}-${index}`} className="align-top">
-                                  <td className="px-4 py-4">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span className="rounded-full bg-[#081a4b]/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#081a4b]">
-                                        {item.kindLabel}
-                                      </span>
-                                      {item.href ? (
-                                        <a
-                                          href={item.href}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="text-sm font-semibold text-[#081a4b] underline-offset-2 hover:text-[#0b2a72] hover:underline"
-                                          title={item.title}
-                                        >
-                                          {item.title}
-                                        </a>
-                                      ) : (
-                                        <span className="text-sm font-semibold text-[#081a4b]" title={item.title}>
-                                          {item.title}
+                        (() => {
+                          const rankedItems = [...section.items].sort((left, right) => {
+                            const scoreDiff =
+                              getPrimaryDocumentScore(section.key, right) -
+                              getPrimaryDocumentScore(section.key, left);
+                            if (scoreDiff !== 0) return scoreDiff;
+                            return left.title.localeCompare(right.title, "ru");
+                          });
+                          const primaryItem = rankedItems[0];
+                          const additionalItems = rankedItems.slice(1);
+
+                          const renderStatusChip = (item: (typeof section.items)[number]) => (
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                item.status.tone === "success"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : item.status.tone === "warning"
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {item.status.label}
+                            </span>
+                          );
+
+                          const renderCoverageChip = (item: (typeof section.items)[number]) => (
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                item.coverage.included
+                                  ? "bg-[#0d5bd7]/10 text-[#0d5bd7]"
+                                  : item.coverage.label === "Идёт доп. анализ"
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {item.coverage.label}
+                            </span>
+                          );
+
+                          return (
+                            <div
+                              key={section.key}
+                              className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+                            >
+                              <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+                                <div className="text-sm font-semibold text-[#081a4b]">{section.title}</div>
+                                <div className="text-xs font-medium text-slate-500">
+                                  {section.items.length} {section.items.length === 1 ? "файл" : section.items.length < 5 ? "файла" : "файлов"}
+                                </div>
+                              </div>
+
+                              <div className="border-b border-slate-200 px-4 py-4">
+                                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                  Главный документ
+                                </div>
+                                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                  <div className="flex flex-wrap items-start justify-between gap-4">
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="rounded-full bg-[#081a4b]/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#081a4b]">
+                                          {primaryItem.kindLabel}
                                         </span>
-                                      )}
+                                        {primaryItem.href ? (
+                                          <a
+                                            href={primaryItem.href}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-sm font-semibold text-[#081a4b] underline-offset-2 hover:text-[#0b2a72] hover:underline"
+                                            title={primaryItem.title}
+                                          >
+                                            {primaryItem.title}
+                                          </a>
+                                        ) : (
+                                          <span className="text-sm font-semibold text-[#081a4b]" title={primaryItem.title}>
+                                            {primaryItem.title}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="mt-3 flex flex-wrap gap-2">
+                                        {renderStatusChip(primaryItem)}
+                                        {renderCoverageChip(primaryItem)}
+                                      </div>
+                                      <div className="mt-2 text-xs leading-5 text-slate-500">
+                                        {primaryItem.status.description}
+                                      </div>
+                                      <div className="mt-1 text-xs leading-5 text-slate-500">
+                                        {primaryItem.coverage.description}
+                                      </div>
                                     </div>
-                                  </td>
-                                  <td className="px-4 py-4">
-                                    <span
-                                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                        item.status.tone === "success"
-                                          ? "bg-emerald-100 text-emerald-700"
-                                          : item.status.tone === "warning"
-                                            ? "bg-amber-100 text-amber-700"
-                                            : "bg-slate-100 text-slate-600"
-                                      }`}
-                                    >
-                                      {item.status.label}
-                                    </span>
-                                    <div className="mt-1 max-w-[360px] text-xs leading-5 text-slate-500">
-                                      {item.status.description}
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-4">
-                                    <span
-                                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                        item.coverage.included
-                                          ? "bg-[#0d5bd7]/10 text-[#0d5bd7]"
-                                          : item.coverage.label === "Идёт доп. анализ"
-                                            ? "bg-amber-100 text-amber-700"
-                                            : "bg-slate-100 text-slate-600"
-                                      }`}
-                                    >
-                                      {item.coverage.label}
-                                    </span>
-                                    <div className="mt-1 max-w-[360px] text-xs leading-5 text-slate-500">
-                                      {item.coverage.description}
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-4 text-right">
                                     <div className="flex flex-col items-end gap-2">
-                                      {item.href ? (
+                                      {primaryItem.href ? (
                                         <a
-                                          href={item.href}
+                                          href={primaryItem.href}
                                           target="_blank"
                                           rel="noreferrer"
                                           className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#081a4b] transition hover:border-slate-300 hover:bg-slate-50 hover:text-[#0b2a72]"
@@ -1531,20 +1590,97 @@ export async function renderTenderRecognitionDetailPage({
                                       ) : (
                                         <span className="text-xs text-slate-400">Нет ссылки</span>
                                       )}
-                                      {item.status.label !== "Текст извлечён" ? (
+                                      {primaryItem.status.label !== "Текст извлечён" ? (
                                         <TenderSourceDocumentRerunButton
-                                          sourceDocumentId={item.id}
+                                          sourceDocumentId={primaryItem.id}
                                           procurementId={procurement.id}
                                           actorName={actorName}
                                         />
                                       ) : null}
                                     </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {additionalItems.length > 0 ? (
+                                <div className="px-4 py-4">
+                                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                    Дополнительные файлы
+                                  </div>
+                                  <div className="overflow-hidden rounded-2xl border border-slate-200">
+                                    <table className="min-w-full divide-y divide-slate-200 text-sm">
+                                      <thead className="bg-white text-left text-slate-500">
+                                        <tr>
+                                          <th className="px-4 py-3 font-medium">Документ</th>
+                                          <th className="px-4 py-3 font-medium">Статус</th>
+                                          <th className="px-4 py-3 font-medium">Участие в анализе</th>
+                                          <th className="px-4 py-3 text-right font-medium">Открыть</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-slate-200 bg-white">
+                                        {additionalItems.map((item, index) => (
+                                          <tr key={`${section.key}-${item.title}-${index}`} className="align-top">
+                                            <td className="px-4 py-4">
+                                              <div className="flex flex-wrap items-center gap-2">
+                                                <span className="rounded-full bg-[#081a4b]/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#081a4b]">
+                                                  {item.kindLabel}
+                                                </span>
+                                                {item.href ? (
+                                                  <a
+                                                    href={item.href}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-sm font-semibold text-[#081a4b] underline-offset-2 hover:text-[#0b2a72] hover:underline"
+                                                    title={item.title}
+                                                  >
+                                                    {item.title}
+                                                  </a>
+                                                ) : (
+                                                  <span className="text-sm font-semibold text-[#081a4b]" title={item.title}>
+                                                    {item.title}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                              {renderStatusChip(item)}
+                                            </td>
+                                            <td className="px-4 py-4">
+                                              {renderCoverageChip(item)}
+                                            </td>
+                                            <td className="px-4 py-4 text-right">
+                                              <div className="flex flex-col items-end gap-2">
+                                                {item.href ? (
+                                                  <a
+                                                    href={item.href}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#081a4b] transition hover:border-slate-300 hover:bg-slate-50 hover:text-[#0b2a72]"
+                                                  >
+                                                    Открыть
+                                                  </a>
+                                                ) : (
+                                                  <span className="text-xs text-slate-400">Нет ссылки</span>
+                                                )}
+                                                {item.status.label !== "Текст извлечён" ? (
+                                                  <TenderSourceDocumentRerunButton
+                                                    sourceDocumentId={item.id}
+                                                    procurementId={procurement.id}
+                                                    actorName={actorName}
+                                                  />
+                                                ) : null}
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })()
                       ))}
                     </div>
                   ) : (

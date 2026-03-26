@@ -158,11 +158,11 @@ export default async function NewTenderProcurementPage({
   const registryRecords = inns.length
     ? await prisma.tenderInnRegistry.findMany({
         where: { isActive: true, inn: { in: inns } },
-        select: { inn: true, label: true },
+        select: { id: true, inn: true, label: true },
       })
     : [];
   const registryByInn = new Map(
-    registryRecords.map((item) => [item.inn, item.label])
+    registryRecords.map((item) => [item.inn, { id: item.id, label: item.label }])
   );
   const firstQueuedProcurement =
     recentProcurements.find((item) => item.aiAnalysisStatus === "queued") ?? null;
@@ -233,7 +233,7 @@ export default async function NewTenderProcurementPage({
               ) : (
                 recentProcurements.map((item) => {
                   const normalizedInn = item.customerInn?.replace(/\D+/g, "").trim() ?? "";
-                  const registryLabel = normalizedInn
+                  const registryRecord = normalizedInn
                     ? registryByInn.get(normalizedInn) ?? null
                     : null;
                   const recognitionMeta = getRecognitionStatusMeta(
@@ -287,11 +287,14 @@ export default async function NewTenderProcurementPage({
                           className="block -mx-4 -my-4 px-4 py-4 font-medium transition hover:text-[#0d5bd7]"
                         >
                           <div>{item.customerName ?? "Не определён"}</div>
-                          {registryLabel ? (
+                          {registryRecord ? (
                             <div className="mt-2">
-                              <span className="inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700">
-                                Реестр ИНН: {registryLabel}
-                              </span>
+                              <Link
+                                href={`/registry/${registryRecord.id}`}
+                                className="inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700 transition hover:bg-rose-100"
+                              >
+                                ТВАРИ!: {registryRecord.label}
+                              </Link>
                             </div>
                           ) : null}
                         </Link>

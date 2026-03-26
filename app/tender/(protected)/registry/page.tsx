@@ -29,10 +29,10 @@ export default async function TenderInnRegistryPage() {
         <div className="bg-[linear-gradient(135deg,#081a4b_0%,#143b8f_55%,#2f78ff_100%)] px-8 py-8 text-white">
           <div className="max-w-4xl">
             <div className="text-sm font-medium uppercase tracking-[0.16em] text-white/65">
-              INN Registry
+              Blacklist
             </div>
             <h1 className="mt-3 text-4xl font-bold tracking-tight">
-              Реестр ИНН компаний
+              ТВАРИ!
             </h1>
             <p className="mt-4 text-base leading-7 text-white/80">
               Отдельный список компаний по ИНН, которые нужно подсвечивать в
@@ -49,7 +49,7 @@ export default async function TenderInnRegistryPage() {
             Новая запись
           </div>
           <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
-            Добавить ИНН в реестр
+            Добавить в ТВАРИ!
           </h2>
 
           <form action={createTenderInnRegistryAction} className="mt-6 space-y-4">
@@ -105,7 +105,7 @@ export default async function TenderInnRegistryPage() {
             Активный список
           </div>
           <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
-            Реестр по ИНН
+            Реестр ТВАРИ!
           </h2>
 
           {records.length === 0 ? (

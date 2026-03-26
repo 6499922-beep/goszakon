@@ -615,6 +615,7 @@ export default async function TenderRecognitionDetailPage({
     ? await prisma.tenderInnRegistry.findFirst({
         where: { isActive: true, inn: normalizedCustomerInn },
         select: {
+          id: true,
           inn: true,
           label: true,
           description: true,
@@ -833,15 +834,18 @@ export default async function TenderRecognitionDetailPage({
                 {innRegistryRecord ? (
                   <div className="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-rose-900">
                     <div className="text-sm font-semibold uppercase tracking-[0.12em] text-rose-700">
-                      Реестр ИНН
+                      ТВАРИ!
                     </div>
                     <div className="mt-2 text-lg font-bold">
                       Компания найдена в реестре
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex rounded-full bg-white px-3 py-1 text-sm font-semibold text-rose-700">
+                      <Link
+                        href={`/registry/${innRegistryRecord.id}`}
+                        className="inline-flex rounded-full bg-white px-3 py-1 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                      >
                         {innRegistryRecord.label}
-                      </span>
+                      </Link>
                       <span className="inline-flex rounded-full bg-white px-3 py-1 text-sm text-rose-700">
                         ИНН: {innRegistryRecord.inn}
                       </span>

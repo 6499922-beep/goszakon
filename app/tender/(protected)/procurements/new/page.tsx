@@ -139,6 +139,29 @@ function getRecognitionStatusNote(note: string) {
   return `${normalized.slice(0, 117).trim()}...`;
 }
 
+function buildProcurementSubject(input: {
+  summary: string | null;
+  title: string;
+  purchaseType: string | null;
+}) {
+  const summary = String(input.summary ?? "").replace(/\s+/g, " ").trim();
+  if (summary) {
+    return summary.length <= 180 ? summary : `${summary.slice(0, 177).trim()}...`;
+  }
+
+  const title = String(input.title ?? "")
+    .replace(/^Закупка по файлам:\s*/i, "")
+    .replace(/^Закупка\s+\d+[^\s]*\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (title) {
+    return title.length <= 180 ? title : `${title.slice(0, 177).trim()}...`;
+  }
+
+  return input.purchaseType?.trim() || "Предмет закупки не определён";
+}
+
 export default async function NewTenderProcurementPage({
   searchParams,
 }: {
@@ -169,6 +192,8 @@ export default async function NewTenderProcurementPage({
         customerInn: true,
         nmck: true,
         nmckWithoutVat: true,
+        summary: true,
+        purchaseType: true,
         status: true,
         aiAnalysisStatus: true,
         aiAnalysisError: true,
@@ -293,6 +318,11 @@ export default async function NewTenderProcurementPage({
                     item.status === "STOPPED"
                       ? `/procurements/recognition/${item.id}#stop-factors-result`
                       : rowHref;
+                  const procurementSubject = buildProcurementSubject({
+                    summary: item.summary,
+                    title: item.title,
+                    purchaseType: item.purchaseType,
+                  });
 
                   return (
                     <tr
@@ -322,6 +352,9 @@ export default async function NewTenderProcurementPage({
                           className="block -mx-4 -my-4 px-4 py-4 font-medium transition hover:text-[#0d5bd7]"
                         >
                           <div>{item.customerName ?? "Не определён"}</div>
+                          <div className="mt-2 max-w-[420px] text-sm leading-5 text-slate-500">
+                            {procurementSubject}
+                          </div>
                           {registryRecord ? (
                             <div className="mt-2">
                               <Link

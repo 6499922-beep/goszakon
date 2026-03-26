@@ -325,8 +325,56 @@ function buildProcurementNumberFallback(sourceText: string) {
 }
 
 function buildCustomerInnFallback(sourceText: string) {
-  const match = sourceText.match(/\bинн\b[^\d]{0,12}(\d{10,12})/i);
-  return match?.[1]?.trim() ?? null;
+  const normalizedText = sourceText.replace(/\u00A0/g, " ");
+  const candidateScores = new Map<string, number>();
+
+  const addCandidate = (value: string | null | undefined, score: number) => {
+    const inn = String(value ?? "").replace(/\D+/g, "");
+    if (!/^\d{10}(\d{2})?$/.test(inn)) return;
+    candidateScores.set(inn, Math.max(candidateScores.get(inn) ?? 0, score));
+  };
+
+  const contextualPatterns: Array<[RegExp, number]> = [
+    [/(?:заказчик|сведения о заказчике|информация о заказчике)[\s\S]{0,160}?\bинн\b[^\d]{0,12}(\d{10,12})/gi, 100],
+    [/(?:организатор(?: закупки)?|покупатель)[\s\S]{0,160}?\bинн\b[^\d]{0,12}(\d{10,12})/gi, 90],
+    [/\bинн\b[^\d]{0,12}(\d{10,12})[\s\S]{0,80}?(?:заказчик|организатор(?: закупки)?|покупатель)/gi, 85],
+  ];
+
+  for (const [pattern, score] of contextualPatterns) {
+    for (const match of normalizedText.matchAll(pattern)) {
+      addCandidate(match[1], score);
+    }
+  }
+
+  const lines = normalizedText
+    .split(/\n+/)
+    .map((item) => item.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  for (const line of lines) {
+    if (!/\bинн\b/i.test(line)) continue;
+    const innMatch = line.match(/\bинн\b[^\d]{0,12}(\d{10,12})/i);
+    if (!innMatch?.[1]) continue;
+
+    if (/(заказчик|организатор(?: закупки)?|покупатель)/i.test(line)) {
+      addCandidate(innMatch[1], 80);
+      continue;
+    }
+
+    if (/(поставщик|участник|исполнитель|подрядчик)/i.test(line)) {
+      addCandidate(innMatch[1], 10);
+      continue;
+    }
+
+    addCandidate(innMatch[1], 40);
+  }
+
+  for (const match of normalizedText.matchAll(/\bинн\b[^\d]{0,12}(\d{10,12})/gi)) {
+    addCandidate(match[1], 20);
+  }
+
+  const best = [...candidateScores.entries()].sort((left, right) => right[1] - left[1])[0];
+  return best?.[0] ?? null;
 }
 
 function buildPlatformFallback(sourceText: string) {

@@ -1095,31 +1095,39 @@ export async function runTenderAiAnalysis(input: {
 
   const model = process.env.OPENAI_MODEL || "gpt-5";
   const compactMode = input.sourceText.length >= 180_000;
+  const ultraCompactMode = input.sourceText.length >= 90_000;
   const packedSourceText = buildTenderAiSourcePack(input.sourceText);
   const scopes = buildTenderDocumentScopes(input.sourceText);
   const metaSourceText =
-    buildScopedSourcePack(scopes, ["notice", "other"], compactMode ? 14000 : 28000) ||
+    buildScopedSourcePack(
+      scopes,
+      ["notice", "other"],
+      ultraCompactMode ? 9000 : compactMode ? 14000 : 28000
+    ) ||
     packedSourceText;
   const pricingSourceText =
     buildScopedSourcePack(
       scopes,
       ["pricing", "notice", "forms"],
-      compactMode ? 16000 : 32000
+      ultraCompactMode ? 10000 : compactMode ? 16000 : 32000
     ) || packedSourceText;
   const requirementsSourceText =
     buildScopedSourcePack(
       scopes,
       ["notice", "forms", "spec", "other"],
-      compactMode ? 18000 : 36000
+      ultraCompactMode ? 12000 : compactMode ? 18000 : 36000
     ) || packedSourceText;
   const contractSourceText =
     buildScopedSourcePack(
       scopes,
       ["contract", "notice", "other"],
-      compactMode ? 16000 : 32000
+      ultraCompactMode ? 10000 : compactMode ? 16000 : 32000
     ) || packedSourceText;
   const equipmentSourceText =
-    buildEquipmentSourcePack(scopes, compactMode ? 22000 : 55000) || packedSourceText;
+    buildEquipmentSourcePack(
+      scopes,
+      ultraCompactMode ? 14000 : compactMode ? 22000 : 55000
+    ) || packedSourceText;
 
   const metaPrompt = `
 Ты разбираешь только общую идентификацию закупки и явные стоп-факторы.
@@ -1214,40 +1222,40 @@ ${equipmentSourceText}
         model,
         prompt: metaPrompt,
         schema: tenderMetaAnalysisSchema,
-        reasoningEffort: "medium",
-        timeoutMs: compactMode ? 90_000 : 60_000,
+        reasoningEffort: ultraCompactMode ? "low" : "medium",
+        timeoutMs: ultraCompactMode ? 75_000 : compactMode ? 90_000 : 60_000,
       }),
       runStructuredResponse<TenderPricingAnalysis>({
         apiKey,
         model,
         prompt: pricingPrompt,
         schema: tenderPricingAnalysisSchema,
-        reasoningEffort: "medium",
-        timeoutMs: compactMode ? 90_000 : 60_000,
+        reasoningEffort: ultraCompactMode ? "low" : "medium",
+        timeoutMs: ultraCompactMode ? 75_000 : compactMode ? 90_000 : 60_000,
       }),
       runStructuredResponse<TenderRequirementsAnalysis>({
         apiKey,
         model,
         prompt: requirementsPrompt,
         schema: tenderRequirementsAnalysisSchema,
-        reasoningEffort: "medium",
-        timeoutMs: compactMode ? 90_000 : 60_000,
+        reasoningEffort: ultraCompactMode ? "low" : "medium",
+        timeoutMs: ultraCompactMode ? 75_000 : compactMode ? 90_000 : 60_000,
       }),
       runStructuredResponse<TenderContractAnalysis>({
         apiKey,
         model,
         prompt: contractPrompt,
         schema: tenderContractAnalysisSchema,
-        reasoningEffort: "medium",
-        timeoutMs: compactMode ? 90_000 : 60_000,
+        reasoningEffort: ultraCompactMode ? "low" : "medium",
+        timeoutMs: ultraCompactMode ? 75_000 : compactMode ? 90_000 : 60_000,
       }),
       runStructuredResponse<TenderEquipmentAnalysis>({
         apiKey,
         model,
         prompt: equipmentPrompt,
         schema: tenderEquipmentAnalysisSchema,
-        reasoningEffort: "medium",
-        timeoutMs: compactMode ? 90_000 : 60_000,
+        reasoningEffort: ultraCompactMode ? "low" : "medium",
+        timeoutMs: ultraCompactMode ? 75_000 : compactMode ? 90_000 : 60_000,
       }),
     ]);
 
@@ -1260,6 +1268,91 @@ ${equipmentSourceText}
     equipmentAnalysis.items_count || input.itemsCount || 0;
   const resolvedNmckWithoutVat =
     pricingAnalysis.nmck_without_vat || String(input.nmckWithoutVat ?? "");
+
+  const synthesizedDossier: TenderSourceDossier = {
+    procurement_number: resolvedProcurementNumber,
+    customer_name: resolvedCustomerName,
+    customer_inn: resolvedCustomerInn,
+    platform: resolvedPlatform,
+    items_count: resolvedItemsCount,
+    procurement_type: metaAnalysis.procurement_type,
+    nmck_mentions: uniqueNonEmptyStrings([
+      pricingAnalysis.nmck_without_vat,
+      pricingAnalysis.nmck_with_vat,
+      pricingAnalysis.price_tax_note,
+    ]),
+    security_mentions: uniqueNonEmptyStrings([
+      pricingAnalysis.bid_security,
+      pricingAnalysis.contract_security,
+    ]),
+    criteria_points: uniqueNonEmptyStrings([requirementsAnalysis.selection_criteria]),
+    required_documents: requirementsAnalysis.required_documents,
+    nonstandard_requirements: requirementsAnalysis.nonstandard_requirements,
+    rrep_rpp_requirements: requirementsAnalysis.rrep_rpp_requirements,
+    decree_1875_ban: requirementsAnalysis.decree_1875_ban,
+    requires_commissioning: contractAnalysis.requires_commissioning,
+    lot_structure: requirementsAnalysis.lot_structure,
+    military_acceptance: requirementsAnalysis.military_acceptance,
+    equipment_items: equipmentAnalysis.equipment_items,
+    delivery_terms: contractAnalysis.delivery_terms,
+    payment_terms: contractAnalysis.payment_terms,
+    contract_term: contractAnalysis.contract_term,
+    responsibility_terms: contractAnalysis.responsibility_terms,
+    penalty_terms: contractAnalysis.penalty_terms,
+    termination_reasons: contractAnalysis.termination_reasons,
+    stop_factor_findings: metaAnalysis.stop_factor_findings,
+    unresolved_questions: [],
+  };
+
+  const synthesizedRawResult: TenderAnalysisResult = {
+    procurement_number: resolvedProcurementNumber,
+    customer_name: resolvedCustomerName,
+    customer_inn: resolvedCustomerInn,
+    platform: resolvedPlatform,
+    items_count: resolvedItemsCount,
+    procurement_type: metaAnalysis.procurement_type,
+    nmck_without_vat: pricingAnalysis.nmck_without_vat,
+    nmck_with_vat: pricingAnalysis.nmck_with_vat,
+    price_tax_note: pricingAnalysis.price_tax_note,
+    bid_security: pricingAnalysis.bid_security,
+    contract_security: pricingAnalysis.contract_security,
+    summary: metaAnalysis.summary,
+    selection_criteria: requirementsAnalysis.selection_criteria,
+    required_documents: requirementsAnalysis.required_documents,
+    nonstandard_requirements: requirementsAnalysis.nonstandard_requirements,
+    rrep_rpp_requirements: requirementsAnalysis.rrep_rpp_requirements,
+    decree_1875_ban: requirementsAnalysis.decree_1875_ban,
+    requires_commissioning: contractAnalysis.requires_commissioning,
+    lot_structure: requirementsAnalysis.lot_structure,
+    military_acceptance: requirementsAnalysis.military_acceptance,
+    equipment_items: equipmentAnalysis.equipment_items,
+    delivery_terms: contractAnalysis.delivery_terms,
+    payment_terms: contractAnalysis.payment_terms,
+    contract_term: contractAnalysis.contract_term,
+    responsibility_terms: contractAnalysis.responsibility_terms,
+    penalty_terms: contractAnalysis.penalty_terms,
+    termination_reasons: contractAnalysis.termination_reasons,
+    stop_factor_findings: metaAnalysis.stop_factor_findings,
+  };
+
+  if (ultraCompactMode) {
+    const result = normalizeTenderAnalysisResult({
+      result: synthesizedRawResult,
+      dossier: synthesizedDossier,
+      metaAnalysis,
+      pricingAnalysis,
+      requirementsAnalysis,
+      contractAnalysis,
+      equipmentAnalysis,
+      fallback: input,
+    });
+
+    return {
+      model,
+      dossier: synthesizedDossier,
+      result,
+    };
+  }
 
   const dossierPrompt = `
 Ты анализируешь документацию закупки по 223-ФЗ для внутреннего тендерного кабинета поставщика.

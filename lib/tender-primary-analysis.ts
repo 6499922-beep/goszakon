@@ -48,6 +48,10 @@ async function withAnalysisRetry<T>(
   throw new Error(truncateErrorMessage(message, 400) || `Не удалось выполнить ${taskName}`);
 }
 
+const PRIMARY_ANALYSIS_TIMEOUT_MS = 5 * 60 * 1000;
+const PRIMARY_ANALYSIS_TIMEOUT_TEXT =
+  "Первичный анализ занял слишком много времени. Заявка сохранена, но нужен повторный запуск или ручная проверка.";
+
 function extractRelevantParagraphs(sourceText: string, patterns: RegExp[], limit = 3) {
   const blocks = sourceText
     .split(/\n{2,}/)
@@ -472,25 +476,49 @@ export async function executeTenderPrimaryAnalysisJob(input: {
   const procurementId = input.procurementId;
 
   try {
-    return await runTenderPrimaryAnalysis(input);
+    return await Promise.race([
+      runTenderPrimaryAnalysis(input),
+      delay(PRIMARY_ANALYSIS_TIMEOUT_MS).then(() => {
+        throw new Error(PRIMARY_ANALYSIS_TIMEOUT_TEXT);
+      }),
+    ]);
   } catch (error) {
     const message = truncateErrorMessage(
       error instanceof Error ? error.message : "Не удалось выполнить первичный AI-анализ"
     );
 
-    await prisma.tenderProcurement.update({
-      where: { id: procurementId },
-      data: {
-        aiAnalysisStatus: "failed",
-        aiAnalysisError: message,
-      },
-    });
+    const isTimeoutError = /слишком много времени|aborted due to timeout|timeout/i.test(
+      message ?? ""
+    );
+    const nextStatus = isTimeoutError ? "needs_text" : "failed";
+    const nextError = isTimeoutError ? PRIMARY_ANALYSIS_TIMEOUT_TEXT : message;
+
+    try {
+      await prisma.tenderProcurement.update({
+        where: { id: procurementId },
+        data: {
+          aiAnalysisStatus: nextStatus,
+          aiAnalysisError: nextError,
+        },
+      });
+    } catch (updateError) {
+      const updateMessage = updateError instanceof Error ? updateError.message : "";
+      if (!/No record was found|P2025/i.test(updateMessage)) {
+        throw updateError;
+      }
+    }
 
     await logTenderEvent({
       procurementId,
       actionType: TenderActionType.NOTE_ADDED,
-      title: "Первичный анализ не завершён",
-      description: message || "Не удалось выполнить первичный AI-анализ",
+      title: isTimeoutError
+        ? "Первичный анализ переведён на ручную проверку"
+        : "Первичный анализ не завершён",
+      description:
+        nextError ||
+        (isTimeoutError
+          ? PRIMARY_ANALYSIS_TIMEOUT_TEXT
+          : "Не удалось выполнить первичный AI-анализ"),
       actorName: "AI",
     });
 

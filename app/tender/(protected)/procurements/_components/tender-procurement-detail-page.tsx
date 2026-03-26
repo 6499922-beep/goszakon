@@ -708,6 +708,7 @@ export async function renderTenderRecognitionDetailPage({
   const sourceDocuments = procurement.sourceDocuments.map((item) => {
     const storagePath = extractStoredDocumentPath(item.note);
     const compactTitle = buildCompactDocumentName(item.title, item.fileName, item.note);
+    const isDeepAnalysisQueued = String(item.note ?? "").includes("Доп. анализ запущен");
     const coverageMatch = analysisCoverage.find((entry) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
       const record = entry as Record<string, unknown>;
@@ -726,12 +727,16 @@ export async function renderTenderRecognitionDetailPage({
       ? coverageIncluded
         ? "Вошёл в AI-анализ"
         : "Не вошёл в AI-анализ"
+      : isDeepAnalysisQueued
+        ? "Идёт доп. анализ"
       : item.contentSnippet
         ? "Ожидает включения в анализ"
         : "Нет текста для AI";
     const coverageDescription =
       coverageMatch && typeof coverageMatch.note === "string" && coverageMatch.note.trim()
         ? coverageMatch.note.trim()
+      : isDeepAnalysisQueued
+        ? "Файл уже повторно отправлен на более тщательное распознавание и будет включён в ближайший пересчёт закупки."
       : item.contentSnippet
           ? "Документ сохранён и будет повторно учтён при ближайшем анализе закупки."
           : "По документу не удалось получить достаточно текста для AI-разбора.";

@@ -127,56 +127,12 @@ async function extractPdfText(file: TenderUploadedFile) {
 
 function isZipArchiveFile(file: TenderUploadedFile) {
   const normalizedName = (file.name || "").toLowerCase().trim();
-  const officeContainerExtensions = [
-    ".docx",
-    ".xlsx",
-    ".xlsm",
-    ".pptx",
-    ".odt",
-    ".ods",
-    ".odp",
-  ];
-
-  if (officeContainerExtensions.some((extension) => normalizedName.endsWith(extension))) {
-    return false;
-  }
-
-  if (normalizedName.endsWith(".zip")) {
-    return true;
-  }
-
-  if (file.buffer.length < 4) {
-    return false;
-  }
-
-  // ZIP magic: PK\x03\x04, PK\x05\x06, PK\x07\x08
-  return (
-    file.buffer[0] === 0x50 &&
-    file.buffer[1] === 0x4b &&
-    (file.buffer[2] === 0x03 || file.buffer[2] === 0x05 || file.buffer[2] === 0x07) &&
-    (file.buffer[3] === 0x04 || file.buffer[3] === 0x06 || file.buffer[3] === 0x08)
-  );
+  return normalizedName.endsWith(".zip");
 }
 
 function isRarArchiveFile(file: TenderUploadedFile) {
   const normalizedName = (file.name || "").toLowerCase().trim();
-  if (normalizedName.endsWith(".rar")) {
-    return true;
-  }
-
-  if (file.buffer.length < 7) {
-    return false;
-  }
-
-  // RAR4/5 magic: "Rar!\x1A\x07"
-  return (
-    file.buffer[0] === 0x52 &&
-    file.buffer[1] === 0x61 &&
-    file.buffer[2] === 0x72 &&
-    file.buffer[3] === 0x21 &&
-    file.buffer[4] === 0x1a &&
-    file.buffer[5] === 0x07
-  );
+  return normalizedName.endsWith(".rar");
 }
 
 function toExactArrayBuffer(buffer: Buffer) {

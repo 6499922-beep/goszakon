@@ -9,6 +9,8 @@ type TenderIntakeUploadFormProps = {
   resetToken?: string;
 };
 
+const ARCHIVE_FILE_PATTERN = /\.(zip|rar|7z)$/i;
+
 export function TenderIntakeUploadForm({
   actorName,
   compact = false,
@@ -52,6 +54,14 @@ export function TenderIntakeUploadForm({
         try {
           if (selectedFiles.length === 0) {
             setErrorMessage("Сначала выбери документы для загрузки.");
+            setIsPending(false);
+            return;
+          }
+
+          if (selectedFiles.some((file) => ARCHIVE_FILE_PATTERN.test(file.name))) {
+            setErrorMessage(
+              "Архивы ZIP/RAR/7Z загружать нельзя. Выбирай только сами документы: PDF, DOC, DOCX, XLS, XLSX, TXT."
+            );
             setIsPending(false);
             return;
           }
@@ -184,6 +194,20 @@ export function TenderIntakeUploadForm({
         className="sr-only"
         onChange={(event) => {
           const files = Array.from(event.target.files ?? []);
+          const archiveFiles = files.filter((file) => ARCHIVE_FILE_PATTERN.test(file.name));
+
+          if (archiveFiles.length > 0) {
+            setSelectedFiles([]);
+            setProgressLabel(null);
+            setErrorMessage(
+              "Архивы ZIP/RAR/7Z загружать нельзя. Выбирай только сами документы: PDF, DOC, DOCX, XLS, XLSX, TXT."
+            );
+            if (fileInputRef.current) {
+              fileInputRef.current.value = "";
+            }
+            return;
+          }
+
           setSelectedFiles(files);
           setErrorMessage(null);
           setProgressLabel(null);
@@ -223,7 +247,7 @@ export function TenderIntakeUploadForm({
 
         {!compact ? (
           <div className="mt-2 text-xs leading-5 text-slate-500">
-            PDF, DOCX, XLSX, TXT и архивы тоже сохраняются. Если часть текста не получится извлечь, система прямо покажет это справа.
+            Загружайте только сами документы: PDF, DOC, DOCX, XLS, XLSX, TXT. Архивы ZIP, RAR и 7Z запрещены, чтобы не терять качество анализа.
           </div>
         ) : null}
 

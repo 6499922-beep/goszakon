@@ -42,6 +42,9 @@ export default async function TenderProtectedLayout({
   const links = TENDER_INTAKE_ONLY_MODE
     ? [
         { title: "Загрузка и распознавание", href: "/procurements/new" },
+        ...(tenderHasCapability(role, "procurements_list")
+          ? [{ title: "Архив", href: "/procurements/archive" }]
+          : []),
         ...(tenderHasCapability(role, "rules_manage")
           ? [{ title: "ТВАРИ!", href: "/registry" }]
           : []),

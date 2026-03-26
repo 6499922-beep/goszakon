@@ -1635,6 +1635,7 @@ export async function archiveTenderFromAnalysisAction(formData: FormData) {
   revalidateTenderRecognitionPaths(procurementId);
   revalidateTenderPricingPaths(procurementId);
   revalidatePath("/procurements/new");
+  revalidatePath("/procurements/archive");
   revalidatePath("/procurements/pricing");
   revalidatePath("/procurements");
   redirect("/procurements/new");
@@ -1775,6 +1776,7 @@ export async function sendTenderToSubmissionAction(formData: FormData) {
   revalidateTenderPricingPaths(procurementId);
   revalidateTenderApprovalPaths(procurementId);
   revalidateTenderSubmissionPaths(procurementId);
+  revalidatePath("/procurements/archive");
   revalidatePath("/procurements/approval");
   revalidatePath("/procurements/submission");
   revalidatePath("/procurements");

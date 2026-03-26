@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TenderProcurementStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { tenderHasCapability } from "@/lib/tender-permissions";
@@ -182,6 +183,11 @@ export default async function NewTenderProcurementPage({
     currentUser.name?.trim() || currentUser.email?.trim() || "Сотрудник";
   const prisma = getPrisma();
   const recentProcurements = await prisma.tenderProcurement.findMany({
+    where: {
+      status: {
+        not: TenderProcurementStatus.ARCHIVED,
+      },
+    },
     orderBy: [{ createdAt: "desc" }],
     take: 20,
       select: {

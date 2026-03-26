@@ -146,6 +146,22 @@ function inferDocumentKind(
   }
 
   if (
+    /тип таблицы:\s*нмцк и цены|ценовые строки и кандидаты на нмцк|кандидаты на нмцк/i.test(
+      contentHaystack
+    )
+  ) {
+    return "Итоговая таблица НМЦК";
+  }
+
+  if (/тип таблицы:\s*товарная таблица/i.test(contentHaystack)) {
+    return "Товарная таблица";
+  }
+
+  if (/тип таблицы:\s*смешанная таблица/i.test(contentHaystack)) {
+    return "Смешанная таблица";
+  }
+
+  if (
     /нмц|обоснован|ценов|калькул|стоим|price/i.test(titleHaystack) &&
     /\.xls|\.xlsx|\.doc|\.docx|\.pdf/i.test(titleHaystack)
   ) {
@@ -204,22 +220,26 @@ function getDocumentKindOrder(kindLabel: string) {
       return 2;
     case "Товарная таблица":
       return 3;
-    case "Договор":
+    case "Смешанная таблица":
       return 4;
-    case "Коммерческая часть":
+    case "Договор":
       return 5;
-    case "Ценовая таблица":
+    case "Коммерческая часть":
       return 6;
-    case "Ценовая форма":
+    case "Итоговая таблица НМЦК":
       return 7;
-    case "НМЦК":
+    case "Ценовая таблица":
       return 8;
-    case "Форма заявки":
+    case "Ценовая форма":
       return 9;
-    case "Спецификация":
+    case "НМЦК":
       return 10;
-    case "Приложение":
+    case "Форма заявки":
       return 11;
+    case "Спецификация":
+      return 12;
+    case "Приложение":
+      return 13;
     default:
       return 20;
   }
@@ -233,10 +253,13 @@ function getDocumentSectionMeta(kindLabel: string) {
       return { key: "notice", title: "Извещение и документация", order: 1 };
     case "ТЗ":
     case "Товарная таблица":
+    case "Смешанная таблица":
     case "Спецификация":
       return { key: "technical", title: "Техническое задание", order: 2 };
     case "Договор":
       return { key: "contract", title: "Договор", order: 3 };
+    case "Итоговая таблица НМЦК":
+      return { key: "pricing", title: "НМЦК и цены", order: 4 };
     case "НМЦК":
     case "Ценовая таблица":
     case "Ценовая форма":
@@ -271,14 +294,16 @@ function getPrimaryDocumentScore(
       break;
     case "technical":
       if (item.kindLabel === "ТЗ") score += 120;
+      if (item.kindLabel === "Товарная таблица") score += 80;
+      if (item.kindLabel === "Смешанная таблица") score += 40;
       if (title.includes("техническ") || title.includes("тз")) score += 60;
-      if (item.kindLabel === "Товарная таблица") score += 20;
       break;
     case "contract":
       if (item.kindLabel === "Договор") score += 120;
       if (title.includes("договор")) score += 60;
       break;
     case "pricing":
+      if (item.kindLabel === "Итоговая таблица НМЦК") score += 140;
       if (item.kindLabel === "НМЦК") score += 120;
       if (item.kindLabel === "Ценовая таблица") score += 90;
       if (item.kindLabel === "Ценовая форма") score += 80;

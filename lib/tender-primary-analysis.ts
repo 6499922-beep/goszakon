@@ -205,6 +205,14 @@ function choosePreferablePriceValue(aiValue: string | null | undefined, fallback
   return normalizedAi;
 }
 
+function deriveWithoutVatFromWithVat(withVatValue: string | null | undefined) {
+  const normalized = normalizeDecimalForDb(withVatValue);
+  if (!normalized) return null;
+  const numeric = Number(normalized);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  return (numeric / 1.22).toFixed(2);
+}
+
 async function updateProcurementAnalysisSafely(
   prisma: ReturnType<typeof getPrisma>,
   procurementId: number,
@@ -790,10 +798,24 @@ export async function runTenderPrimaryAnalysis(input: {
     result.nmck_with_vat?.trim(),
     priceFallback.withVat
   );
-  const nmckWithoutVatRaw = choosePreferablePriceValue(
+  let nmckWithoutVatRaw = choosePreferablePriceValue(
     result.nmck_without_vat?.trim(),
     priceFallback.withoutVat
   );
+  const nmckWithVatNormalized = normalizeDecimalForDb(nmckWithVatRaw);
+  const nmckWithoutVatNormalized = normalizeDecimalForDb(nmckWithoutVatRaw);
+  if (nmckWithVatNormalized) {
+    const withVatNumeric = Number(nmckWithVatNormalized);
+    const withoutVatNumeric = Number(nmckWithoutVatNormalized);
+    if (
+      !nmckWithoutVatNormalized ||
+      !Number.isFinite(withoutVatNumeric) ||
+      withoutVatNumeric <= 0 ||
+      withoutVatNumeric < withVatNumeric / 10
+    ) {
+      nmckWithoutVatRaw = deriveWithoutVatFromWithVat(nmckWithVatNormalized);
+    }
+  }
   const nmckWithVatValue = normalizeDecimalForDb(nmckWithVatRaw);
   const nmckWithoutVatValue = normalizeDecimalForDb(
     nmckWithoutVatRaw

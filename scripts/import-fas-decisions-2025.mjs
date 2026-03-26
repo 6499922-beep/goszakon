@@ -1,25 +1,18 @@
-import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import {
+  buildCategoryMap,
+  createPrisma,
+  filterByOnlySlugs,
+  upsertCases,
+} from "./import-runtime.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, "..");
 
-function requiredEnv(name) {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} is not set`);
-  }
-  return value;
-}
-
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: requiredEnv("DATABASE_URL") }),
-});
+const prisma = createPrisma();
 
 const cases = [
   {
@@ -841,28 +834,16 @@ const cases = [
 ];
 
 async function main() {
-  const onlySlugs = process.env.ONLY_SLUGS
-    ? new Set(
-        process.env.ONLY_SLUGS.split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-      )
-    : null;
+  const itemsToImport = filterByOnlySlugs(cases);
 
-  const itemsToImport = onlySlugs
-    ? cases.filter((item) => onlySlugs.has(item.slug))
-    : cases;
+  if (itemsToImport.length === 0) {
+    console.log("No cases selected for import.");
+    return;
+  }
 
-  const categorySlugs = [...new Set(itemsToImport.map((item) => item.categorySlug))];
-  const categories = await prisma.category.findMany({
-    where: { slug: { in: categorySlugs } },
-    select: { id: true, slug: true },
-  });
-
-  const categoryMap = new Map(categories.map((item) => [item.slug, item.id]));
+  const categoryMap = await buildCategoryMap(prisma, itemsToImport);
 
   for (const item of itemsToImport) {
-    const categoryId = categoryMap.get(item.categorySlug) ?? null;
     const pdfPath = item.pdfUrl
       ? path.join(repoRoot, "public", item.pdfUrl.replace(/^\//, ""))
       : null;
@@ -870,52 +851,9 @@ async function main() {
     if (pdfPath && !fs.existsSync(pdfPath)) {
       throw new Error(`PDF file is missing: ${pdfPath}`);
     }
-
-    await prisma.case.upsert({
-      where: { slug: item.slug },
-      update: {
-        title: item.title,
-        summary: item.summary,
-        procurementNumber: item.procurementNumber,
-        region: item.region,
-        subject: item.subject,
-        violation: item.violation,
-        applicantPosition: item.applicantPosition,
-        decision: item.decision,
-        result: item.result,
-        pdfUrl: item.pdfUrl,
-        customerName: item.customerName,
-        customerInn: item.customerInn,
-        customerKpp: item.customerKpp,
-        decisionDate: item.decisionDate ? new Date(item.decisionDate) : null,
-        categoryId,
-        isFeatured: item.isFeatured,
-        published: item.published,
-      },
-      create: {
-        title: item.title,
-        slug: item.slug,
-        summary: item.summary,
-        procurementNumber: item.procurementNumber,
-        region: item.region,
-        subject: item.subject,
-        violation: item.violation,
-        applicantPosition: item.applicantPosition,
-        decision: item.decision,
-        result: item.result,
-        pdfUrl: item.pdfUrl,
-        customerName: item.customerName,
-        customerInn: item.customerInn,
-        customerKpp: item.customerKpp,
-        decisionDate: item.decisionDate ? new Date(item.decisionDate) : null,
-        categoryId,
-        isFeatured: item.isFeatured,
-        published: item.published,
-      },
-    });
-
-    console.log(`Upserted: ${item.slug}`);
   }
+
+  await upsertCases(prisma, itemsToImport, categoryMap);
 }
 
 try {

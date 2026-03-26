@@ -1,18 +1,10 @@
-import "dotenv/config";
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import {
+  createPrisma,
+  filterByOnlySlugs,
+  upsertMaterials,
+} from "./import-runtime.mjs";
 
-function requiredEnv(name) {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} is not set`);
-  }
-  return value;
-}
-
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: requiredEnv("DATABASE_URL") }),
-});
+const prisma = createPrisma();
 
 const materials = [
   {
@@ -577,62 +569,8 @@ const materials = [
 ];
 
 async function main() {
-  const onlySlugs = process.env.ONLY_SLUGS
-    ? new Set(
-        process.env.ONLY_SLUGS.split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-      )
-    : null;
-
-  const itemsToImport = onlySlugs
-    ? materials.filter((item) => onlySlugs.has(item.slug))
-    : materials;
-
-  for (const item of itemsToImport) {
-    await prisma.material.upsert({
-      where: { slug: item.slug },
-      update: {
-        title: item.title,
-        type: item.type,
-        topic: item.topic,
-        authority: item.authority,
-        outcome: item.outcome,
-        caseNumber: item.caseNumber,
-        decisionDate: new Date(item.decisionDate),
-        excerpt: item.excerpt,
-        body: item.body,
-        seoTitle: item.seoTitle,
-        seoDescription: item.seoDescription,
-        pdfUrl: item.pdfUrl,
-        sourceName: item.sourceName,
-        isPublished: true,
-        isFeatured: item.isFeatured,
-        publishedAt: new Date(item.decisionDate),
-      },
-      create: {
-        title: item.title,
-        slug: item.slug,
-        type: item.type,
-        topic: item.topic,
-        authority: item.authority,
-        outcome: item.outcome,
-        caseNumber: item.caseNumber,
-        decisionDate: new Date(item.decisionDate),
-        excerpt: item.excerpt,
-        body: item.body,
-        seoTitle: item.seoTitle,
-        seoDescription: item.seoDescription,
-        pdfUrl: item.pdfUrl,
-        sourceName: item.sourceName,
-        isPublished: true,
-        isFeatured: item.isFeatured,
-        publishedAt: new Date(item.decisionDate),
-      },
-    });
-
-    console.log(`Upserted material: ${item.slug}`);
-  }
+  const itemsToImport = filterByOnlySlugs(materials);
+  await upsertMaterials(prisma, itemsToImport);
 }
 
 main()

@@ -311,6 +311,12 @@ export default function NonPaymentPage() {
                 Смотреть короткий материал по ответственности заказчика →
               </Link>
               <Link
+                href="/analitika/zhaloba-v-ufas-na-prosrochku-oplaty-chemk-yupiter"
+                className="mt-3 inline-flex text-sm font-semibold text-[#081a4b] underline underline-offset-4"
+              >
+                Посмотреть, как выглядит рабочая жалоба в УФАС на просрочку оплаты →
+              </Link>
+              <Link
                 href="/analitika/moskovskoe-ufas-preduprezhdenie-za-prosrochku-oplaty-uaz-077-04-7-30-4-11579-2025"
                 className="mt-3 inline-flex text-sm font-semibold text-[#081a4b] underline underline-offset-4"
               >

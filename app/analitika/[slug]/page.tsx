@@ -43,6 +43,19 @@ export default async function AnalyticsDetailPage({ params }: PageProps) {
           {material.outcome ? <span>Результат: {material.outcome}</span> : null}
         </div>
 
+        {material.pdfUrl ? (
+          <div className="mt-8">
+            <a
+              href={material.pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-[#081a4b] transition hover:bg-slate-50"
+            >
+              {material.sourceName ? `Открыть источник: ${material.sourceName}` : "Открыть источник"}
+            </a>
+          </div>
+        ) : null}
+
         <div className="prose prose-slate mt-10 max-w-none">
           <div className="whitespace-pre-wrap text-base leading-8 text-slate-800">
             {material.body}

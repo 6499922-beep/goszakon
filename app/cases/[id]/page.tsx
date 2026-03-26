@@ -5,6 +5,7 @@ import { getPrisma } from "@/lib/prisma";
 import { SITE_CONTACTS, SITE_URL } from "@/lib/site-config";
 import { getCasePath, parseCaseParam } from "@/lib/cases";
 import { getCaseSupportLinks } from "@/lib/related-content";
+import { getCaseExtraDocs } from "@/lib/case-extra-docs";
 
 export const revalidate = 3600;
 
@@ -213,6 +214,7 @@ export default async function CasePage({ params }: PageProps) {
     violation: item.violation,
     result: item.result,
   });
+  const extraDocs = getCaseExtraDocs(item.slug);
   const canonicalUrl = `${SITE_URL}${canonicalPath}`;
 
   const articleJsonLd = {
@@ -337,6 +339,18 @@ export default async function CasePage({ params }: PageProps) {
                 Открыть PDF решения
               </a>
             ) : null}
+
+            {extraDocs.map((doc) => (
+              <a
+                key={doc.href}
+                href={doc.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-4 text-base font-semibold text-[#081a4b] transition hover:bg-slate-50"
+              >
+                {doc.label}
+              </a>
+            ))}
 
             <Link
               href="/cases"

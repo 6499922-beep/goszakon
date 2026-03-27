@@ -32,7 +32,7 @@ export function TenderRecognitionTabs({
 
   const tabs = [
     { key: "about" as const, label: "О закупке" },
-    { key: "contract" as const, label: "Условия договора" },
+    { key: "contract" as const, label: "Договор" },
     { key: "requirements" as const, label: "Нестандартные требования" },
     { key: "sourceDocuments" as const, label: "Файлы закупки" },
     { key: "submissionDocuments" as const, label: "Документы до подачи" },

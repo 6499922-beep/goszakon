@@ -973,6 +973,8 @@ export async function renderTenderRecognitionDetailPage({
   )
     .map(([, value]) => value)
     .sort((left, right) => left.order - right.order);
+  const contractSection = sourceDocumentSections.find((section) => section.key === "contract");
+  const primaryContractDocument = contractSection?.items[0] ?? null;
   const procurementChatMessages = procurement.stageComments.map((item) => ({
     id: item.id,
     role: item.authorName === "GPT" ? ("assistant" as const) : ("user" as const),
@@ -1460,8 +1462,31 @@ export async function renderTenderRecognitionDetailPage({
             }
             contract={
               <div className="space-y-4">
+                {primaryContractDocument ? (
+                  <div className="rounded-3xl border border-[#0d5bd7]/15 bg-[#0d5bd7]/5 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">
+                      Основной файл договора
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-base font-bold text-[#081a4b]">
+                          {primaryContractDocument.title}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-600">
+                          Договорный анализ строится в первую очередь по этому файлу.
+                        </div>
+                      </div>
+                      <a
+                        href={primaryContractDocument.href ?? "#"}
+                        className="inline-flex items-center rounded-full border border-[#0d5bd7]/20 bg-white px-4 py-2 text-sm font-semibold text-[#0d5bd7] transition hover:bg-[#0d5bd7]/5"
+                      >
+                        Открыть договор
+                      </a>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-base font-bold text-[#081a4b]">Условия договора</div>
+                  <div className="text-base font-bold text-[#081a4b]">Разбор договора</div>
                   <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                     <div className="rounded-2xl bg-white px-4 py-3">
                       <span className="font-medium text-[#081a4b]">Поставка:</span>{" "}

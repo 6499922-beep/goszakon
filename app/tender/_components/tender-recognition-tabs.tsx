@@ -36,7 +36,7 @@ export function TenderRecognitionTabs({
     { key: "requirements" as const, label: "Нестандартные требования" },
     { key: "sourceDocuments" as const, label: "Файлы закупки" },
     { key: "submissionDocuments" as const, label: "Документы до подачи" },
-    { key: "goods" as const, label: "Позиции по заказу" },
+    { key: "goods" as const, label: "Позиции / НМЦК" },
   ];
 
   const tabClassName = (isActive: boolean) =>

@@ -872,6 +872,7 @@ export async function renderTenderRecognitionDetailPage({
   const lotStructure = getAiAnalysisString(aiAnalysis, "lot_structure");
   const militaryAcceptance = getAiAnalysisString(aiAnalysis, "military_acceptance");
   const responsibilityTerms = getAiAnalysisString(aiAnalysis, "responsibility_terms");
+  const priceTaxNote = getAiAnalysisString(aiAnalysis, "price_tax_note");
   const customerKpp = getAiAnalysisString(aiAnalysis, "customer_kpp");
   const customerOgrn = getAiAnalysisString(aiAnalysis, "customer_ogrn");
   const customerAddress = getAiAnalysisString(aiAnalysis, "customer_address");
@@ -975,6 +976,8 @@ export async function renderTenderRecognitionDetailPage({
     .sort((left, right) => left.order - right.order);
   const contractSection = sourceDocumentSections.find((section) => section.key === "contract");
   const primaryContractDocument = contractSection?.items[0] ?? null;
+  const pricingSection = sourceDocumentSections.find((section) => section.key === "pricing");
+  const primaryPricingDocument = pricingSection?.items[0] ?? null;
   const procurementChatMessages = procurement.stageComments.map((item) => ({
     id: item.id,
     role: item.authorName === "GPT" ? ("assistant" as const) : ("user" as const),
@@ -1486,31 +1489,60 @@ export async function renderTenderRecognitionDetailPage({
                   </div>
                 ) : null}
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-base font-bold text-[#081a4b]">Разбор договора</div>
-                  <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Поставка:</span>{" "}
-                      {procurement.deliveryTerms ?? "не определено"}
+                  <div className="text-base font-bold text-[#081a4b]">Ключевые условия договора</div>
+                  <div className="mt-1 text-sm text-slate-500">
+                    Ниже собраны только важные договорные условия из проекта договора или договора.
+                  </div>
+                  <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                    <div className="rounded-2xl border border-[#0d5bd7]/15 bg-white px-4 py-4 shadow-sm">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">
+                        Куда поставлять
+                      </div>
+                      <div className="mt-2 text-sm leading-6 text-slate-700">
+                        {procurement.deliveryTerms ?? "не определено"}
+                      </div>
                     </div>
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Оплата:</span>{" "}
-                      {procurement.paymentTerms ?? "не определено"}
+                    <div className="rounded-2xl border border-[#0d5bd7]/15 bg-white px-4 py-4 shadow-sm">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">
+                        Оплата
+                      </div>
+                      <div className="mt-2 text-sm leading-6 text-slate-700">
+                        {procurement.paymentTerms ?? "не определено"}
+                      </div>
                     </div>
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Срок договора:</span>{" "}
-                      {procurement.contractTerm ?? "не определено"}
+                    <div className="rounded-2xl border border-[#0d5bd7]/15 bg-white px-4 py-4 shadow-sm">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">
+                        Срок договора
+                      </div>
+                      <div className="mt-2 text-sm leading-6 text-slate-700">
+                        {procurement.contractTerm ?? "не определено"}
+                      </div>
                     </div>
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Ответственность по договору:</span>{" "}
-                      {responsibilityTerms || procurement.penaltyTerms || "не определено"}
+                    <div className="rounded-2xl border border-[#0d5bd7]/15 bg-white px-4 py-4 shadow-sm">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">
+                        Ответственность
+                      </div>
+                      <div className="mt-2 text-sm leading-6 text-slate-700">
+                        {responsibilityTerms || procurement.penaltyTerms || "не определено"}
+                      </div>
                     </div>
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Неустойка:</span>{" "}
-                      {procurement.penaltyTerms ?? "не определено"}
+                    <div className="rounded-2xl border border-[#0d5bd7]/15 bg-white px-4 py-4 shadow-sm">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">
+                        Неустойка
+                      </div>
+                      <div className="mt-2 text-sm leading-6 text-slate-700">
+                        {procurement.penaltyTerms ?? "не определено"}
+                      </div>
                     </div>
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <span className="font-medium text-[#081a4b]">Основания расторжения:</span>{" "}
-                      {terminationReasons.length > 0 ? terminationReasons.join("; ") : "не определено"}
+                    <div className="rounded-2xl border border-[#0d5bd7]/15 bg-white px-4 py-4 shadow-sm">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">
+                        Расторжение
+                      </div>
+                      <div className="mt-2 text-sm leading-6 text-slate-700">
+                        {terminationReasons.length > 0
+                          ? terminationReasons.join("; ")
+                          : "не определено"}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1797,6 +1829,58 @@ export async function renderTenderRecognitionDetailPage({
             }
             goods={
               <div className="space-y-4">
+                <div className="rounded-3xl border border-[#0d5bd7]/15 bg-[#0d5bd7]/5 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-base font-bold text-[#081a4b]">Разбор НМЦК</div>
+                      <div className="mt-1 text-sm text-slate-500">
+                        Здесь собран отдельный ценовой анализ по файлам НМЦК и Excel.
+                      </div>
+                    </div>
+                    {primaryPricingDocument?.href ? (
+                      <a
+                        href={primaryPricingDocument.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center rounded-full border border-[#0d5bd7]/20 bg-white px-4 py-2 text-sm font-semibold text-[#0d5bd7] transition hover:bg-[#0d5bd7]/5"
+                      >
+                        Открыть основной файл НМЦК
+                      </a>
+                    ) : null}
+                  </div>
+                  <div className="mt-4 grid gap-3 xl:grid-cols-3">
+                    <div className="rounded-2xl border border-[#0d5bd7]/15 bg-white px-4 py-4 shadow-sm">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">
+                        НМЦК
+                      </div>
+                      <div className="mt-2 text-lg font-bold text-[#081a4b]">
+                        {formatCurrency(procurement.nmck ?? procurement.nmckWithoutVat)}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-[#0d5bd7]/15 bg-white px-4 py-4 shadow-sm">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">
+                        Без НДС
+                      </div>
+                      <div className="mt-2 text-lg font-bold text-[#081a4b]">
+                        {formatCurrency(procurement.nmckWithoutVat)}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-[#0d5bd7]/15 bg-white px-4 py-4 shadow-sm">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0d5bd7]">
+                        Как учтены налоги
+                      </div>
+                      <div className="mt-2 text-sm leading-6 text-slate-700">
+                        {priceTaxNote || "не определено"}
+                      </div>
+                    </div>
+                  </div>
+                  {primaryPricingDocument ? (
+                    <div className="mt-4 rounded-2xl border border-white/80 bg-white px-4 py-3 text-sm text-slate-700">
+                      <span className="font-semibold text-[#081a4b]">Основной ценовой документ:</span>{" "}
+                      {primaryPricingDocument.title}
+                    </div>
+                  ) : null}
+                </div>
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
@@ -1806,9 +1890,6 @@ export async function renderTenderRecognitionDetailPage({
                       </div>
                     </div>
                     <div className="flex items-center gap-3 text-sm">
-                      <div className="rounded-full bg-white px-3 py-1.5 text-slate-600">
-                        НМЦК: {formatCurrency(procurement.nmck ?? procurement.nmckWithoutVat)}
-                      </div>
                       <Link
                         href={equipmentHref}
                         target="_blank"

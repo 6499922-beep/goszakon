@@ -10,6 +10,7 @@ import { PDFParse } from "pdf-parse";
 import WordExtractor from "word-extractor";
 import * as XLSX from "xlsx";
 import {
+  Prisma,
   TenderFasReviewStatus,
   TenderPromptConfigKey,
   TenderRuleKind,
@@ -1681,6 +1682,92 @@ export async function archiveTenderFromAnalysisAction(formData: FormData) {
   revalidatePath("/procurements/pricing");
   revalidatePath("/procurements");
   redirect("/procurements/new");
+}
+
+export async function updateTenderRecognitionNumbersAction(formData: FormData) {
+  const user = await getCurrentTenderUser();
+
+  if (
+    !user ||
+    !(
+      tenderHasCapability(user.role, "procurement_initial") ||
+      tenderHasCapability(user.role, "procurement_pricing") ||
+      tenderHasCapability(user.role, "procurement_decision") ||
+      tenderHasCapability(user.role, "procurement_submission")
+    )
+  ) {
+    throw new Error("Недостаточно прав для этого действия");
+  }
+
+  const prisma = getPrisma();
+  const procurementId = Number(formData.get("procurementId"));
+  const returnTo = normalizeString(formData.get("returnTo")) || `/procurements/recognition/${procurementId}`;
+  const nmck = normalizeNumber(formData.get("nmck"));
+  const nmckWithoutVat = normalizeNumber(formData.get("nmckWithoutVat"));
+  const itemsCountValue = normalizeNumber(formData.get("itemsCount"));
+  const itemsCount =
+    itemsCountValue != null && Number.isInteger(itemsCountValue) && itemsCountValue >= 0
+      ? itemsCountValue
+      : null;
+
+  if (!Number.isInteger(procurementId) || procurementId <= 0) {
+    redirect("/procurements/new");
+  }
+
+  const procurement = await prisma.tenderProcurement.findUnique({
+    where: { id: procurementId },
+    select: {
+      id: true,
+      aiAnalysis: true,
+    },
+  });
+
+  if (!procurement) {
+    redirect("/procurements/new");
+  }
+
+  const aiAnalysis =
+    procurement.aiAnalysis && typeof procurement.aiAnalysis === "object" && !Array.isArray(procurement.aiAnalysis)
+      ? { ...(procurement.aiAnalysis as Record<string, unknown>) }
+      : {};
+
+  aiAnalysis.nmck_with_vat = nmck != null ? String(nmck.toFixed(2)) : "";
+  aiAnalysis.nmck_without_vat = nmckWithoutVat != null ? String(nmckWithoutVat.toFixed(2)) : "";
+  aiAnalysis.items_count = itemsCount ?? 0;
+
+  await prisma.tenderProcurement.update({
+    where: { id: procurementId },
+    data: {
+      nmck: nmck != null ? new Prisma.Decimal(nmck.toFixed(2)) : null,
+      nmckWithoutVat: nmckWithoutVat != null ? new Prisma.Decimal(nmckWithoutVat.toFixed(2)) : null,
+      itemsCount,
+      aiAnalysis: aiAnalysis as Prisma.InputJsonValue,
+    },
+  });
+
+  await logTenderEvent({
+    procurementId,
+    actionType: TenderActionType.STATUS_UPDATED,
+    title: "Ручная правка НМЦК и позиций",
+    description: "В карточке закупки вручную обновили НМЦК, НМЦК без НДС или количество позиций.",
+    actorName: user.name?.trim() || user.email?.trim() || "Сотрудник",
+    metadata: {
+      nmck,
+      nmckWithoutVat,
+      itemsCount,
+    },
+  });
+
+  revalidateTenderRecognitionPaths(procurementId);
+  revalidateTenderPricingPaths(procurementId);
+  revalidateTenderApprovalPaths(procurementId);
+  revalidateTenderSubmissionPaths(procurementId);
+  revalidatePath("/procurements/new");
+  revalidatePath("/procurements/pricing");
+  revalidatePath("/procurements/approval");
+  revalidatePath("/procurements/submission");
+  revalidatePath("/procurements");
+  redirect(returnTo);
 }
 
 export async function saveTenderPricingReviewAction(formData: FormData) {

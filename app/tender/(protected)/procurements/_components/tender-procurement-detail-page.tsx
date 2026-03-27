@@ -13,6 +13,7 @@ import {
   sendTenderToApprovalAction,
   sendTenderToSubmissionAction,
   sendTenderToPricingAction,
+  updateTenderRecognitionNumbersAction,
 } from "@/app/tender/actions";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/prisma";
@@ -33,6 +34,13 @@ function formatCurrency(value: { toString(): string } | null | undefined) {
     currency: "RUB",
     maximumFractionDigits: 2,
   }).format(parsed);
+}
+
+function formatNumberInputValue(value: { toString(): string } | number | null | undefined) {
+  if (value == null) return "";
+  const parsed = Number(String(value).replace(",", "."));
+  if (!Number.isFinite(parsed)) return "";
+  return parsed.toFixed(2);
 }
 
 function jsonListToStrings(value: unknown) {
@@ -1080,6 +1088,13 @@ export async function renderTenderRecognitionDetailPage({
     tenderHasCapability(currentUser.role, "procurement_submission");
   const actorName =
     currentUser.name?.trim() || currentUser.email?.trim() || "Сотрудник";
+  const currentRecognitionHref = isSubmissionView
+    ? `/procurements/submission/${procurement.id}`
+    : isApprovalView
+      ? `/procurements/approval/${procurement.id}`
+      : isPricingView
+        ? `/procurements/pricing/${procurement.id}`
+        : `/procurements/recognition/${procurement.id}`;
 
   return (
     <main className="space-y-4">
@@ -1880,6 +1895,65 @@ export async function renderTenderRecognitionDetailPage({
                       {primaryPricingDocument.title}
                     </div>
                   ) : null}
+                  <form
+                    action={updateTenderRecognitionNumbersAction}
+                    className="mt-4 rounded-2xl border border-white/80 bg-white p-4"
+                  >
+                    <input type="hidden" name="procurementId" value={procurement.id} />
+                    <input type="hidden" name="returnTo" value={currentRecognitionHref} />
+                    <div className="text-sm font-semibold text-[#081a4b]">
+                      Ручная правка НМЦК и позиций
+                    </div>
+                    <div className="mt-3 grid gap-3 xl:grid-cols-3">
+                      <label className="block">
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                          НМЦК
+                        </div>
+                        <input
+                          type="number"
+                          name="nmck"
+                          step="0.01"
+                          min="0"
+                          defaultValue={formatNumberInputValue(procurement.nmck)}
+                          className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-[#081a4b] outline-none transition focus:border-[#0d5bd7] focus:bg-white"
+                        />
+                      </label>
+                      <label className="block">
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                          Без НДС
+                        </div>
+                        <input
+                          type="number"
+                          name="nmckWithoutVat"
+                          step="0.01"
+                          min="0"
+                          defaultValue={formatNumberInputValue(procurement.nmckWithoutVat)}
+                          className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-[#081a4b] outline-none transition focus:border-[#0d5bd7] focus:bg-white"
+                        />
+                      </label>
+                      <label className="block">
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                          Кол-во позиций
+                        </div>
+                        <input
+                          type="number"
+                          name="itemsCount"
+                          step="1"
+                          min="0"
+                          defaultValue={procurement.itemsCount ?? equipmentCount}
+                          className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-[#081a4b] outline-none transition focus:border-[#0d5bd7] focus:bg-white"
+                        />
+                      </label>
+                    </div>
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        type="submit"
+                        className="inline-flex items-center rounded-full bg-[#081a4b] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
+                      >
+                        Сохранить вручную
+                      </button>
+                    </div>
+                  </form>
                 </div>
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">

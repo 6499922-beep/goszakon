@@ -64,6 +64,19 @@ const stages = [
   },
 ];
 
+const firstDocuments = [
+  "госконтракт и приложения к нему;",
+  "претензия заказчика, расчет неустойки и документы об удержании;",
+  "переписка по приемке, оплате, срокам и замечаниям заказчика;",
+  "документы, подтверждающие собственные нарушения заказчика по договору.",
+];
+
+const formatOfWork = [
+  "Быстро оцениваем, есть ли шанс снизить неустойку или выбить ее полностью.",
+  "Работаем по всей России: подключаемся онлайн, выезжаем к клиенту и собираем позицию вместе с командой.",
+  "Если спор связан с удержанием из оплаты, сразу стыкуем неустойку с требованиями о возврате денег и процентов.",
+];
+
 export default function SupplierPenaltyReductionPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
@@ -94,17 +107,17 @@ export default function SupplierPenaltyReductionPage() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
-                href={SITE_CONTACTS.phoneHref}
+                href={SITE_CONTACTS.emailHref}
                 className="rounded-2xl bg-[#081a4b] px-7 py-4 text-center text-base font-semibold text-white transition hover:bg-[#0d2568]"
               >
-                Оценить спор по неустойке
+                Направить договор и расчет
               </a>
 
               <a
-                href={SITE_CONTACTS.emailHref}
+                href={SITE_CONTACTS.phoneHref}
                 className="rounded-2xl border border-slate-300 bg-white px-7 py-4 text-center text-base font-semibold text-[#081a4b] transition hover:bg-slate-50"
               >
-                Направить договор и расчет
+                Быстро обсудить спор
               </a>
             </div>
           </div>
@@ -138,6 +151,49 @@ export default function SupplierPenaltyReductionPage() {
                 ответственность заказчика. Этот перекос нельзя просто принимать
                 как норму.
               </p>
+
+              <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-7 text-white/90">
+                Можно прислать спор дистанционно: договор, претензию, расчет и
+                платежные документы. Этого уже достаточно для первичной оценки.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-16 lg:grid-cols-[1fr_0.95fr]">
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 shadow-sm">
+            <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+              Что прислать на разбор
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {firstDocuments.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-slate-200 bg-white p-5"
+                >
+                  <p className="text-base leading-8 text-slate-700">{item}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-[#081a4b] p-8 text-white shadow-sm">
+            <div className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm text-white/80">
+              Как подключаемся
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {formatOfWork.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-white/10 bg-white/5 p-5"
+                >
+                  <p className="text-base leading-8 text-white/90">{item}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>

@@ -46,6 +46,19 @@ const cases = [
   },
 ];
 
+const trustPoints = [
+  "Быстро оцениваем, есть ли у заказчика и ФАС реальная база для включения в РНП.",
+  "Работаем по всей России: можно подключиться онлайн, а при необходимости собрать позицию с командой и документами на месте.",
+  "Смотрим не только на сам эпизод, но и на переписку, попытки исполнения, поведение заказчика и экономическую логику конфликта.",
+];
+
+const firstDocuments = [
+  "уведомление о заседании ФАС или письмо заказчика о направлении сведений в РНП;",
+  "договор, проект договора, переписка о подписании и исполнении;",
+  "документы по обеспечению, срокам, поставке или расторжению;",
+  "объяснения, почему контракт не был подписан или исполнен в том виде, как этого требовал заказчик.",
+];
+
 export default function RnpPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
@@ -66,19 +79,25 @@ export default function RnpPage() {
               поставщиков.
             </p>
 
+            <p className="mt-4 max-w-3xl text-lg leading-9 text-slate-700">
+              Для таких ситуаций важна скорость. Чем раньше собрать документы и
+              объяснить поведение поставщика, тем выше шанс не допустить
+              включения в реестр.
+            </p>
+
             <div className="mt-8 flex flex-wrap gap-3">
               <a
-                href="#request"
+                href={SITE_CONTACTS.emailHref}
                 className="rounded-2xl bg-[#081a4b] px-7 py-4 text-white transition hover:bg-[#0d2568]"
               >
-                Проверить ситуацию
+                Направить документы по РНП
               </a>
 
               <a
-                href="#practice"
+                href={SITE_CONTACTS.phoneHref}
                 className="rounded-2xl border border-slate-300 px-7 py-4 transition hover:bg-slate-50"
               >
-                Смотреть практику
+                Срочно обсудить ситуацию
               </a>
             </div>
           </div>
@@ -97,6 +116,44 @@ export default function RnpPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-slate-50">
+        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-16 lg:grid-cols-2">
+          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <h2 className="text-3xl font-bold tracking-tight text-[#081a4b]">
+              Почему с РНП важно подключаться сразу
+            </h2>
+
+            <div className="mt-6 space-y-4">
+              {trustPoints.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
+                >
+                  <p className="text-base leading-8 text-slate-700">{item}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-[#081a4b] p-8 text-white shadow-sm">
+            <h2 className="text-3xl font-bold tracking-tight">
+              Что прислать на разбор
+            </h2>
+
+            <div className="mt-6 space-y-4">
+              {firstDocuments.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-white/10 bg-white/5 p-5"
+                >
+                  <p className="text-base leading-8 text-white/90">{item}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

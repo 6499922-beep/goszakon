@@ -62,6 +62,13 @@ const outcomes = [
   "Связка спора по УПД с приемкой, оплатой и последующими санкциями по контракту.",
 ];
 
+const firstDocuments = [
+  "сам УПД, история его отправки через ЭДО или иным способом;",
+  "переписка с замечаниями заказчика и всеми возвратами документа;",
+  "акты, накладные, документы по приемке и исполнению контракта;",
+  "письма или расчеты, если из-за УПД уже сдвигают оплату или удерживают деньги.",
+];
+
 export default function CustomerRefusesUpdPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
@@ -92,17 +99,17 @@ export default function CustomerRefusesUpdPage() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
-                href={SITE_CONTACTS.phoneHref}
+                href={SITE_CONTACTS.emailHref}
                 className="rounded-2xl bg-[#081a4b] px-7 py-4 text-center text-base font-semibold text-white transition hover:bg-[#0d2568]"
               >
-                Разобрать УПД и оплату
+                Направить УПД и переписку
               </a>
 
               <a
-                href={SITE_CONTACTS.emailHref}
+                href={SITE_CONTACTS.phoneHref}
                 className="rounded-2xl border border-slate-300 bg-white px-7 py-4 text-center text-base font-semibold text-[#081a4b] transition hover:bg-slate-50"
               >
-                Направить документы
+                Быстро обсудить ситуацию
               </a>
             </div>
           </div>
@@ -134,6 +141,50 @@ export default function CustomerRefusesUpdPage() {
                 и этим получает контроль над сроком оплаты. Именно поэтому спор
                 по УПД почти всегда выходит за рамки простого документооборота.
               </p>
+
+              <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-7 text-white/90">
+                Можно прислать спор дистанционно: УПД, переписку и документы по
+                приемке. Этого уже достаточно, чтобы понять, где заканчивается
+                нормальная проверка и начинается злоупотребление.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-16 lg:grid-cols-[1fr_0.95fr]">
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 shadow-sm">
+            <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+              Что прислать на разбор
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {firstDocuments.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-slate-200 bg-white p-5"
+                >
+                  <p className="text-base leading-8 text-slate-700">{item}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-[#081a4b] p-8 text-white shadow-sm">
+            <div className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm text-white/80">
+              Что можно получить
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {outcomes.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-white/10 bg-white/5 p-5"
+                >
+                  <p className="text-base leading-8 text-white/90">{item}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>

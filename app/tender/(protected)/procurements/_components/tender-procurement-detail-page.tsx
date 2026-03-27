@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { TenderProcurementChat } from "@/app/tender/_components/tender-procurement-chat";
+import { TenderIntakeUploadForm } from "@/app/tender/_components/tender-intake-upload-form";
 import { TenderRecognitionTabs } from "@/app/tender/_components/tender-recognition-tabs";
 import { TenderSourceDocumentRerunButton } from "@/app/tender/_components/tender-source-document-rerun-button";
 import {
@@ -1644,6 +1645,21 @@ export async function renderTenderRecognitionDetailPage({
             }
             sourceDocuments={
               <div className="space-y-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-base font-bold text-[#081a4b]">Дозагрузить файлы</div>
+                  <div className="mt-2 text-sm leading-6 text-slate-500">
+                    Если по закупке пришли дополнительные документы позже, их можно добавить сюда. Система сохранит их в эту же карточку и запустит повторный анализ.
+                  </div>
+                  <div className="mt-4">
+                    <TenderIntakeUploadForm
+                      actorName={actorName}
+                      compact
+                      existingProcurementId={procurement.id}
+                      existingProcurementTitle={procurement.title}
+                      resetToken={`append-${procurement.id}-${procurement.updatedAt.toISOString()}`}
+                    />
+                  </div>
+                </div>
                 <div id="documents-list" className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>

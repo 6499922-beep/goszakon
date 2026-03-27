@@ -7,6 +7,8 @@ type TenderIntakeUploadFormProps = {
   actorName: string;
   compact?: boolean;
   resetToken?: string;
+  existingProcurementId?: number | null;
+  existingProcurementTitle?: string | null;
 };
 
 const ARCHIVE_FILE_PATTERN = /\.(zip|rar|7z)$/i;
@@ -15,6 +17,8 @@ export function TenderIntakeUploadForm({
   actorName,
   compact = false,
   resetToken,
+  existingProcurementId = null,
+  existingProcurementTitle,
 }: TenderIntakeUploadFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -66,32 +70,38 @@ export function TenderIntakeUploadForm({
             return;
           }
 
-          setProgressLabel("Создаём карточку закупки...");
-          const startResponse = await fetch("/api/tender/intake/start", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              actorName,
-              fileNames: selectedFiles.map((file) => file.name),
-            }),
-          });
+          let procurementId = existingProcurementId;
 
-          const startPayload =
-            ((await startResponse.json().catch(() => null)) as
-              | { ok?: boolean; error?: string; procurementId?: number }
-              | null) ?? null;
+          if (!procurementId) {
+            setProgressLabel("Создаём карточку закупки...");
+            const startResponse = await fetch("/api/tender/intake/start", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                actorName,
+                fileNames: selectedFiles.map((file) => file.name),
+              }),
+            });
 
-          if (!startResponse.ok || !startPayload?.ok || !startPayload.procurementId) {
-            setErrorMessage(
-              startPayload?.error || "Не удалось создать карточку закупки."
-            );
-            setIsPending(false);
-            return;
+            const startPayload =
+              ((await startResponse.json().catch(() => null)) as
+                | { ok?: boolean; error?: string; procurementId?: number }
+                | null) ?? null;
+
+            if (!startResponse.ok || !startPayload?.ok || !startPayload.procurementId) {
+              setErrorMessage(
+                startPayload?.error || "Не удалось создать карточку закупки."
+              );
+              setIsPending(false);
+              return;
+            }
+
+            procurementId = startPayload.procurementId;
+          } else {
+            setProgressLabel("Дозагружаем файлы в текущую закупку...");
           }
-
-          const procurementId = startPayload.procurementId;
 
           for (let index = 0; index < selectedFiles.length; index += 1) {
             const file = selectedFiles[index];
@@ -124,7 +134,9 @@ export function TenderIntakeUploadForm({
             }
           }
 
-          setProgressLabel("Запускаем первичный анализ...");
+          setProgressLabel(
+            existingProcurementId ? "Запускаем повторный анализ..." : "Запускаем первичный анализ..."
+          );
           const finalizeResponse = await fetch("/api/tender/intake/finalize", {
             method: "POST",
             headers: {
@@ -155,7 +167,9 @@ export function TenderIntakeUploadForm({
             return;
           }
 
-          setProgressLabel("Ставим закупку в обработку...");
+          setProgressLabel(
+            existingProcurementId ? "Ставим закупку на повторный анализ..." : "Ставим закупку в обработку..."
+          );
           await fetch("/api/tender/process-queue", {
             method: "POST",
             headers: {
@@ -170,7 +184,11 @@ export function TenderIntakeUploadForm({
             fileInputRef.current.value = "";
           }
 
-          router.push(`/procurements/new?uploaded=${procurementId}`);
+          router.push(
+            existingProcurementId
+              ? `/procurements/recognition/${procurementId}`
+              : `/procurements/new?uploaded=${procurementId}`
+          );
           router.refresh();
         } catch (error) {
           setErrorMessage(
@@ -220,7 +238,9 @@ export function TenderIntakeUploadForm({
             {isPending
               ? "Загружаем документы и запускаем анализ..."
               : compact
-                ? "Добавить ещё одну закупку"
+                ? existingProcurementId
+                  ? "Дозагрузить документы в эту закупку"
+                  : "Добавить ещё одну закупку"
                 : "Загрузить всю документацию по закупке"}
           </div>
           {!compact ? (
@@ -229,7 +249,9 @@ export function TenderIntakeUploadForm({
             </p>
           ) : (
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Можно сразу загрузить следующий пакет документов, пока предыдущие закупки уже стоят в таблице ниже.
+              {existingProcurementId
+                ? `Можно добавить ещё файлы в текущую закупку${existingProcurementTitle ? `: ${existingProcurementTitle}` : ""}. После дозагрузки система заново пересчитает анализ.`
+                : "Можно сразу загрузить следующий пакет документов, пока предыдущие закупки уже стоят в таблице ниже."}
             </p>
           )}
         </div>
@@ -301,7 +323,9 @@ export function TenderIntakeUploadForm({
                 {isPending
                   ? "Загружаем документы и запускаем анализ..."
                   : compact
-                    ? "Загрузить и распознать"
+                    ? existingProcurementId
+                      ? "Дозагрузить и пересчитать"
+                      : "Загрузить и распознать"
                     : "Запустить анализ"}
               </button>
               {!isPending ? (

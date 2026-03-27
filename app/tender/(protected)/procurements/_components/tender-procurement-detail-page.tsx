@@ -10,6 +10,7 @@ import {
   markTenderDocumentsPreparedAction,
   markTenderSubmittedAction,
   rerunTenderSourceDocumentDeepAnalysisAction,
+  saveTenderRecognitionPositionAction,
   sendTenderToApprovalAction,
   sendTenderToSubmissionAction,
   sendTenderToPricingAction,
@@ -1021,23 +1022,29 @@ export async function renderTenderRecognitionDetailPage({
 
           return {
             key: `tech-${item.id}`,
+            technicalItemId: item.id,
             index: item.lineNumber ?? index + 1,
             name,
             quantityLabel,
+            quantityValue: item.quantity ?? "",
             details,
             amountLabel,
+            amountValue: item.approximateUnitPrice ? formatNumberInputValue(item.approximateUnitPrice) : "",
           };
         })
       : equipmentItems.map((item, index) => ({
           key: `ai-${index}`,
+          technicalItemId: null,
           index: index + 1,
           name: item,
           quantityLabel: "Не указано",
+          quantityValue: "",
           details: "",
           amountLabel:
             equipmentItems.length <= 1 && (procurement.nmck ?? procurement.nmckWithoutVat)
               ? formatCurrency(procurement.nmck ?? procurement.nmckWithoutVat)
               : "Не выделено из НМЦК",
+          amountValue: "",
         }));
   const stopFactorState = procurement.ruleMatches.length > 0 ? "stop" : "ok";
   const stopFactorTitle =
@@ -1982,24 +1989,69 @@ export async function renderTenderRecognitionDetailPage({
                             <th className="px-4 py-3 font-semibold">Позиция</th>
                             <th className="px-4 py-3 font-semibold">Кол-во</th>
                             <th className="px-4 py-3 font-semibold">Цена</th>
+                            <th className="px-4 py-3 text-right font-semibold">Сохранить</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {positionRows.map((item) => (
-                            <tr key={item.key} className="align-top">
-                              <td className="px-4 py-3 font-semibold text-[#081a4b]">{item.index}</td>
-                              <td className="px-4 py-3">
-                                <div className="font-medium text-slate-800">{item.name}</div>
-                                {item.details ? (
-                                  <div className="mt-1 text-xs leading-5 text-slate-500">
-                                    {item.details}
-                                  </div>
-                                ) : null}
-                              </td>
-                              <td className="px-4 py-3 text-slate-700">{item.quantityLabel}</td>
-                              <td className="px-4 py-3 text-slate-800">{item.amountLabel}</td>
-                            </tr>
-                          ))}
+                          {positionRows.map((item) => {
+                            const formId = `position-form-${procurement.id}-${item.key}`;
+                            return (
+                              <tr key={item.key} className="align-top">
+                                <td className="px-4 py-3 font-semibold text-[#081a4b]">
+                                  {item.index}
+                                  <form id={formId} action={saveTenderRecognitionPositionAction}>
+                                    <input type="hidden" name="procurementId" value={procurement.id} />
+                                    <input type="hidden" name="technicalItemId" value={item.technicalItemId ?? ""} />
+                                    <input type="hidden" name="lineNumber" value={item.index} />
+                                    <input type="hidden" name="returnTo" value={currentRecognitionHref} />
+                                  </form>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <input
+                                    form={formId}
+                                    type="text"
+                                    name="positionName"
+                                    defaultValue={item.name}
+                                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800 outline-none transition focus:border-[#0d5bd7] focus:bg-white"
+                                  />
+                                  {item.details ? (
+                                    <div className="mt-1 text-xs leading-5 text-slate-500">{item.details}</div>
+                                  ) : null}
+                                </td>
+                                <td className="px-4 py-3 text-slate-700">
+                                  <input
+                                    form={formId}
+                                    type="text"
+                                    name="quantity"
+                                    defaultValue={item.quantityValue}
+                                    placeholder={item.quantityLabel}
+                                    className="w-full min-w-[110px] rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-[#0d5bd7] focus:bg-white"
+                                  />
+                                </td>
+                                <td className="px-4 py-3 text-slate-800">
+                                  <input
+                                    form={formId}
+                                    type="number"
+                                    name="approximateUnitPrice"
+                                    step="0.01"
+                                    min="0"
+                                    defaultValue={item.amountValue}
+                                    placeholder={item.amountLabel}
+                                    className="w-full min-w-[130px] rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-[#0d5bd7] focus:bg-white"
+                                  />
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <button
+                                    form={formId}
+                                    type="submit"
+                                    className="inline-flex items-center rounded-full bg-[#081a4b] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
+                                  >
+                                    Сохранить
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

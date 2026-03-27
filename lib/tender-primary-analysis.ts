@@ -656,6 +656,20 @@ function buildCustomerInnFallback(sourceText: string) {
 function buildContractCustomerInnFallback(sourceText: string) {
   const contractText = buildContractSectionsText(sourceText);
   if (!contractText) return null;
+
+  const requisitesPatterns = [
+    /(?:реквизиты|адреса\s+и\s+реквизиты\s+сторон|юридические\s+адреса\s+и\s+банковские\s+реквизиты)[\s\S]{0,1400}?(?:покупател(?:я|ь)|заказчик)[\s\S]{0,260}?\bинн\b[^\d]{0,12}(\d{10,12})/i,
+    /(?:покупател(?:я|ь)|заказчик)[\s\S]{0,260}?\bинн\b[^\d]{0,12}(\d{10,12})/i,
+    /\bинн\b[^\d]{0,12}(\d{10,12})[\s\S]{0,120}?(?:покупател(?:я|ь)|заказчик)/i,
+  ];
+
+  for (const pattern of requisitesPatterns) {
+    const match = contractText.match(pattern);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
   return buildCustomerInnFallback(contractText);
 }
 

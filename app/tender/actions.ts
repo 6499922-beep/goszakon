@@ -22,6 +22,7 @@ import {
   TenderSourceDocumentFormType,
   TenderSourceDocumentStatus,
   TenderProcurementStatus,
+  TenderTechnicalItemStatus,
   TenderUserRole,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -3114,6 +3115,103 @@ export async function saveTenderTechnicalItemAction(formData: FormData) {
   });
 
   revalidatePath(`/procurements/${procurementId}`);
+}
+
+export async function saveTenderRecognitionPositionAction(formData: FormData) {
+  const user = await getCurrentTenderUser();
+
+  if (
+    !user ||
+    !(
+      tenderHasCapability(user.role, "procurement_initial") ||
+      tenderHasCapability(user.role, "procurement_pricing") ||
+      tenderHasCapability(user.role, "procurement_decision") ||
+      tenderHasCapability(user.role, "procurement_submission")
+    )
+  ) {
+    throw new Error("Недостаточно прав для этого действия");
+  }
+
+  const prisma = getPrisma();
+  const procurementId = Number(formData.get("procurementId"));
+  const technicalItemId = Number(formData.get("technicalItemId"));
+  const lineNumberValue = normalizeNumber(formData.get("lineNumber"));
+  const lineNumber =
+    lineNumberValue != null && Number.isInteger(lineNumberValue) && lineNumberValue > 0
+      ? lineNumberValue
+      : null;
+  const positionName = String(formData.get("positionName") ?? "").trim();
+  const quantity = normalizeString(formData.get("quantity"));
+  const approximateUnitPrice = normalizeNumber(formData.get("approximateUnitPrice"));
+  const returnTo =
+    normalizeString(formData.get("returnTo")) || `/procurements/recognition/${procurementId}`;
+
+  if (!Number.isInteger(procurementId) || procurementId <= 0) {
+    redirect("/procurements/new");
+  }
+
+  if (!positionName) {
+    throw new Error("Название позиции обязательно");
+  }
+
+  if (Number.isInteger(technicalItemId) && technicalItemId > 0) {
+    await prisma.tenderTechnicalItem.update({
+      where: { id: technicalItemId },
+      data: {
+        lineNumber,
+        requestedName: positionName,
+        identifiedProduct: positionName,
+        quantity,
+        approximateUnitPrice:
+          approximateUnitPrice != null
+            ? new Prisma.Decimal(approximateUnitPrice.toFixed(2))
+            : null,
+        status: TenderTechnicalItemStatus.EXPLICIT,
+        pricingReady: approximateUnitPrice != null,
+      },
+    });
+  } else {
+    await prisma.tenderTechnicalItem.create({
+      data: {
+        procurementId,
+        lineNumber,
+        requestedName: positionName,
+        identifiedProduct: positionName,
+        quantity,
+        approximateUnitPrice:
+          approximateUnitPrice != null
+            ? new Prisma.Decimal(approximateUnitPrice.toFixed(2))
+            : null,
+        status: TenderTechnicalItemStatus.EXPLICIT,
+        pricingReady: approximateUnitPrice != null,
+      },
+    });
+  }
+
+  await logTenderEvent({
+    procurementId,
+    actionType: TenderActionType.NOTE_ADDED,
+    title: "Ручная правка позиции",
+    description: `Обновлена позиция: ${positionName}.`,
+    actorName: user.name?.trim() || user.email?.trim() || "Сотрудник",
+    metadata: {
+      technicalItemId: Number.isInteger(technicalItemId) && technicalItemId > 0 ? technicalItemId : null,
+      lineNumber,
+      quantity,
+      approximateUnitPrice,
+    },
+  });
+
+  revalidateTenderRecognitionPaths(procurementId);
+  revalidateTenderPricingPaths(procurementId);
+  revalidateTenderApprovalPaths(procurementId);
+  revalidateTenderSubmissionPaths(procurementId);
+  revalidatePath("/procurements/new");
+  revalidatePath("/procurements/pricing");
+  revalidatePath("/procurements/approval");
+  revalidatePath("/procurements/submission");
+  revalidatePath("/procurements");
+  redirect(returnTo);
 }
 
 export async function importTenderTechnicalItemsAction(formData: FormData) {

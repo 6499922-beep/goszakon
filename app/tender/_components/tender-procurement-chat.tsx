@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 type ChatMessage = {
@@ -25,6 +26,8 @@ const QUICK_PROMPTS = [
   "На что нужно обратить внимание в договоре?",
   "Какие документы до подачи самые важные?",
 ];
+
+const ARCHIVE_FILE_PATTERN = /\.(zip|rar|7z)$/i;
 
 function parseStoredSources(body: string) {
   const marker = "\n\nИсточники:\n";
@@ -67,14 +70,17 @@ export function TenderProcurementChat({
   initialMessages,
   sourceDocuments = [],
 }: TenderProcurementChatProps) {
+  const router = useRouter();
   const [messages, setMessages] = useState(initialMessages);
   const [draft, setDraft] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [procurementOnlyMode, setProcurementOnlyMode] = useState(false);
   const [isPending, startTransition] = useTransition();
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const hasMessages = messages.length > 0;
   const sortedMessages = useMemo(
@@ -124,8 +130,11 @@ export function TenderProcurementChat({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const question = draft.trim();
-    if (!question || isPending) return;
+    const hasFiles = selectedFiles.length > 0;
+    const filesToUpload = [...selectedFiles];
+    const question =
+      draft.trim() || (hasFiles ? "Проанализируй добавленные файлы и учти их в этой закупке." : "");
+    if ((!question && !hasFiles) || isPending) return;
 
     setError(null);
     const optimisticUserMessage: ChatMessage = {
@@ -136,6 +145,10 @@ export function TenderProcurementChat({
       createdAt: new Date().toISOString(),
     };
     setDraft("");
+    setSelectedFiles([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
     setMessages((current) => [...current, optimisticUserMessage]);
     requestAnimationFrame(() => {
       viewportRef.current?.scrollTo({
@@ -146,6 +159,54 @@ export function TenderProcurementChat({
 
     startTransition(async () => {
       try {
+        if (filesToUpload.length > 0) {
+          if (filesToUpload.some((file) => ARCHIVE_FILE_PATTERN.test(file.name))) {
+            throw new Error(
+              "Архивы ZIP/RAR/7Z загружать нельзя. Прикрепляй только сами документы: PDF, DOC, DOCX, XLS, XLSX, TXT."
+            );
+          }
+
+          for (let index = 0; index < filesToUpload.length; index += 1) {
+            const file = filesToUpload[index];
+            const uploadResponse = await fetch("/api/tender/intake/file", {
+              method: "POST",
+              headers: {
+                "Content-Type": file.type || "application/octet-stream",
+                "X-Procurement-Id": String(procurementId),
+                "X-File-Name": encodeURIComponent(file.name),
+              },
+              body: file,
+            });
+
+            const uploadPayload =
+              ((await uploadResponse.json().catch(() => null)) as
+                | { ok?: boolean; error?: string }
+                | null) ?? null;
+
+            if (!uploadResponse.ok || !uploadPayload?.ok) {
+              throw new Error(
+                uploadPayload?.error || `Не удалось прикрепить файл "${file.name}".`
+              );
+            }
+          }
+
+          await fetch("/api/tender/intake/finalize", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ procurementId }),
+          }).catch(() => null);
+
+          await fetch("/api/tender/process-queue", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ procurementId }),
+          }).catch(() => null);
+        }
+
         const response = await fetch("/api/tender/chat", {
           method: "POST",
           headers: {
@@ -176,6 +237,7 @@ export function TenderProcurementChat({
           payload.userMessage as ChatMessage,
           payload.assistantMessage as ChatMessage,
         ]);
+        router.refresh();
 
         requestAnimationFrame(() => {
           viewportRef.current?.scrollTo({
@@ -188,6 +250,10 @@ export function TenderProcurementChat({
           current.filter((item) => item.id !== optimisticUserMessage.id)
         );
         setDraft(question);
+        setSelectedFiles(filesToUpload);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
         setError(
           submitError instanceof Error
             ? submitError.message
@@ -312,6 +378,17 @@ export function TenderProcurementChat({
           </div>
 
           <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="sr-only"
+              onChange={(event) => {
+                const files = Array.from(event.target.files ?? []);
+                setSelectedFiles(files);
+                setError(null);
+              }}
+            />
             <textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
@@ -328,6 +405,23 @@ export function TenderProcurementChat({
               placeholder="Напиши вопрос по этой закупке..."
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#0d5bd7] focus:ring-2 focus:ring-[#0d5bd7]/10"
             />
+            {selectedFiles.length > 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  Прикреплённые файлы
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {selectedFiles.map((file, index) => (
+                    <span
+                      key={`${file.name}-${index}`}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700"
+                    >
+                      {file.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             {error ? (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {error}
@@ -346,15 +440,25 @@ export function TenderProcurementChat({
               ))}
             </div>
             <div className="flex items-center justify-between gap-3">
-              <div className="text-xs text-slate-400">
-                Enter — отправить, Shift + Enter — новая строка
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isPending}
+                  className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Добавить файлы
+                </button>
+                <div className="text-xs text-slate-400">
+                  Enter — отправить, Shift + Enter — новая строка
+                </div>
               </div>
               <button
                 type="submit"
-                disabled={isPending || !draft.trim()}
+                disabled={isPending || (!draft.trim() && selectedFiles.length === 0)}
                 className="ml-auto inline-flex items-center rounded-full bg-[#0d5bd7] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0b4fc0] disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                {isPending ? "Думаю..." : "Спросить"}
+                {isPending ? "Думаю..." : selectedFiles.length > 0 ? "Отправить с файлами" : "Спросить"}
               </button>
             </div>
           </form>

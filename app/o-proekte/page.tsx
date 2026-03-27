@@ -86,6 +86,12 @@ export default function AboutUsPage() {
               и поставщиками.
             </p>
 
+            <p className="mt-4 text-lg leading-9 text-slate-700">
+              Мы работаем по всей России: можем подключиться онлайн, приехать к
+              клиенту в регион и при необходимости помочь не только со спором,
+              но и с практическим обучением команды по закупочной работе.
+            </p>
+
             <div className="mt-8 flex flex-wrap gap-4">
               <a
                 href={SITE_CONTACTS.phoneHref}
@@ -121,6 +127,23 @@ export default function AboutUsPage() {
                   Разбираем перекосы, которые заказчики пытаются сделать обычной практикой.
                 </p>
               </Link>
+            </div>
+
+            <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-6">
+              <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+                Формат работы
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm">
+                  Онлайн-подключение к спору, жалобе или срочной закупочной ситуации.
+                </div>
+                <div className="rounded-2xl bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm">
+                  Выезд к клиенту в регион, если задачу удобнее решать на месте.
+                </div>
+                <div className="rounded-2xl bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm">
+                  Практическое обучение команды по документации, ФАС и спорным закупочным блокам.
+                </div>
+              </div>
             </div>
           </div>
 

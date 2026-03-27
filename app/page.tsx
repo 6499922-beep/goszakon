@@ -64,6 +64,12 @@ export default async function HomePage() {
                 судебная защита и правовая оценка перспектив спора.
               </p>
 
+              <p className="mt-4 max-w-2xl text-lg leading-9 text-slate-700">
+                Работаем по всей России: подключаемся онлайн, выезжаем к клиенту
+                и при необходимости обучаем команду, чтобы спорные закупочные
+                ситуации не повторялись.
+              </p>
+
               <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6">
                 <div className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
                   Важно
@@ -139,6 +145,17 @@ export default async function HomePage() {
                     решений, выводов и спорных ситуаций, с которыми сталкиваются
                     поставщики и заказчики в реальной работе.
                   </p>
+
+                  <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-sm font-semibold uppercase tracking-[0.12em] text-white/60">
+                      По всей России
+                    </div>
+                    <p className="mt-2 text-sm leading-7 text-white/90">
+                      Подключаемся дистанционно, выезжаем в регион и можем
+                      работать не только по спору, но и с командой клиента:
+                      разбирать закупочные риски, документацию и практику ФАС.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f3eb;
+  --foreground: #172033;
+  --surface: #fffdf9;
+  --surface-muted: #f0ebe2;
+  --brand: #081a4b;
+  --brand-deep: #04112f;
+  --accent: #b68a52;
+  --accent-soft: rgba(182, 138, 82, 0.12);
+  --line: rgba(8, 26, 75, 0.1);
 }
 
 @theme inline {
@@ -22,5 +29,73 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), "Manrope", "Segoe UI", sans-serif;
+  background-image:
+    radial-gradient(circle at top left, rgba(182, 138, 82, 0.12), transparent 28%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.72)),
+    linear-gradient(rgba(8, 26, 75, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(8, 26, 75, 0.03) 1px, transparent 1px);
+  background-size: auto, auto, 36px 36px, 36px 36px;
+  background-attachment: fixed;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
+
+::selection {
+  background: rgba(182, 138, 82, 0.22);
+  color: var(--brand-deep);
+}
+
+.site-shell {
+  position: relative;
+}
+
+.site-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 14%, rgba(8, 26, 75, 0.05), transparent 20%),
+    radial-gradient(circle at 88% 10%, rgba(182, 138, 82, 0.09), transparent 22%);
+  z-index: 0;
+}
+
+.site-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-panel {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(246, 243, 235, 0.88)),
+    radial-gradient(circle at top right, rgba(182, 138, 82, 0.16), transparent 35%);
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 70px rgba(8, 26, 75, 0.08);
+}
+
+.ink-card {
+  background: linear-gradient(160deg, var(--brand), #14336e);
+  box-shadow: 0 24px 70px rgba(8, 26, 75, 0.24);
+}
+
+.accent-wash {
+  background:
+    linear-gradient(160deg, rgba(182, 138, 82, 0.16), rgba(255, 255, 255, 0.9)),
+    var(--surface);
+}
+
+.section-wash {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(240, 235, 226, 0.92));
 }

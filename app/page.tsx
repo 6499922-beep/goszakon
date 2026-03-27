@@ -51,33 +51,33 @@ export default async function HomePage() {
   ];
 
   return (
-    <main className="min-h-screen bg-white text-slate-900">
-      <section className="border-b border-slate-200 bg-white">
+    <main className="min-h-screen bg-transparent text-slate-900">
+      <section className="border-b border-[color:var(--line)] bg-transparent">
         <div className="mx-auto max-w-7xl px-6 py-16">
           <div className="grid items-start gap-12 xl:grid-cols-[minmax(0,1fr)_460px]">
             <div>
-              <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+              <div className="inline-flex rounded-full border border-[color:var(--line)] bg-[rgba(255,253,249,0.82)] px-4 py-2 text-sm font-medium text-slate-600 shadow-sm">
                 GOSZAKON • Правовая помощь в закупках
               </div>
 
-              <h1 className="mt-6 text-5xl font-bold tracking-tight text-[#081a4b] md:text-6xl xl:text-[72px] xl:leading-[0.98]">
+              <h1 className="mt-6 max-w-4xl text-5xl font-bold tracking-[-0.03em] text-[#081a4b] md:text-6xl xl:text-[78px] xl:leading-[0.94]">
                 Практика ФАС и защита интересов в закупках
               </h1>
 
-              <p className="mt-6 max-w-2xl text-lg leading-9 text-slate-700">
+              <p className="mt-6 max-w-2xl text-[19px] leading-9 text-slate-700">
                 Помогаем поставщикам и заказчикам в закупочных спорах: жалобы в ФАС,
                 РНП, неоплата по контрактам, спорные условия документации,
                 судебная защита и правовая оценка перспектив спора.
               </p>
 
-              <p className="mt-4 max-w-2xl text-lg leading-9 text-slate-700">
+              <p className="mt-4 max-w-2xl text-[19px] leading-9 text-slate-700">
                 Работаем по всей России: подключаемся онлайн, выезжаем к клиенту
                 и при необходимости обучаем команду, чтобы спорные закупочные
                 ситуации не повторялись.
               </p>
 
-              <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6">
-                <div className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
+              <div className="accent-wash mt-8 rounded-3xl p-6">
+                <div className="text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6a3a]">
                   Важно
                 </div>
 
@@ -91,14 +91,14 @@ export default async function HomePage() {
               <div className="mt-8 flex flex-wrap gap-4">
                 <Link
                   href="/uslugi"
-                  className="rounded-2xl bg-[#081a4b] px-7 py-4 text-base font-semibold text-white transition hover:bg-[#0d2568]"
+                  className="rounded-2xl bg-[#081a4b] px-7 py-4 text-base font-semibold text-white shadow-[0_18px_34px_rgba(8,26,75,0.18)] transition hover:bg-[#0d2568]"
                 >
                   Разобрать ситуацию
                 </Link>
 
                 <a
                   href={SITE_CONTACTS.emailHref}
-                  className="rounded-2xl border border-slate-300 bg-white px-7 py-4 text-base font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="rounded-2xl border border-[color:var(--line)] bg-[rgba(255,253,249,0.92)] px-7 py-4 text-base font-semibold text-slate-700 transition hover:bg-white"
                 >
                   Прислать документы
                 </a>
@@ -125,7 +125,7 @@ export default async function HomePage() {
                 {contactActions.map((item) => (
                   <div
                     key={item}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-700"
+                    className="rounded-2xl border border-[color:var(--line)] bg-[rgba(255,253,249,0.9)] p-4 text-sm leading-7 text-slate-700 shadow-sm"
                   >
                     {item}
                   </div>
@@ -134,8 +134,8 @@ export default async function HomePage() {
             </div>
 
             <div className="xl:pt-16">
-              <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-8 shadow-sm">
-                <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
+              <div className="hero-panel rounded-[32px] p-8">
+                <div className="text-sm uppercase tracking-[0.16em] text-[#8b6a3a]">
                   Почему нам доверяют
                 </div>
 
@@ -143,7 +143,7 @@ export default async function HomePage() {
                   {advantages.map((item) => (
                     <div
                       key={item}
-                      className="flex min-h-[120px] items-start rounded-2xl border border-slate-200 bg-white p-5"
+                      className="flex min-h-[120px] items-start rounded-2xl border border-[color:var(--line)] bg-[rgba(255,255,255,0.92)] p-5"
                     >
                       <div className="break-words text-[17px] font-semibold leading-7 text-[#081a4b] sm:text-[18px]">
                         {item}
@@ -152,7 +152,7 @@ export default async function HomePage() {
                   ))}
                 </div>
 
-                <div className="mt-6 rounded-2xl bg-[#081a4b] p-6 text-white">
+                <div className="ink-card mt-6 rounded-2xl p-6 text-white">
                   <div className="text-xl font-semibold leading-8">
                     Мы сами работаем в закупочной практике
                   </div>
@@ -191,11 +191,11 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="border-b border-slate-200 bg-slate-50">
+      <section className="section-wash border-b border-[color:var(--line)]">
         <div className="mx-auto max-w-7xl px-6 py-20">
           <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div>
-              <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+              <div className="inline-flex rounded-full border border-[color:var(--line)] bg-[rgba(255,253,249,0.92)] px-4 py-2 text-sm font-medium text-slate-600">
                 Отдельное направление
               </div>
 
@@ -233,7 +233,7 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="hero-panel rounded-3xl p-6">
               <h3 className="text-xl font-semibold text-[#081a4b]">
                 Чем можем помочь
               </h3>
@@ -260,10 +260,10 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="border-b border-slate-200 bg-white">
+      <section className="border-b border-[color:var(--line)] bg-transparent">
         <div className="mx-auto max-w-7xl px-6 py-20">
           <div className="max-w-3xl">
-            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+            <div className="inline-flex rounded-full border border-[color:var(--line)] bg-[rgba(255,253,249,0.88)] px-4 py-2 text-sm font-medium text-slate-600">
               Ключевые разделы
             </div>
 
@@ -280,7 +280,7 @@ export default async function HomePage() {
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             <Link
               href="/cases"
-              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+              className="hero-panel rounded-3xl p-7 transition hover:-translate-y-1 hover:shadow-md"
             >
               <h3 className="text-2xl font-semibold text-[#081a4b]">Практика ФАС</h3>
               <p className="mt-4 text-slate-700">
@@ -293,7 +293,7 @@ export default async function HomePage() {
 
             <Link
               href="/narusheniya"
-              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+              className="hero-panel rounded-3xl p-7 transition hover:-translate-y-1 hover:shadow-md"
             >
               <h3 className="text-2xl font-semibold text-[#081a4b]">Нарушения</h3>
               <p className="mt-4 text-slate-700">
@@ -307,7 +307,7 @@ export default async function HomePage() {
 
             <Link
               href="/analitika"
-              className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+              className="hero-panel rounded-3xl p-7 transition hover:-translate-y-1 hover:shadow-md"
             >
               <h3 className="text-2xl font-semibold text-[#081a4b]">Аналитика</h3>
               <p className="mt-4 text-slate-700">

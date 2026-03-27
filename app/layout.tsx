@@ -95,12 +95,12 @@ export default async function RootLayout({
           </div>
         </noscript>
 
-        <div className="flex min-h-screen flex-col">
-          <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="site-shell flex min-h-screen flex-col">
+          <header className="sticky top-0 z-40 border-b border-[color:var(--line)] bg-[rgba(255,253,249,0.92)] backdrop-blur">
             <div className="mx-auto max-w-7xl px-6">
               <div className="flex items-center justify-between gap-6 py-5">
                 <Link href="/" className="flex min-w-0 items-center gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#081a4b] text-base font-bold text-white">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#081a4b] text-base font-bold text-white shadow-[0_16px_30px_rgba(8,26,75,0.2)]">
                     GZ
                   </div>
 
@@ -143,13 +143,13 @@ export default async function RootLayout({
                 </div>
               </div>
 
-              <div className="hidden border-t border-slate-100 xl:block">
+              <div className="hidden border-t border-[color:var(--line)] xl:block">
                 <nav className="flex flex-wrap justify-center gap-x-10 gap-y-3 py-5">
                   {navigation.map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="text-[15px] font-medium text-slate-700 transition hover:text-[#081a4b]"
+                      className="text-[15px] font-medium text-slate-700 transition hover:text-[#081a4b] hover:[text-shadow:0_0_0.01px_currentColor]"
                     >
                       {item.title}
                     </Link>
@@ -157,7 +157,7 @@ export default async function RootLayout({
                 </nav>
               </div>
 
-              <div className="border-t border-slate-100 xl:hidden">
+              <div className="border-t border-[color:var(--line)] xl:hidden">
                 <div className="flex gap-5 overflow-x-auto py-4">
                   {navigation.map((item) => (
                     <Link
@@ -198,12 +198,12 @@ export default async function RootLayout({
 
           <main className="flex-1">{children}</main>
 
-          <footer className="border-t border-slate-200 bg-slate-50">
+          <footer className="border-t border-[color:var(--line)] bg-[rgba(240,235,226,0.75)]">
             <div className="mx-auto max-w-7xl px-6 py-16">
               <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr]">
                 <div>
                   <Link href="/" className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#081a4b] text-sm font-bold text-white">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#081a4b] text-sm font-bold text-white shadow-[0_12px_24px_rgba(8,26,75,0.18)]">
                       GZ
                     </div>
                     <div>
@@ -226,7 +226,7 @@ export default async function RootLayout({
                     Практика ФАС • Нарушения • РНП • Аналитика • Судебная защита
                   </div>
 
-                  <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-5">
+                  <div className="hero-panel mt-6 rounded-3xl p-5">
                     <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
                       Контакты
                     </div>

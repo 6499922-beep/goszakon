@@ -14,7 +14,6 @@ function extractStoredDocumentPath(note: string | null | undefined) {
 }
 
 function buildRawDocumentHref(documentId: number, storedPath?: string | null) {
-  if (storedPath) return encodeURI(storedPath);
   return `/api/tender/source-document/${documentId}`;
 }
 

@@ -9,6 +9,7 @@ type TenderRecognitionTabsProps = {
   sourceDocuments: React.ReactNode;
   submissionDocuments: React.ReactNode;
   goods: React.ReactNode;
+  unresolved: React.ReactNode;
   chat?: React.ReactNode;
 };
 
@@ -19,6 +20,7 @@ export function TenderRecognitionTabs({
   sourceDocuments,
   submissionDocuments,
   goods,
+  unresolved,
   chat,
 }: TenderRecognitionTabsProps) {
   const [activeTab, setActiveTab] = useState<
@@ -28,6 +30,7 @@ export function TenderRecognitionTabs({
     | "sourceDocuments"
     | "submissionDocuments"
     | "goods"
+    | "unresolved"
   >("about");
 
   const tabs = [
@@ -37,6 +40,7 @@ export function TenderRecognitionTabs({
     { key: "sourceDocuments" as const, label: "Файлы закупки" },
     { key: "submissionDocuments" as const, label: "Документы до подачи" },
     { key: "goods" as const, label: "Позиции / НМЦК" },
+    { key: "unresolved" as const, label: "Не определилось" },
   ];
 
   const tabClassName = (isActive: boolean) =>
@@ -49,7 +53,7 @@ export function TenderRecognitionTabs({
   return (
     <div className={`grid gap-4 ${chat ? "xl:grid-cols-[minmax(0,1fr)_380px]" : ""}`}>
       <div className="space-y-4">
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-7">
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-8">
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -68,6 +72,7 @@ export function TenderRecognitionTabs({
         <div hidden={activeTab !== "sourceDocuments"}>{sourceDocuments}</div>
         <div hidden={activeTab !== "submissionDocuments"}>{submissionDocuments}</div>
         <div hidden={activeTab !== "goods"}>{goods}</div>
+        <div hidden={activeTab !== "unresolved"}>{unresolved}</div>
       </div>
 
       {chat ? <div className="xl:sticky xl:top-4 xl:self-start">{chat}</div> : null}

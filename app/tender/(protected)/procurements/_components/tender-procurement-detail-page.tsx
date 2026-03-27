@@ -203,6 +203,14 @@ function inferDocumentKind(
   }
 
   if (
+    /ответ на запрос|ответы на запрос|ответ на запросы|разъяснен|разъяснения|запрос разъяснений/i.test(
+      titleHaystack
+    )
+  ) {
+    return "Ответ на запросы";
+  }
+
+  if (
     /компактная таблица позиций|позиции для анализа|наименован|ед\.? ?изм|колич|цена|сумм/i.test(
       contentHaystack
     )
@@ -239,6 +247,8 @@ function getDocumentKindOrder(kindLabel: string) {
       return 5;
     case "Коммерческая часть":
       return 6;
+    case "Ответ на запросы":
+      return 19;
     case "Итоговая таблица НМЦК":
       return 7;
     case "Ценовая таблица":
@@ -283,6 +293,8 @@ function getDocumentSectionMeta(kindLabel: string) {
     case "Анкета":
     case "Декларация":
       return { key: "forms", title: "Формы заказчика", order: 5 };
+    case "Ответ на запросы":
+      return { key: "responses", title: "Ответ на запросы", order: 7 };
     default:
       return { key: "other", title: "Приложения и прочее", order: 6 };
   }
@@ -328,6 +340,11 @@ function getPrimaryDocumentScore(
       if (item.kindLabel === "Форма заявки") score += 120;
       if (title.includes("форма")) score += 40;
       if (title.includes("заявк")) score += 30;
+      break;
+    case "responses":
+      if (item.kindLabel === "Ответ на запросы") score += 120;
+      if (title.includes("ответ")) score += 50;
+      if (title.includes("разъясн")) score += 40;
       break;
     default:
       if (item.kindLabel === "Приложение") score += 20;
@@ -992,6 +1009,7 @@ export async function renderTenderRecognitionDetailPage({
   const primaryContractDocument = contractSection?.items[0] ?? null;
   const pricingSection = sourceDocumentSections.find((section) => section.key === "pricing");
   const primaryPricingDocument = pricingSection?.items[0] ?? null;
+  const pricingDocuments = pricingSection?.items ?? [];
   const procurementChatMessages = procurement.stageComments.map((item) => ({
     id: item.id,
     role: item.authorName === "GPT" ? ("assistant" as const) : ("user" as const),
@@ -1909,6 +1927,43 @@ export async function renderTenderRecognitionDetailPage({
                       {primaryPricingDocument.title}
                     </div>
                   ) : null}
+                  {pricingDocuments.length > 0 ? (
+                    <div className="mt-4 rounded-2xl border border-white/80 bg-white p-4">
+                      <div className="text-sm font-semibold text-[#081a4b]">Файлы НМЦК и цен</div>
+                      <div className="mt-3 space-y-2">
+                        {pricingDocuments.map((item) => (
+                          <div
+                            key={`pricing-doc-${item.id}`}
+                            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 px-3 py-3"
+                          >
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="rounded-full bg-[#081a4b]/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#081a4b]">
+                                  {item.kindLabel}
+                                </span>
+                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                                  {item.status.label}
+                                </span>
+                              </div>
+                              <div className="mt-2 text-sm font-semibold text-[#081a4b]">
+                                {item.title}
+                              </div>
+                            </div>
+                            {item.href ? (
+                              <a
+                                href={item.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#081a4b] transition hover:border-slate-300 hover:bg-slate-50 hover:text-[#0b2a72]"
+                              >
+                                Открыть
+                              </a>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -2014,14 +2069,25 @@ export async function renderTenderRecognitionDetailPage({
                     </div>
                   )}
                 </div>
-
+              </div>
+            }
+            unresolved={
+              <div className="space-y-4">
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <div className="text-base font-bold text-[#081a4b]">
                     Что не удалось определить автоматически
                   </div>
+                  <div className="mt-2 text-sm leading-6 text-slate-500">
+                    Здесь собраны только те поля и документы, которые системе не удалось уверенно разобрать.
+                  </div>
                   {missingFields.length > 0 ? (
-                    <div className="mt-3 grid gap-3 text-sm leading-6 text-slate-700">
+                    <div className="mt-4 grid gap-3 text-sm leading-6 text-slate-700">
                       {missingFields.map((item, index) => (
+                        (() => {
+                          const missingFileHref = item.documentId
+                            ? buildSourceDocumentViewerHref(procurement.id, item.documentId)
+                            : null;
+                          return (
                         <div
                           key={`${item.title}-${index}`}
                           className={`rounded-2xl border px-4 py-3 ${
@@ -2032,12 +2098,10 @@ export async function renderTenderRecognitionDetailPage({
                         >
                           <div className="font-semibold text-[#081a4b]">{item.title}</div>
                           <div className="mt-1 text-sm text-slate-600">{item.description}</div>
-                          {item.documentId ? (
+                          {missingFileHref ? (
                             <div className="mt-2">
                               <a
-                                href={
-                                  buildSourceDocumentViewerHref(procurement.id, item.documentId) ?? "#"
-                                }
+                                href={missingFileHref}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="font-medium text-[#081a4b] underline decoration-slate-300 underline-offset-2 hover:text-[#0b2a72]"
@@ -2047,6 +2111,8 @@ export async function renderTenderRecognitionDetailPage({
                             </div>
                           ) : null}
                         </div>
+                          );
+                        })()
                       ))}
                     </div>
                   ) : (

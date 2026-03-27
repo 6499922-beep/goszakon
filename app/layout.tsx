@@ -24,6 +24,7 @@ export default async function RootLayout({
     { title: "Нарушения", href: "/narusheniya" },
     { title: "РНП", href: "/rnp" },
     { title: "Аналитика", href: "/analitika" },
+    { title: "Поставщикам", href: "/postavshikam/riski" },
     { title: "Услуги", href: "/uslugi" },
     { title: "Заказчикам", href: "/zakazchikam" },
     { title: "Судебная защита", href: "/sudebnaya-zashita-v-zakupkah" },
@@ -40,15 +41,16 @@ export default async function RootLayout({
         { title: "Аналитика", href: "/analitika" },
       ],
     },
-    {
-      title: "Услуги",
-      links: [
-        { title: "Услуги поставщикам", href: "/uslugi" },
-        { title: "Не платит заказчик", href: "/neoplata-po-goskontraktu" },
-        { title: "Заказчикам", href: "/zakazchikam" },
-        { title: "Судебная защита", href: "/sudebnaya-zashita-v-zakupkah" },
-        { title: "О проекте", href: "/o-proekte" },
-      ],
+        {
+          title: "Услуги",
+          links: [
+            { title: "Услуги поставщикам", href: "/uslugi" },
+            { title: "Поставщикам", href: "/postavshikam/riski" },
+            { title: "Не платит заказчик", href: "/neoplata-po-goskontraktu" },
+            { title: "Заказчикам", href: "/zakazchikam" },
+            { title: "Судебная защита", href: "/sudebnaya-zashita-v-zakupkah" },
+            { title: "О проекте", href: "/o-proekte" },
+          ],
     },
   ];
 
@@ -245,6 +247,12 @@ export default async function RootLayout({
 
                     <div className="mt-3 text-sm text-slate-500">
                       Для связи используйте телефон или электронную почту.
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600">
+                      Работаем по всей России: подключаемся онлайн, выезжаем к
+                      клиенту и при необходимости обучаем команду заказчика или
+                      поставщика.
                     </div>
                   </div>
                 </div>

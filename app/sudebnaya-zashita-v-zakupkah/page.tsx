@@ -65,6 +65,12 @@ const stages = [
   },
 ];
 
+const formatOfWork = [
+  "Быстро оцениваем перспективу по решению ФАС, материалам дела и документам закупки.",
+  "Работаем по всей России: подключаемся онлайн, выезжаем к клиенту и собираем позицию вместе с командой.",
+  "Если спор связан с оплатой, неустойкой или исполнением контракта, сразу стыкуем судебный блок с соседними требованиями.",
+];
+
 export default function CourtProtectionPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
@@ -95,17 +101,17 @@ export default function CourtProtectionPage() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
-                href={SITE_CONTACTS.phoneHref}
+                href={SITE_CONTACTS.emailHref}
                 className="rounded-2xl bg-[#081a4b] px-7 py-4 text-center text-base font-semibold text-white transition hover:bg-[#0d2568]"
               >
-                Оценить перспективу спора
+                Направить решение ФАС
               </a>
 
               <a
-                href={SITE_CONTACTS.emailHref}
+                href={SITE_CONTACTS.phoneHref}
                 className="rounded-2xl border border-slate-300 bg-white px-7 py-4 text-center text-base font-semibold text-[#081a4b] transition hover:bg-slate-50"
               >
-                Направить решение ФАС
+                Быстро обсудить перспективу
               </a>
             </div>
           </div>
@@ -138,7 +144,34 @@ export default function CourtProtectionPage() {
                 поток формальных споров, а берем в работу только те дела, где
                 видим реальный шанс изменить итог.
               </p>
+
+              <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-7 text-white/90">
+                Подключаемся по всей России: можно быстро прислать решение,
+                материалы жалобы и документы закупки, а дальше уже решить,
+                нужен ли выезд и отдельная работа с командой.
+              </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="max-w-3xl">
+            <h2 className="text-3xl font-bold tracking-tight text-[#081a4b] md:text-4xl">
+              Как мы подключаемся к таким спорам
+            </h2>
+          </div>
+
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {formatOfWork.map((item) => (
+              <div
+                key={item}
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm"
+              >
+                <p className="text-base leading-8 text-slate-700">{item}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>

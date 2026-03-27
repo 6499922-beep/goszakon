@@ -175,6 +175,12 @@ export default async function CustomersPage({ searchParams }: PageProps) {
     "Сопровождаем заказчика в ФАС, а при необходимости и в суде.",
   ];
 
+  const formatOfWork = [
+    "Подключаемся онлайн по всей России и быстро входим в конфликтную закупку или жалобу.",
+    "Выезжаем к заказчику, если нужно собрать позицию с участием контрактной службы, закупочного подразделения и руководства.",
+    "Проводим практическое обучение команды по документации, нацрежиму, защите в ФАС и типовым ошибкам закупки.",
+  ];
+
   const riskBlocks = [
     "Закупка распадается уже после публикации, потому что слабая документация не выдерживает жалобу.",
     "ФАС видит нарушение там, где заказчик пытался решить практическую задачу, но оформил ее юридически слабо.",
@@ -202,12 +208,18 @@ export default async function CustomersPage({ searchParams }: PageProps) {
               суде, если административной стадии уже недостаточно.
             </p>
 
+            <p className="mt-4 max-w-4xl text-lg leading-9 text-slate-700">
+              Работаем по всей России: подключаемся дистанционно, выезжаем к
+              заказчику и можем не только вести спор, но и помогать команде
+              выстроить более устойчивую закупочную практику.
+            </p>
+
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
-                href={SITE_CONTACTS.phoneHref}
+                href={SITE_CONTACTS.emailHref}
                 className="rounded-2xl bg-[#081a4b] px-7 py-4 text-center text-base font-semibold text-white transition hover:bg-[#0d2568]"
               >
-                Позвонить: {SITE_CONTACTS.phoneDisplay}
+                Направить закупку на разбор
               </a>
 
               <Link
@@ -234,6 +246,27 @@ export default async function CustomersPage({ searchParams }: PageProps) {
               <div
                 key={item}
                 className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm"
+              >
+                <p className="text-base leading-8 text-slate-700">{item}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="max-w-3xl">
+            <h2 className="text-3xl font-bold tracking-tight text-[#081a4b] md:text-4xl">
+              Формат работы с заказчиком
+            </h2>
+          </div>
+
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {formatOfWork.map((item) => (
+              <div
+                key={item}
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm"
               >
                 <p className="text-base leading-8 text-slate-700">{item}</p>
               </div>

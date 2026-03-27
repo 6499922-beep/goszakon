@@ -44,6 +44,12 @@ export default async function HomePage() {
     "400+ заседаний ФАС",
   ];
 
+  const contactActions = [
+    "Быстро оцениваем перспективу спора по документам.",
+    "Подключаемся онлайн по всей России и при необходимости выезжаем на место.",
+    "Работаем не только по спору, но и по выстраиванию закупочной практики команды.",
+  ];
+
   return (
     <main className="min-h-screen bg-white text-slate-900">
       <section className="border-b border-slate-200 bg-white">
@@ -84,18 +90,18 @@ export default async function HomePage() {
 
               <div className="mt-8 flex flex-wrap gap-4">
                 <Link
-                  href="/cases"
+                  href="/uslugi"
                   className="rounded-2xl bg-[#081a4b] px-7 py-4 text-base font-semibold text-white transition hover:bg-[#0d2568]"
                 >
-                  Практика ФАС
+                  Разобрать ситуацию
                 </Link>
 
-                <Link
-                  href="/analitika"
+                <a
+                  href={SITE_CONTACTS.emailHref}
                   className="rounded-2xl border border-slate-300 bg-white px-7 py-4 text-base font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
-                  Аналитика
-                </Link>
+                  Прислать документы
+                </a>
               </div>
 
               <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-slate-600">
@@ -113,6 +119,17 @@ export default async function HomePage() {
                   {SITE_CONTACTS.email}
                 </a>
 
+              </div>
+
+              <div className="mt-8 grid gap-4 md:grid-cols-3">
+                {contactActions.map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-700"
+                  >
+                    {item}
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -156,6 +173,17 @@ export default async function HomePage() {
                       разбирать закупочные риски, документацию и практику ФАС.
                     </p>
                   </div>
+
+                  <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-sm font-semibold uppercase tracking-[0.12em] text-white/60">
+                      Быстрый старт
+                    </div>
+                    <p className="mt-2 text-sm leading-7 text-white/90">
+                      Если нужно быстро понять перспективу, достаточно
+                      направить договор, переписку, решение ФАС или комплект
+                      документов по спору.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -197,10 +225,10 @@ export default async function HomePage() {
                 </Link>
 
                 <a
-                  href={SITE_CONTACTS.phoneHref}
+                  href={SITE_CONTACTS.emailHref}
                   className="rounded-2xl border border-slate-300 bg-white px-7 py-4 text-base font-semibold text-[#081a4b] transition hover:bg-slate-50"
                 >
-                  Позвонить
+                  Прислать документы по неоплате
                 </a>
               </div>
             </div>
@@ -222,6 +250,9 @@ export default async function HomePage() {
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   При необходимости — подключение инструментов ФАС
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  Онлайн-подключение по всей России, выезд и обучение команды
                 </div>
               </div>
             </div>

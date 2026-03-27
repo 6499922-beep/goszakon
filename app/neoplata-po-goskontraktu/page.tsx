@@ -64,6 +64,37 @@ const stages = [
   },
 ];
 
+const trustPoints = [
+  "Разбираем споры по неоплате, удержаниям, приемке и формальным документам как единую конструкцию, а не по частям.",
+  "Подключаемся по всей России: можем работать онлайн, выехать к клиенту и помочь команде собрать позицию по спору.",
+  "Смотрим не только на долг, но и на проценты, встречную неустойку, жалобу в УФАС и дальнейший суд.",
+];
+
+const firstDocuments = [
+  "госконтракт и приложения к нему;",
+  "УПД, акты, накладные и переписка по приемке;",
+  "письма заказчика с формальными замечаниями, удержанием или отказом в оплате;",
+  "расчет долга, если часть суммы уже удержана или оплачена.",
+];
+
+const quickCases = [
+  {
+    href: "/analitika/chelyabinskoe-ufas-shtraf-za-prosrochku-oplaty-chemk-074-04-7-30-4-1927-2025",
+    title: "Челябинское УФАС: штраф за просрочку оплаты",
+    text: "Показательный материал о том, что просрочка оплаты по договору уже сама по себе может привести к административной ответственности заказчика.",
+  },
+  {
+    href: "/analitika/moskovskoe-ufas-oak-shtraf-za-prosrochku-oplaty-077-04-7-30-4-12634-2025",
+    title: "Московское УФАС: ОАК оштрафовали за просрочку оплаты",
+    text: "Полезный пример для тех случаев, когда заказчик считает, что затягивание платежа останется без последствий.",
+  },
+  {
+    href: "/cases/neoplata",
+    title: "Практика по неоплате",
+    text: "Хаб с кейсами, материалами и соседними спорами по оплате, приемке, удержаниям и формальным документам.",
+  },
+];
+
 export default function NonPaymentPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
@@ -94,17 +125,17 @@ export default function NonPaymentPage() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
-                href={SITE_CONTACTS.phoneHref}
+                href={SITE_CONTACTS.emailHref}
                 className="rounded-2xl bg-[#081a4b] px-7 py-4 text-center text-base font-semibold text-white transition hover:bg-[#0d2568]"
               >
-                Разобрать неоплату
+                Прислать документы по неоплате
               </a>
 
               <a
-                href={SITE_CONTACTS.emailHref}
+                href={SITE_CONTACTS.phoneHref}
                 className="rounded-2xl border border-slate-300 bg-white px-7 py-4 text-center text-base font-semibold text-[#081a4b] transition hover:bg-slate-50"
               >
-                Направить документы
+                Быстро обсудить ситуацию
               </a>
             </div>
           </div>
@@ -137,7 +168,58 @@ export default function NonPaymentPage() {
                 больше контроля над приемкой, документами и моментом расчета,
                 чем у поставщика.
               </p>
+
+              <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-7 text-white/90">
+                Работаем по всей России: подключаемся онлайн, выезжаем к
+                клиенту и помогаем быстро собрать документы и позицию под
+                претензию, ФАС или суд.
+              </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-16 lg:grid-cols-[1fr_0.95fr]">
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 shadow-sm">
+            <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+              Почему к нам идут с неоплатой
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {trustPoints.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-slate-200 bg-white p-5"
+                >
+                  <p className="text-base leading-8 text-slate-700">{item}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-[#081a4b] p-8 text-white shadow-sm">
+            <div className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm text-white/80">
+              Что прислать на разбор
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {firstDocuments.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-white/10 bg-white/5 p-5"
+                >
+                  <p className="text-base leading-8 text-white/90">{item}</p>
+                </div>
+              ))}
+            </div>
+
+            <a
+              href={SITE_CONTACTS.emailHref}
+              className="mt-8 inline-flex rounded-2xl bg-white px-6 py-4 text-base font-semibold text-[#081a4b] transition hover:bg-slate-100"
+            >
+              Направить комплект на почту
+            </a>
           </div>
         </div>
       </section>
@@ -346,6 +428,19 @@ export default function NonPaymentPage() {
           </div>
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {quickCases.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-3xl border border-emerald-200 bg-emerald-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"
+              >
+                <h3 className="text-2xl font-semibold text-[#081a4b]">
+                  {item.title}
+                </h3>
+                <p className="mt-4 text-slate-700">{item.text}</p>
+              </Link>
+            ))}
+
             <Link
               href="/zakazchik-ne-podpisyvaet-upd"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:bg-white hover:shadow-md"

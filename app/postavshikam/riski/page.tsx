@@ -10,6 +10,12 @@ export const metadata: Metadata = {
 };
 
 export default function SupplierRiskHubPage() {
+  const trustPoints = [
+    "Работаем не только с жалобой в ФАС, но и с неоплатой, РНП, удержанием денег и дальнейшим судом.",
+    "Подключаемся по всей России: онлайн, с выездом и при необходимости с разбором ситуации вместе с вашей командой.",
+    "Помогаем быстро понять, есть ли перспектива, или честно говорим, что слабое место нужно менять до спора.",
+  ];
+
   return (
     <main className="min-h-screen bg-white text-slate-900">
       <section className="border-b border-slate-200 bg-white">
@@ -31,18 +37,24 @@ export default function SupplierRiskHubPage() {
               Здесь удобно начинать не с общей формулировки, а со своей
               ситуации: что именно произошло и где сейчас главный риск.
             </p>
+
+            <p className="mt-4 max-w-3xl text-lg leading-9 text-slate-700">
+              Можно подключиться дистанционно, приехать на место или разобрать
+              ситуацию вместе с вашей командой, если спор уже влияет на
+              исполнение контракта и дальнейшие закупки.
+            </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/uslugi"
+                href="/chto-delat-esli"
                 className="rounded-2xl bg-[#081a4b] px-7 py-4 text-center text-base font-semibold text-white transition hover:bg-[#0d2568]"
               >
-                Перейти в услуги
+                Найти свою ситуацию
               </Link>
               <a
-                href={SITE_CONTACTS.phoneHref}
+                href={SITE_CONTACTS.emailHref}
                 className="rounded-2xl border border-slate-300 bg-white px-7 py-4 text-center text-base font-semibold text-[#081a4b] transition hover:bg-slate-50"
               >
-                Разобрать ситуацию
+                Прислать документы
               </a>
             </div>
           </div>
@@ -71,6 +83,27 @@ export default function SupplierRiskHubPage() {
                 работает как карта конфликта, а не как витрина общих описаний.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-slate-50">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="max-w-3xl">
+            <h2 className="text-3xl font-bold tracking-tight text-[#081a4b] md:text-4xl">
+              Почему поставщики начинают именно отсюда
+            </h2>
+          </div>
+
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {trustPoints.map((item) => (
+              <div
+                key={item}
+                className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm"
+              >
+                <p className="text-base leading-8 text-slate-700">{item}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>

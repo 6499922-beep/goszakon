@@ -14,7 +14,6 @@ import {
   sendTenderToApprovalAction,
   sendTenderToSubmissionAction,
   sendTenderToPricingAction,
-  updateTenderRecognitionNumbersAction,
 } from "@/app/tender/actions";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/prisma";
@@ -1902,65 +1901,6 @@ export async function renderTenderRecognitionDetailPage({
                       {primaryPricingDocument.title}
                     </div>
                   ) : null}
-                  <form
-                    action={updateTenderRecognitionNumbersAction}
-                    className="mt-4 rounded-2xl border border-white/80 bg-white p-4"
-                  >
-                    <input type="hidden" name="procurementId" value={procurement.id} />
-                    <input type="hidden" name="returnTo" value={currentRecognitionHref} />
-                    <div className="text-sm font-semibold text-[#081a4b]">
-                      Ручная правка НМЦК и позиций
-                    </div>
-                    <div className="mt-3 grid gap-3 xl:grid-cols-3">
-                      <label className="block">
-                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                          НМЦК
-                        </div>
-                        <input
-                          type="number"
-                          name="nmck"
-                          step="0.01"
-                          min="0"
-                          defaultValue={formatNumberInputValue(procurement.nmck)}
-                          className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-[#081a4b] outline-none transition focus:border-[#0d5bd7] focus:bg-white"
-                        />
-                      </label>
-                      <label className="block">
-                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                          Без НДС
-                        </div>
-                        <input
-                          type="number"
-                          name="nmckWithoutVat"
-                          step="0.01"
-                          min="0"
-                          defaultValue={formatNumberInputValue(procurement.nmckWithoutVat)}
-                          className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-[#081a4b] outline-none transition focus:border-[#0d5bd7] focus:bg-white"
-                        />
-                      </label>
-                      <label className="block">
-                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                          Кол-во позиций
-                        </div>
-                        <input
-                          type="number"
-                          name="itemsCount"
-                          step="1"
-                          min="0"
-                          defaultValue={procurement.itemsCount ?? equipmentCount}
-                          className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-[#081a4b] outline-none transition focus:border-[#0d5bd7] focus:bg-white"
-                        />
-                      </label>
-                    </div>
-                    <div className="mt-3 flex justify-end">
-                      <button
-                        type="submit"
-                        className="inline-flex items-center rounded-full bg-[#081a4b] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
-                      >
-                        Сохранить вручную
-                      </button>
-                    </div>
-                  </form>
                 </div>
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -2012,7 +1952,7 @@ export async function renderTenderRecognitionDetailPage({
                                     type="text"
                                     name="positionName"
                                     defaultValue={item.name}
-                                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800 outline-none transition focus:border-[#0d5bd7] focus:bg-white"
+                                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-lg font-semibold text-slate-900 outline-none transition focus:border-[#0d5bd7] focus:bg-white"
                                   />
                                   {item.details ? (
                                     <div className="mt-1 text-xs leading-5 text-slate-500">{item.details}</div>
@@ -2025,20 +1965,25 @@ export async function renderTenderRecognitionDetailPage({
                                     name="quantity"
                                     defaultValue={item.quantityValue}
                                     placeholder={item.quantityLabel}
-                                    className="w-full min-w-[110px] rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-[#0d5bd7] focus:bg-white"
+                                    className="w-full min-w-[92px] max-w-[120px] rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-[#0d5bd7] focus:bg-white"
                                   />
                                 </td>
                                 <td className="px-4 py-3 text-slate-800">
-                                  <input
-                                    form={formId}
-                                    type="number"
-                                    name="approximateUnitPrice"
-                                    step="0.01"
-                                    min="0"
-                                    defaultValue={item.amountValue}
-                                    placeholder={item.amountLabel}
-                                    className="w-full min-w-[130px] rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-[#0d5bd7] focus:bg-white"
-                                  />
+                                  <div className="flex min-w-[170px] items-center gap-2">
+                                    <input
+                                      form={formId}
+                                      type="number"
+                                      name="approximateUnitPrice"
+                                      step="0.01"
+                                      min="0"
+                                      defaultValue={item.amountValue}
+                                      placeholder={item.amountLabel}
+                                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-[#0d5bd7] focus:bg-white"
+                                    />
+                                    <span className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600">
+                                      ₽
+                                    </span>
+                                  </div>
                                 </td>
                                 <td className="px-4 py-3 text-right">
                                   <button

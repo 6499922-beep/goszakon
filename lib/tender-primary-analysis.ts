@@ -98,10 +98,14 @@ function parseTenderSourceSections(sourceText: string) {
 function isLikelyContractSection(section: TenderSourceSection) {
   const titleHaystack = section.title.toLowerCase();
   const bodyHaystack = section.body.slice(0, 2000).toLowerCase();
+  const openingBody = section.body.slice(0, 600).toLowerCase();
 
   return (
     /договор|контракт|проект договора|условия договора/i.test(titleHaystack) ||
-    /договор|контракт|проект договора|покупатель|заказчик|стороны договора/i.test(bodyHaystack)
+    /(?:^|\n)\s*(?:договор|контракт|проект договора)\b/i.test(openingBody) ||
+    /стороны договора|покупатель[,:\s]|поставщик[,:\s]|именуем[а-я\s]+в дальнейшем\s+["«]?(?:покупатель|заказчик|поставщик)/i.test(
+      bodyHaystack
+    )
   );
 }
 
@@ -112,6 +116,30 @@ function buildContractSectionsText(sourceText: string) {
     .map((section) => `Файл: ${section.title}\n${section.body}`)
     .join("\n\n")
     .trim();
+}
+
+function extractContractPartyBlock(
+  contractText: string,
+  labels: string[],
+  maxLength = 900
+) {
+  const labelPattern = labels.join("|");
+  const directMatch = contractText.match(
+    new RegExp(
+      `(?:^|\\n)\\s*(?:${labelPattern})\\s*[:\\-]?\\s*([\\s\\S]{30,${maxLength}}?)(?=\\n\\s*(?:${labelPattern}|поставщик|исполнитель|подрядчик|участник|реквизиты|адреса\\s+и\\s+реквизиты|юридические\\s+адреса|банковские\\s+реквизиты|\\d+(?:\\.\\d+)*[.)]?\\s*[А-Яа-я]|$))`,
+      "i"
+    )
+  );
+
+  const directValue = directMatch?.[1]
+    ?.replace(/\n{3,}/g, "\n\n")
+    .replace(/\s+\n/g, "\n")
+    .trim();
+  if (directValue) {
+    return directValue.slice(0, maxLength);
+  }
+
+  return null;
 }
 
 function buildPenaltyFallback(sourceText: string) {
@@ -657,6 +685,17 @@ function buildContractCustomerInnFallback(sourceText: string) {
   const contractText = buildContractSectionsText(sourceText);
   if (!contractText) return null;
 
+  const partyBlock = extractContractPartyBlock(contractText, [
+    "покупател(?:я|ь)",
+    "заказчик",
+  ]);
+  if (partyBlock) {
+    const partyInn = partyBlock.match(/\bинн\b[^\d]{0,12}(\d{10,12})/i);
+    if (partyInn?.[1]) {
+      return partyInn[1];
+    }
+  }
+
   const requisitesPatterns = [
     /(?:реквизиты|адреса\s+и\s+реквизиты\s+сторон|юридические\s+адреса\s+и\s+банковские\s+реквизиты)[\s\S]{0,1400}?(?:покупател(?:я|ь)|заказчик)[\s\S]{0,260}?\bинн\b[^\d]{0,12}(\d{10,12})/i,
     /(?:покупател(?:я|ь)|заказчик)[\s\S]{0,260}?\bинн\b[^\d]{0,12}(\d{10,12})/i,
@@ -747,6 +786,20 @@ function buildContractCustomerNameFallback(sourceText: string) {
   const contractText = buildContractSectionsText(sourceText);
   if (!contractText) return null;
 
+  const partyBlock = extractContractPartyBlock(contractText, [
+    "покупател(?:я|ь)",
+    "заказчик",
+  ]);
+  if (partyBlock) {
+    const firstLine = partyBlock
+      .split(/\n+/)
+      .map((line) => line.replace(/\s+/g, " ").trim())
+      .find(Boolean);
+    if (firstLine && firstLine.length >= 4) {
+      return firstLine.slice(0, 240);
+    }
+  }
+
   const explicitPatterns = [
     /(?:заказчик|покупатель)\s*[:\-]?\s*([^\n]{4,240})/i,
     /(?:именуем[а-я\s]+в дальнейшем\s+["«]?(?:заказчик|покупатель)["»]?)[,:\s-]*([^\n]{4,240})/i,
@@ -769,6 +822,65 @@ function buildItemsCountFallback(sourceText: string) {
 
   if (values.length === 0) return 0;
   return Math.max(...values);
+}
+
+function buildTechnicalEquipmentFallback(sourceText: string) {
+  const sections = parseTenderSourceSections(sourceText).filter((section) => {
+    const title = section.title.toLowerCase();
+    const body = section.body.slice(0, 2000).toLowerCase();
+    return /технич|тз|специфик|описан.*товар|характерист|техническое задание/i.test(
+      `${title}\n${body}`
+    );
+  });
+
+  if (sections.length === 0) return [];
+
+  const candidates = new Map<string, number>();
+  const addCandidate = (value: string, score: number) => {
+    const normalized = value.replace(/\s+/g, " ").trim();
+    if (!normalized || normalized.length < 12) return;
+    if (/^(окпд|оквэд|код|характеристик|требован|параметр|комплектность)\b/i.test(normalized)) {
+      return;
+    }
+    if (/^\d+(?:[.,]\d+)?\s*(мм|см|м|кг|квт|в|а|шт)\.?$/i.test(normalized)) {
+      return;
+    }
+    if (/^(вертикальн|горизонтальн|мощност|снаряженн|грузоподъемност|объем|давление|скорость)\b/i.test(normalized)) {
+      score -= 20;
+    }
+
+    const current = candidates.get(normalized) ?? 0;
+    if (score > current) {
+      candidates.set(normalized, score);
+    }
+  };
+
+  for (const section of sections) {
+    const lines = section.body
+      .split(/\n+/)
+      .map((line) => line.replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+
+    for (const line of lines) {
+      if (/^(техническое задание|спецификация|наименование|кол-?во|ед\.?\s*изм|итого|всего)$/i.test(line)) {
+        continue;
+      }
+
+      if (/^\d+[.)]\s+/.test(line) || /^[\-•]\s+/.test(line)) {
+        addCandidate(line.replace(/^(?:\d+[.)]|[\-•])\s+/, ""), 120);
+        continue;
+      }
+
+      if (/(поставка|закупка|товар|оборудован|издели|насос|шкаф|кабель|материал|автомобил|мебел|прибор|система|станц|комплект)/i.test(line)) {
+        addCandidate(line, 90);
+      }
+    }
+  }
+
+  return [...candidates.entries()]
+    .sort((left, right) => right[1] - left[1])
+    .map(([value]) => value)
+    .slice(0, 25);
 }
 
 function buildSummaryFallback(sourceText: string) {
@@ -847,6 +959,7 @@ function buildQuickTenderFallback(input: {
     input.procurement.itemsCount ||
     buildItemsCountFallback(input.sourceText) ||
     0;
+  const equipmentItems = buildTechnicalEquipmentFallback(input.sourceText);
   const summary = buildSummaryFallback(input.sourceText);
   const selectionCriteria = buildSelectionCriteriaFallback(input.sourceText) || "";
   const deliveryTerms = buildDeliveryFallback(input.sourceText) || "";
@@ -915,7 +1028,7 @@ function buildQuickTenderFallback(input: {
       requires_commissioning: "",
       lot_structure: "",
       military_acceptance: "",
-      equipment_items: [],
+      equipment_items: equipmentItems,
       delivery_terms: deliveryTerms,
       payment_terms: paymentTerms,
       contract_term: contractTerm,
@@ -951,7 +1064,7 @@ function buildQuickTenderFallback(input: {
       requires_commissioning: "",
       lot_structure: "",
       military_acceptance: "",
-      equipment_items: [],
+      equipment_items: equipmentItems,
       delivery_terms: deliveryTerms,
       payment_terms: paymentTerms,
       contract_term: contractTerm,

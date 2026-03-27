@@ -758,15 +758,15 @@ function normalizeTenderAnalysisResult(input: {
       fallback.procurementNumber ? String(fallback.procurementNumber) : ""
     ),
     customer_name: pickFirstNonEmptyString(
-      result.customer_name,
       requisitesAnalysis.customer_name,
+      result.customer_name,
       metaAnalysis.customer_name,
       dossier.customer_name,
       fallback.customerName
     ),
     customer_inn: pickFirstNonEmptyString(
-      result.customer_inn,
       requisitesAnalysis.customer_inn,
+      result.customer_inn,
       metaAnalysis.customer_inn,
       dossier.customer_inn,
       fallback.customerInn
@@ -888,16 +888,13 @@ function normalizeTenderAnalysisResult(input: {
       dossier.contract_term
     ),
     responsibility_terms: pickFirstNonEmptyString(
-      result.responsibility_terms,
       contractAnalysis.responsibility_terms,
       dossier.responsibility_terms,
-      result.penalty_terms,
-      contractAnalysis.penalty_terms,
-      dossier.penalty_terms
+      result.responsibility_terms
     ),
     penalty_terms: pickFirstNonEmptyString(
-      result.penalty_terms,
       contractAnalysis.penalty_terms,
+      result.penalty_terms,
       dossier.penalty_terms
     ),
     termination_reasons: mergeTenderStringLists(
@@ -1415,6 +1412,7 @@ ${metaSourceText}
 
 Правила:
 - особенно доверяй разделам договора, проекта договора, реквизитам сторон, сведениям о заказчике и карточке организации;
+- если есть раздел "Реквизиты сторон", "Адреса и реквизиты сторон", "Покупатель", "Заказчик", сначала ищи именно там;
 - не бери ИНН, КПП и ОГРН поставщика, участника, исполнителя или подрядчика;
 - если рядом явно указаны слова заказчик, покупатель, организатор закупки, сведения о заказчике — это приоритет.
 
@@ -1485,6 +1483,7 @@ ${requirementsSourceText}
 Правила для договора:
 - если в комплекте есть договор или проект договора, считай его главным источником;
 - поле "ответственность по договору" заполняй только по разделу "Ответственность сторон" или ближайшему одноимённому разделу договора;
+- если раздел "Ответственность сторон" не найден, оставь поле пустым, а не подставляй похожие куски про цену, предмет закупки или общие условия;
 - не подставляй в "ответственность" общий текст закупки, вводные абзацы, реквизиты и описание предмета закупки;
 - особенно ищи точные проценты, суммы и формулы штрафов/пеней;
 - отдельно ищи фразы "за каждый день просрочки", "неустойка", "штраф", "ответственность сторон";
@@ -1503,6 +1502,12 @@ ${contractSourceText}
 Определи:
 - количество позиций
 - список оборудования / товаров
+
+Правила:
+- если нет Excel, обязательно выделяй позиции из Технического задания, спецификации и приложений с перечнем товара;
+- позиция должна быть названием товара/оборудования, а не отдельной характеристикой, кодом ОКПД или параметром;
+- не превращай в позицию строки вроде "ОКПД", "мощность", "напряжение", "грузоподъемность", если это просто характеристика уже найденного товара;
+- если у товара много характеристик, верни короткое название самой позиции без лишнего хвоста.
 
 Текст документов:
 ${equipmentSourceText}

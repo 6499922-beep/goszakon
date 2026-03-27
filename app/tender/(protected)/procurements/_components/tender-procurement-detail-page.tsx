@@ -1801,7 +1801,7 @@ export async function renderTenderRecognitionDetailPage({
                                                     href={item.href}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#081a4b] transition hover:border-slate-300 hover:bg-slate-50 hover:text-[#0b2a72]"
+                                                    className="inline-flex items-center rounded-full bg-[#0d5bd7] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0b4fc0]"
                                                   >
                                                     Открыть
                                                   </a>

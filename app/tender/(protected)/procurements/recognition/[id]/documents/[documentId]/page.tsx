@@ -151,7 +151,12 @@ export default async function TenderRecognitionDocumentPage({
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-            <div className="text-sm font-semibold text-[#081a4b]">Просмотр файла</div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-semibold text-[#081a4b]">Просмотр файла</div>
+              <span className="rounded-full bg-[#0d5bd7]/10 px-3 py-1 text-xs font-semibold text-[#0d5bd7]">
+                Открыт отдельный документ
+              </span>
+            </div>
             <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
               <iframe
                 src={rawHref}

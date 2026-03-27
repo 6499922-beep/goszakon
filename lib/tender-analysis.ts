@@ -1345,10 +1345,18 @@ export async function runTenderAiAnalysis(input: {
     categories: ["notice", "forms", "spec", "other"],
     maxTotalLength: hyperCompactMode ? 3500 : ultraCompactMode ? 6000 : compactMode ? 10000 : 36000,
   });
-  const contractSourcePack = buildPackedScopeSelection(scopes, {
-    categories: ["contract", "notice", "other"],
+  const contractOnlySourcePack = buildPackedScopeSelection(scopes, {
+    categories: ["contract"],
     maxTotalLength: hyperCompactMode ? 3000 : ultraCompactMode ? 5000 : compactMode ? 9000 : 32000,
   });
+  const hasContractOnlySource =
+    contractOnlySourcePack.includedIds.length > 0 && contractOnlySourcePack.text.trim().length > 0;
+  const contractSourcePack = hasContractOnlySource
+    ? contractOnlySourcePack
+    : buildPackedScopeSelection(scopes, {
+        categories: ["contract", "notice", "other"],
+        maxTotalLength: hyperCompactMode ? 3000 : ultraCompactMode ? 5000 : compactMode ? 9000 : 32000,
+      });
   const equipmentSourcePack = buildPackedScopeSelection(scopes, {
     categories: ["spec", "pricing", "notice", "forms"],
     maxTotalLength: hyperCompactMode ? 4500 : ultraCompactMode ? 7000 : compactMode ? 12000 : 55000,
@@ -1475,6 +1483,9 @@ ${requirementsSourceText}
 - требуются ли пуско-наладочные работы
 
 Правила для договора:
+- если в комплекте есть договор или проект договора, считай его главным источником;
+- поле "ответственность по договору" заполняй только по разделу "Ответственность сторон" или ближайшему одноимённому разделу договора;
+- не подставляй в "ответственность" общий текст закупки, вводные абзацы, реквизиты и описание предмета закупки;
 - особенно ищи точные проценты, суммы и формулы штрафов/пеней;
 - отдельно ищи фразы "за каждый день просрочки", "неустойка", "штраф", "ответственность сторон";
 - отдельно ищи все основания одностороннего отказа / расторжения.

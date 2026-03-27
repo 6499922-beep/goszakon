@@ -129,6 +129,33 @@ function buildPenaltyFallback(sourceText: string) {
   return matches.length > 0 ? matches.join("\n\n") : null;
 }
 
+function buildResponsibilitySectionFallback(sourceText: string) {
+  const contractText = buildContractSectionsText(sourceText);
+  if (!contractText) return null;
+
+  const normalizedText = contractText.replace(/\r/g, "");
+  const sectionMatch = normalizedText.match(
+    /(?:^|\n)\s*(?:\d+(?:\.\d+)*[.)]?\s*)?(?:ответственность\s+сторон|ответственность)\s*(?:[:\-]\s*|\n+)([\s\S]{80,2600}?)(?=\n\s*(?:\d+(?:\.\d+)*[.)]?\s*)(?:предмет|цена|стоимость|срок|оплата|поставка|приемка|качество|гарант|обеспечение|расторж|односторон|форс|права|обязанности|разрешение|прочие|заключитель)|$)/i
+  );
+
+  const sectionBody = sectionMatch?.[1]
+    ?.replace(/\n{3,}/g, "\n\n")
+    .replace(/\s+\n/g, "\n")
+    .trim();
+
+  if (sectionBody && sectionBody.length >= 40) {
+    return sectionBody.slice(0, 1600);
+  }
+
+  const paragraphMatches = extractRelevantParagraphs(
+    contractText,
+    [/ответственность\s+сторон/i, /ответственность/i],
+    2
+  );
+
+  return paragraphMatches.length > 0 ? paragraphMatches.join("\n\n") : null;
+}
+
 function buildContractPenaltyFallback(sourceText: string) {
   const contractText = buildContractSectionsText(sourceText);
   if (!contractText) return null;
@@ -811,6 +838,9 @@ function buildQuickTenderFallback(input: {
   const deliveryTerms = buildDeliveryFallback(input.sourceText) || "";
   const paymentTerms = buildPaymentFallback(input.sourceText) || "";
   const contractTerm = buildContractTermFallback(input.sourceText) || "";
+  const responsibilityTerms =
+    buildResponsibilitySectionFallback(input.sourceText) ||
+    "";
   const penaltyTerms =
     buildContractPenaltyFallback(input.sourceText) ||
     buildPenaltyFallback(input.sourceText) ||
@@ -875,7 +905,7 @@ function buildQuickTenderFallback(input: {
       delivery_terms: deliveryTerms,
       payment_terms: paymentTerms,
       contract_term: contractTerm,
-      responsibility_terms: penaltyTerms,
+      responsibility_terms: responsibilityTerms,
       penalty_terms: penaltyTerms,
       termination_reasons: terminationReasons,
       stop_factor_findings: [],
@@ -911,7 +941,7 @@ function buildQuickTenderFallback(input: {
       delivery_terms: deliveryTerms,
       payment_terms: paymentTerms,
       contract_term: contractTerm,
-      responsibility_terms: penaltyTerms,
+      responsibility_terms: responsibilityTerms,
       penalty_terms: penaltyTerms,
       termination_reasons: terminationReasons,
       stop_factor_findings: [],
@@ -1021,6 +1051,7 @@ export async function runTenderPrimaryAnalysis(input: {
   const penaltyFallback =
     buildContractPenaltyFallback(sourceText) ||
     buildPenaltyFallback(sourceText);
+  const responsibilityFallback = buildResponsibilitySectionFallback(sourceText);
   const terminationFallback = buildTerminationFallback(sourceText);
   const priceFallback = buildPriceFallbackFromMentions(
     dossier.nmck_mentions,
@@ -1092,8 +1123,7 @@ export async function runTenderPrimaryAnalysis(input: {
         contract_security: result.contract_security?.trim() || contractSecurityFallback || "",
         responsibility_terms:
           result.responsibility_terms?.trim() ||
-          result.penalty_terms?.trim() ||
-          penaltyFallback ||
+          responsibilityFallback ||
           "",
         analysis_document_coverage: documentCoverage as any,
         analysis_document_summary: {

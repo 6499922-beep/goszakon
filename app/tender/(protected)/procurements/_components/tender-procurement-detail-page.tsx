@@ -76,13 +76,18 @@ function extractStoredDocumentPath(note: string | null | undefined) {
   return match?.[1]?.trim() ?? null;
 }
 
-function buildSourceDocumentHref(
+function buildSourceDocumentFileHref(
   documentId: number | null | undefined,
   storedPath?: string | null
 ) {
   if (storedPath) return encodeURI(storedPath);
   if (!documentId) return null;
   return `/api/tender/source-document/${documentId}`;
+}
+
+function buildSourceDocumentViewerHref(procurementId: number, documentId: number | null | undefined) {
+  if (!documentId) return null;
+  return `/procurements/recognition/${procurementId}/documents/${documentId}`;
 }
 
 function extractLastPathSegment(value: string | null | undefined) {
@@ -934,7 +939,8 @@ export async function renderTenderRecognitionDetailPage({
         item.documentKind,
         item.formType
       ),
-      href: buildSourceDocumentHref(item.id, storagePath),
+      href: buildSourceDocumentViewerHref(procurement.id, item.id),
+      fileHref: buildSourceDocumentFileHref(item.id, storagePath),
       excerpt: item.contentSnippet ? buildRuleDocumentExcerpt(
         {
           rule: {
@@ -1272,9 +1278,9 @@ export async function renderTenderRecognitionDetailPage({
                             {matchingDocuments.length > 0 ? (
                               <div className="mt-3 space-y-3 text-sm">
                                 {matchingDocuments.map((document) => {
-                                  const href = buildSourceDocumentHref(
-                                    document.id,
-                                    extractStoredDocumentPath(document.note)
+                                  const href = buildSourceDocumentViewerHref(
+                                    procurement.id,
+                                    document.id
                                   );
                                   const excerpt = buildRuleDocumentExcerpt(match, document);
                                   return (
@@ -1502,6 +1508,8 @@ export async function renderTenderRecognitionDetailPage({
                       </div>
                       <a
                         href={primaryContractDocument.href ?? "#"}
+                        target="_blank"
+                        rel="noreferrer"
                         className="inline-flex items-center rounded-full border border-[#0d5bd7]/20 bg-white px-4 py-2 text-sm font-semibold text-[#0d5bd7] transition hover:bg-[#0d5bd7]/5"
                       >
                         Открыть договор
@@ -2028,7 +2036,7 @@ export async function renderTenderRecognitionDetailPage({
                             <div className="mt-2">
                               <a
                                 href={
-                                  buildSourceDocumentHref(item.documentId, item.storagePath) ?? "#"
+                                  buildSourceDocumentViewerHref(procurement.id, item.documentId) ?? "#"
                                 }
                                 target="_blank"
                                 rel="noreferrer"

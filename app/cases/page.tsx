@@ -320,7 +320,7 @@ export default async function CasesPage({ searchParams }: PageProps) {
 
         <form className="hero-panel mt-8 rounded-3xl p-6">
           <div className="grid gap-4 lg:grid-cols-12">
-            <div className="lg:col-span-12 xl:col-span-5">
+            <div className="lg:col-span-12 xl:col-span-4">
               <label className="block text-sm font-medium text-slate-700">
                 Поиск
               </label>
@@ -408,26 +408,31 @@ export default async function CasesPage({ searchParams }: PageProps) {
               </select>
             </div>
 
-            <div className="lg:col-span-12 xl:col-span-1">
-              <label className="block text-sm font-medium text-transparent">
-                Действие
-              </label>
-              <button
-                type="submit"
-                className="mt-2 h-14 w-full rounded-2xl bg-[#081a4b] px-6 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
-              >
-                Найти
-              </button>
-            </div>
           </div>
 
-          <div className="mt-4">
-            <Link
-              href="/cases"
-              className="inline-flex rounded-2xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-            >
-              Сбросить фильтры
-            </Link>
+          <div className="mt-5 border-t border-[color:var(--line)]/70 pt-5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <p className="max-w-2xl text-sm leading-6 text-slate-500">
+                Ищите по номеру закупки, ИНН, заказчику, нарушению или быстро
+                собирайте подборку по региону, категории и свежести практики.
+              </p>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <button
+                  type="submit"
+                  className="inline-flex h-14 min-w-[160px] items-center justify-center rounded-2xl bg-[#081a4b] px-8 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
+                >
+                  Найти
+                </button>
+
+                <Link
+                  href="/cases"
+                  className="inline-flex h-14 items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  Сбросить фильтры
+                </Link>
+              </div>
+            </div>
           </div>
         </form>
 

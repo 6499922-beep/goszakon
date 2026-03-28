@@ -37,7 +37,7 @@ export default function CustomerInnSearch() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+      className="hero-panel rounded-3xl p-6"
     >
       <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
         Проверка заказчика
@@ -51,21 +51,27 @@ export default function CustomerInnSearch() {
         Покажем кейсы по заказчику, количество жалоб и краткий вывод по рискам.
       </p>
 
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-        <input
-          type="text"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Например: 7701234567 или Мосводоканал"
-          className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-500"
-        />
+      <div className="mt-5">
+        <label className="block text-sm font-medium text-slate-700">
+          ИНН или название заказчика
+        </label>
 
-        <button
-          type="submit"
-          className="rounded-2xl bg-[#081a4b] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
-        >
-          Проверить
-        </button>
+        <div className="mt-2 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+          <input
+            type="text"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Например: 7701234567 или Мосводоканал"
+            className="h-14 w-full rounded-2xl border border-slate-300 bg-white px-5 text-base outline-none focus:border-[#081a4b]"
+          />
+
+          <button
+            type="submit"
+            className="inline-flex h-14 items-center justify-center rounded-2xl bg-[#081a4b] px-6 text-sm font-semibold text-white transition hover:bg-[#0d2568]"
+          >
+            Проверить
+          </button>
+        </div>
       </div>
 
       {error ? (
@@ -73,8 +79,10 @@ export default function CustomerInnSearch() {
           {error}
         </div>
       ) : (
-        <div className="mt-4 text-sm text-slate-500">
-          По ИНН откроется сразу карточка заказчика, по названию покажем список найденных совпадений.
+        <div className="mt-5 border-t border-[color:var(--line)]/70 pt-4 text-sm leading-6 text-slate-500">
+          По ИНН откроется сразу карточка заказчика, по названию покажем список
+          найденных совпадений и дальше можно перейти к кейсам и рискам по этому
+          заказчику.
         </div>
       )}
     </form>

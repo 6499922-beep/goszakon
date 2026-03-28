@@ -17,14 +17,14 @@ export default async function AnalyticsPage() {
   });
 
   return (
-    <main className="min-h-screen bg-white text-slate-900">
-      <section className="border-b border-slate-200 bg-white">
+    <main className="min-h-screen bg-transparent text-slate-900">
+      <section className="border-b border-[color:var(--line)] bg-transparent">
         <div className="mx-auto max-w-7xl px-6 py-16">
           <div className="max-w-3xl">
-            <div className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
+            <div className="text-sm font-medium uppercase tracking-[0.16em] text-[#8b6a3a]">
               Аналитика
             </div>
-            <h1 className="mt-3 text-5xl font-bold tracking-tight text-[#081a4b]">
+            <h1 className="mt-3 text-5xl font-bold tracking-[-0.03em] text-[#081a4b] md:text-6xl">
               Аналитика закупочных споров
             </h1>
             <p className="mt-5 text-lg leading-9 text-slate-700">
@@ -35,10 +35,10 @@ export default async function AnalyticsPage() {
         </div>
       </section>
 
-      <section className="bg-slate-50">
+      <section className="section-wash">
         <div className="mx-auto max-w-7xl px-6 py-16">
           {materials.length === 0 ? (
-            <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <div className="hero-panel rounded-3xl p-10 text-center">
               <div className="text-2xl font-semibold text-[#081a4b]">
                 Аналитика пока не опубликована
               </div>
@@ -52,7 +52,7 @@ export default async function AnalyticsPage() {
                 <Link
                   key={item.id}
                   href={`/analitika/${item.slug}`}
-                  className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                  className="hero-panel rounded-3xl p-7 transition hover:-translate-y-1 hover:shadow-md"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-sm text-slate-500">

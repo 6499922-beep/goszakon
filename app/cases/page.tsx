@@ -247,14 +247,14 @@ export default async function CasesPage({ searchParams }: PageProps) {
       : null;
 
   return (
-    <main className="min-h-screen bg-white text-slate-900">
+    <main className="min-h-screen bg-transparent text-slate-900">
       <div className="mx-auto max-w-6xl px-6 py-16">
         <div className="max-w-3xl">
-          <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+          <div className="inline-flex rounded-full border border-[color:var(--line)] bg-[rgba(255,253,249,0.9)] px-4 py-2 text-sm font-medium text-slate-600">
             База практики ФАС
           </div>
 
-          <h1 className="mt-5 text-5xl font-bold tracking-tight text-[#081a4b]">
+          <h1 className="mt-5 text-5xl font-bold tracking-[-0.03em] text-[#081a4b] md:text-6xl">
             База практики ФАС
           </h1>
 
@@ -297,7 +297,7 @@ export default async function CasesPage({ searchParams }: PageProps) {
           ))}
         </div>
 
-        <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+        <div className="hero-panel mt-6 rounded-3xl p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="max-w-3xl">
               <div className="text-base font-semibold text-[#081a4b]">
@@ -318,7 +318,7 @@ export default async function CasesPage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        <form className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+        <form className="hero-panel mt-8 rounded-3xl p-6">
           <div className="grid gap-4 lg:grid-cols-12">
             <div className="lg:col-span-12 xl:col-span-5">
               <label className="block text-sm font-medium text-slate-700">

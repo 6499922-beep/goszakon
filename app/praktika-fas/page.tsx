@@ -11,14 +11,14 @@ export const metadata: Metadata = {
 
 export default function FasPracticeHubPage() {
   return (
-    <main className="min-h-screen bg-white text-slate-900">
-      <section className="border-b border-slate-200 bg-white">
+    <main className="min-h-screen bg-transparent text-slate-900">
+      <section className="border-b border-[color:var(--line)] bg-transparent">
         <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
           <div>
-            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+            <div className="inline-flex rounded-full border border-[color:var(--line)] bg-[rgba(255,253,249,0.9)] px-4 py-2 text-sm font-medium text-slate-600">
               Новый слой над базой практики
             </div>
-            <h1 className="mt-6 max-w-5xl text-5xl font-bold leading-[1.02] tracking-tight text-[#081a4b] md:text-7xl">
+            <h1 className="mt-6 max-w-5xl text-5xl font-bold leading-[1.02] tracking-[-0.03em] text-[#081a4b] md:text-7xl">
               Практика ФАС по ключевым темам
             </h1>
             <p className="mt-6 max-w-3xl text-xl leading-9 text-slate-700">
@@ -48,8 +48,8 @@ export default function FasPracticeHubPage() {
           </div>
 
           <div className="grid gap-5">
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm">
-              <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
+            <div className="hero-panel rounded-3xl p-7">
+              <div className="text-sm uppercase tracking-[0.16em] text-[#8b6a3a]">
                 Что внутри
               </div>
               <div className="mt-4 text-5xl font-bold text-[#081a4b]">
@@ -76,7 +76,7 @@ export default function FasPracticeHubPage() {
         </div>
       </section>
 
-      <section className="border-b border-slate-200 bg-slate-50">
+      <section className="section-wash border-b border-[color:var(--line)]">
         <div className="mx-auto max-w-7xl px-6 py-20">
           <div className="max-w-3xl">
             <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
@@ -92,7 +92,7 @@ export default function FasPracticeHubPage() {
               <Link
                 key={page.slug}
                 href={`/praktika-fas/${page.slug}`}
-                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="hero-panel rounded-3xl p-6 transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
                   {page.eyebrow}

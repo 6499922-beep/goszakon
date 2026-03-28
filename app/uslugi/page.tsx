@@ -56,15 +56,15 @@ export default function ServicesPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-white text-slate-900">
-      <section className="border-b border-slate-200 bg-white">
+    <main className="min-h-screen bg-transparent text-slate-900">
+      <section className="border-b border-[color:var(--line)] bg-transparent">
         <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
           <div className="max-w-4xl">
-            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+            <div className="inline-flex rounded-full border border-[color:var(--line)] bg-[rgba(255,253,249,0.9)] px-4 py-2 text-sm font-medium text-slate-600">
               Услуги GOSZAKON
             </div>
 
-            <h1 className="mt-6 text-4xl font-bold tracking-tight text-[#081a4b] md:text-6xl">
+            <h1 className="mt-6 text-4xl font-bold tracking-[-0.03em] text-[#081a4b] md:text-6xl">
               Юридическая помощь поставщикам по 223-ФЗ и спорам в ФАС
             </h1>
 
@@ -93,7 +93,7 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      <section className="border-b border-slate-200 bg-slate-50">
+      <section className="section-wash border-b border-[color:var(--line)]">
         <div className="mx-auto max-w-7xl px-6 py-16">
           <div className="mb-10 max-w-3xl">
             <h2 className="text-3xl font-bold tracking-tight text-[#081a4b] md:text-4xl">
@@ -111,7 +111,7 @@ export default function ServicesPage() {
                 <Link
                   key={service.title}
                   href={service.href}
-                  className="flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                  className="hero-panel flex h-full flex-col rounded-3xl p-7 transition hover:-translate-y-1 hover:shadow-md"
                 >
                   <h3 className="text-xl font-semibold leading-8 text-[#081a4b]">
                     {service.title}
@@ -126,7 +126,7 @@ export default function ServicesPage() {
               ) : (
                 <div
                   key={service.title}
-                  className="flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-7 shadow-sm"
+                  className="hero-panel flex h-full flex-col rounded-3xl p-7"
                 >
                   <h3 className="text-xl font-semibold leading-8 text-[#081a4b]">
                     {service.title}
@@ -141,10 +141,10 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      <section className="border-b border-slate-200 bg-white">
+      <section className="border-b border-[color:var(--line)] bg-transparent">
         <div className="mx-auto max-w-7xl px-6 py-16">
           <div className="grid gap-8 lg:grid-cols-2">
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8">
+            <div className="accent-wash rounded-3xl p-8">
               <h2 className="text-3xl font-bold tracking-tight text-[#081a4b]">
                 Когда стоит обращаться
               </h2>
@@ -182,7 +182,7 @@ export default function ServicesPage() {
           <div className="mt-10 grid gap-4 lg:grid-cols-3">
             <Link
               href="/cases"
-              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
+              className="hero-panel rounded-3xl p-6 transition hover:bg-white hover:shadow-sm"
             >
               <div className="text-lg font-semibold text-[#081a4b]">
                 Практика ФАС
@@ -193,7 +193,7 @@ export default function ServicesPage() {
             </Link>
             <Link
               href="/spornye-praktiki"
-              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
+              className="hero-panel rounded-3xl p-6 transition hover:bg-white hover:shadow-sm"
             >
               <div className="text-lg font-semibold text-[#081a4b]">
                 Спорные практики
@@ -204,7 +204,7 @@ export default function ServicesPage() {
             </Link>
             <Link
               href="/sudebnaya-zashita-v-zakupkah"
-              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
+              className="hero-panel rounded-3xl p-6 transition hover:bg-white hover:shadow-sm"
             >
               <div className="text-lg font-semibold text-[#081a4b]">
                 Судебная защита
@@ -215,7 +215,7 @@ export default function ServicesPage() {
             </Link>
             <Link
               href="/chto-delat-esli"
-              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
+              className="hero-panel rounded-3xl p-6 transition hover:bg-white hover:shadow-sm"
             >
               <div className="text-lg font-semibold text-[#081a4b]">
                 Что делать, если...
@@ -228,7 +228,7 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      <section className="bg-slate-50">
+      <section className="section-wash">
         <div className="mx-auto max-w-7xl px-6 py-16">
           <div className="grid gap-8 rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm lg:grid-cols-[1fr_0.9fr]">
             <div>

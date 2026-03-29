@@ -494,7 +494,7 @@ export default async function CasesPage({ searchParams }: PageProps) {
             cases.map((item) => (
               <article
                 key={item.id}
-                className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-md"
+                className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
@@ -523,7 +523,7 @@ export default async function CasesPage({ searchParams }: PageProps) {
                     </h2>
 
                     {item.summary ? (
-                      <p className="mt-3 text-base leading-8 text-slate-700">
+                      <p className="mt-3 max-w-4xl text-base leading-8 text-slate-700">
                         {item.summary}
                       </p>
                     ) : null}
@@ -532,65 +532,75 @@ export default async function CasesPage({ searchParams }: PageProps) {
 
                 <div className="mt-5 flex flex-wrap gap-2">
                   {item.subject ? (
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                    <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
                       Суть спора: {item.subject}
                     </span>
                   ) : null}
                   {item.violation ? (
                     <Link
                       href={buildPageHref({ q, region, category, violation: item.violation, sort: safeSort })}
-                      className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50"
+                      className="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-white"
                     >
                       Нарушение: {item.violation}
                     </Link>
                   ) : null}
                   {item.result ? (
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                    <span className="rounded-full bg-[rgba(8,26,75,0.06)] px-3 py-1 text-xs font-semibold text-[#081a4b] ring-1 ring-[rgba(8,26,75,0.08)]">
                       Итог: {item.result}
                     </span>
                   ) : null}
                 </div>
 
-                <div className="mt-5 grid gap-3 text-sm text-slate-600 md:grid-cols-2 xl:grid-cols-4">
-                  <div>
-                    <span className="font-semibold text-slate-800">
-                      Заказчик:
-                    </span>{" "}
-                    {item.customerInn ? (
-                      <Link
-                        href={`/zakazchik/${item.customerInn}`}
-                        className="font-medium text-[#081a4b] underline-offset-4 transition hover:underline"
-                      >
-                        {item.customerName || "Открыть карточку заказчика"}
-                      </Link>
-                    ) : (
-                      item.customerName || "Не указан"
-                    )}
+                <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 ring-1 ring-slate-200/80">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Заказчик
+                    </div>
+                    <div className="mt-2 leading-6 text-slate-700">
+                      {item.customerInn ? (
+                        <Link
+                          href={`/zakazchik/${item.customerInn}`}
+                          className="font-medium text-[#081a4b] underline-offset-4 transition hover:underline"
+                        >
+                          {item.customerName || "Открыть карточку заказчика"}
+                        </Link>
+                      ) : (
+                        item.customerName || "Не указан"
+                      )}
+                    </div>
                   </div>
 
-                  <div>
-                    <span className="font-semibold text-slate-800">ИНН:</span>{" "}
-                    {item.customerInn || "Не указан"}
+                  <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 ring-1 ring-slate-200/80">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      ИНН
+                    </div>
+                    <div className="mt-2 leading-6 text-slate-700">
+                      {item.customerInn || "Не указан"}
+                    </div>
                   </div>
 
-                  <div>
-                    <span className="font-semibold text-slate-800">
-                      Регион:
-                    </span>{" "}
-                    {item.region || "Не указан"}
+                  <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 ring-1 ring-slate-200/80">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Регион
+                    </div>
+                    <div className="mt-2 leading-6 text-slate-700">
+                      {item.region || "Не указан"}
+                    </div>
                   </div>
 
-                  <div>
-                    <span className="font-semibold text-slate-800">
-                      Номер закупки:
-                    </span>{" "}
-                    {item.procurementNumber || "Не указан"}
+                  <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 ring-1 ring-slate-200/80">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Номер закупки
+                    </div>
+                    <div className="mt-2 leading-6 text-slate-700">
+                      {item.procurementNumber || "Не указан"}
+                    </div>
                   </div>
                 </div>
 
                 {item.result ? (
-                  <div className="mt-4 text-sm leading-7 text-slate-700">
-                    <span className="font-semibold text-slate-800">
+                  <div className="mt-4 rounded-2xl border border-[rgba(8,26,75,0.08)] bg-[rgba(8,26,75,0.04)] px-4 py-3 text-sm leading-7 text-slate-700">
+                    <span className="font-semibold text-[#081a4b]">
                       Практический результат:
                     </span>{" "}
                     {item.result}

@@ -309,17 +309,25 @@ export default async function CustomersPage({ searchParams }: PageProps) {
                     <Link
                       key={item.customerInn}
                       href={`/zakazchik/${item.customerInn}`}
-                      className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm"
+                      className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                     >
-                      <div className="text-xs uppercase tracking-[0.12em] text-slate-400">
-                        ИНН {item.customerInn}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                          ИНН {item.customerInn}
+                        </div>
+                        <span className="rounded-full bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500 ring-1 ring-slate-200">
+                          Заказчик
+                        </span>
                       </div>
+
                       <div className="mt-3 text-lg font-semibold leading-8 text-[#081a4b]">
                         {item.customerName}
                       </div>
-                      <div className="mt-3 text-sm text-slate-600">
-                        Кейсов в базе: {item.count}
+
+                      <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 ring-1 ring-slate-200/80">
+                        Кейсов в базе: <span className="font-semibold text-slate-800">{item.count}</span>
                       </div>
+
                       <div className="mt-4 text-sm font-semibold text-[#081a4b]">
                         Открыть карточку →
                       </div>

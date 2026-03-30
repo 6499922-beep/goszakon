@@ -504,9 +504,9 @@ export function TenderGeneralChat({
 
   return (
     <section className="grid gap-4 xl:h-[calc(100vh-7.5rem)] xl:grid-cols-[280px_minmax(0,1fr)_320px] xl:overflow-hidden">
-      <aside className="hidden xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:rounded-[2rem] xl:border xl:border-slate-200 xl:bg-[#f7f7f8]">
+      <aside className="hidden xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:rounded-[2rem] xl:border xl:border-[#d8dde8] xl:bg-[#f3f4f6]">
         <div className="border-b border-slate-200 px-4 py-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
             GOSZAKON
           </div>
           <div className="mt-2 text-xl font-semibold text-[#111827]">GPT-чат</div>
@@ -520,7 +520,7 @@ export function TenderGeneralChat({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
             Текущий чат
           </div>
           <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
@@ -532,7 +532,7 @@ export function TenderGeneralChat({
             </div>
           </div>
 
-          <div className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+          <div className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
             Последние темы
           </div>
           <div className="mt-3 space-y-1">
@@ -556,7 +556,7 @@ export function TenderGeneralChat({
         </div>
 
         <div className="border-t border-slate-200 px-4 py-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
             Аккаунт
           </div>
           <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
@@ -569,10 +569,10 @@ export function TenderGeneralChat({
       </aside>
 
       <div className="flex min-h-[84vh] flex-col rounded-[2rem] border border-slate-200 bg-white xl:min-h-0 xl:h-full xl:overflow-hidden">
-        <div className="border-b border-slate-100 px-8 py-5">
+        <div className="border-b border-slate-100 px-8 py-4">
           <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4">
             <div className="min-w-0">
-              <div className="text-lg font-semibold text-[#111827]">{threadTitle}</div>
+              <div className="text-[15px] font-semibold text-[#111827]">{threadTitle}</div>
               <div className="mt-1 text-sm text-slate-500">
                 Работаю как обычный чат: можно писать вопрос, прикладывать документы и продолжать диалог.
               </div>
@@ -582,7 +582,7 @@ export function TenderGeneralChat({
 
         <div ref={viewportRef} className="flex-1 overflow-y-auto px-8 py-8 xl:min-h-0">
           {sortedMessages.length > 0 ? (
-            <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
+            <div className="mx-auto flex w-full max-w-4xl flex-col gap-10">
               {sortedMessages.map((message) => {
                 const parsed = parseStoredSources(message.body);
                 const isAssistant = message.role === "assistant";
@@ -592,13 +592,13 @@ export function TenderGeneralChat({
                     className={isAssistant ? "w-full" : "ml-auto w-full max-w-[78%]"}
                   >
                     {isAssistant ? (
-                      <div className="rounded-[2rem] bg-white px-2 py-1 text-slate-800">
+                      <div className="rounded-[2rem] bg-white px-1 py-1 text-slate-800">
                         <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
                           {message.authorName}
                         </div>
-                        <div className="mt-3">{renderAssistantMarkdown(parsed.text)}</div>
+                        <div className="mt-4 text-[16px]">{renderAssistantMarkdown(parsed.text)}</div>
                         {parsed.sources.length > 0 ? (
-                          <div className="mt-5 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                          <div className="mt-6 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
                             <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
                               Источники
                             </div>
@@ -621,7 +621,7 @@ export function TenderGeneralChat({
                         <div className="text-xs font-semibold uppercase tracking-[0.14em] text-white/60">
                           {message.authorName}
                         </div>
-                        <div className="mt-3 whitespace-pre-wrap text-sm leading-7">{parsed.text}</div>
+                        <div className="mt-3 whitespace-pre-wrap text-[15px] leading-7">{parsed.text}</div>
                       </div>
                     )}
                   </article>
@@ -645,7 +645,7 @@ export function TenderGeneralChat({
 
         <form
           onSubmit={handleSubmit}
-          className="border-t border-slate-100 bg-white px-6 py-5 xl:shrink-0"
+          className="border-t border-slate-100 bg-white px-6 py-4 xl:shrink-0"
           ref={composerRef}
         >
           <input
@@ -699,7 +699,7 @@ export function TenderGeneralChat({
               const files = Array.from(event.dataTransfer.files ?? []);
               addFiles(files);
             }}
-            className="mx-auto w-full max-w-4xl rounded-[2rem] border border-slate-200 bg-white px-4 py-4 shadow-sm"
+            className="mx-auto w-full max-w-4xl rounded-[2rem] border border-slate-200 bg-white px-4 py-3 shadow-sm"
           >
             <div className="flex items-end gap-3">
               <button
@@ -733,9 +733,9 @@ export function TenderGeneralChat({
                     }
                   }
                 }}
-                rows={3}
+                rows={2}
                 placeholder="Спроси ChatGPT"
-                className="min-h-[3rem] flex-1 resize-none border-0 bg-transparent px-1 py-2 text-[15px] leading-7 text-slate-800 outline-none"
+                className="min-h-[2.75rem] flex-1 resize-none border-0 bg-transparent px-1 py-2 text-[15px] leading-7 text-slate-800 outline-none"
               />
 
               <button

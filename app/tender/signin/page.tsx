@@ -7,7 +7,7 @@ import {
   createAdminSession,
   verifyAdminSession,
 } from "@/lib/admin-auth";
-import { isTenderHost } from "@/lib/tender-host";
+import { isTenderChatHost, isTenderHost } from "@/lib/tender-host";
 
 type PageProps = {
   searchParams: Promise<{
@@ -19,8 +19,9 @@ export const dynamic = "force-dynamic";
 
 export default async function TenderSignInPage({ searchParams }: PageProps) {
   const headerStore = await headers();
+  const host = headerStore.get("host");
 
-  if (!isTenderHost(headerStore.get("host"))) {
+  if (!isTenderHost(host)) {
     redirect("/");
   }
 
@@ -31,7 +32,7 @@ export default async function TenderSignInPage({ searchParams }: PageProps) {
   );
 
   if (existingSession) {
-    redirect("/");
+    redirect(isTenderChatHost(host) ? "/chat" : "/");
   }
 
   async function signInAction(formData: FormData) {
@@ -72,7 +73,7 @@ export default async function TenderSignInPage({ searchParams }: PageProps) {
       maxAge: 60 * 60 * 24 * 30,
     });
 
-    redirect("/");
+    redirect(isTenderChatHost(host) ? "/chat" : "/");
   }
 
   return (

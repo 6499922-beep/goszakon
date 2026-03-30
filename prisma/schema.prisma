@@ -95,9 +95,49 @@ model Admin {
   passwordHash String
   role         TenderUserRole @default(ADMIN)
   comments     TenderStageComment[]
+  chatThreads  TenderChatThread[]
+  chatMessages TenderChatMessage[]
   promptConfigs TenderPromptConfig[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+enum TenderChatThreadKind {
+  GENERAL
+}
+
+enum TenderChatMessageRole {
+  USER
+  ASSISTANT
+}
+
+model TenderChatThread {
+  id        Int                  @id @default(autoincrement())
+  ownerId   Int
+  title     String               @default("Личный чат")
+  kind      TenderChatThreadKind @default(GENERAL)
+  owner     Admin                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  messages  TenderChatMessage[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([ownerId])
+}
+
+model TenderChatMessage {
+  id         Int                   @id @default(autoincrement())
+  threadId    Int
+  role       TenderChatMessageRole
+  body       String                @db.Text
+  authorId   Int?
+  authorName String?
+  thread     TenderChatThread      @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  author     Admin?                @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+
+  @@index([threadId, createdAt])
+  @@index([authorId])
 }
 
 enum TenderUserRole {

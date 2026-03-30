@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { isTenderHost } from "@/lib/tender-host";
+import { isTenderChatHost, isTenderHost } from "@/lib/tender-host";
 
 export function proxy(request: NextRequest) {
   const host = request.headers.get("host");
@@ -23,6 +23,11 @@ export function proxy(request: NextRequest) {
   }
 
   const rewrittenUrl = request.nextUrl.clone();
+  if (isTenderChatHost(host)) {
+    rewrittenUrl.pathname = pathname === "/" ? "/tender/chat" : `/tender${pathname}`;
+    return NextResponse.rewrite(rewrittenUrl);
+  }
+
   rewrittenUrl.pathname = pathname === "/" ? "/tender" : `/tender${pathname}`;
 
   return NextResponse.rewrite(rewrittenUrl);

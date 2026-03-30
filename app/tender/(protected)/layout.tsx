@@ -7,7 +7,7 @@ import {
   getCurrentTenderUser,
   verifyAdminSession,
 } from "@/lib/admin-auth";
-import { isTenderHost } from "@/lib/tender-host";
+import { isTenderChatHost, isTenderHost } from "@/lib/tender-host";
 import { TenderUserRole } from "@prisma/client";
 import { tenderUserRoleLabels } from "@/lib/tender-users";
 import { tenderHasCapability } from "@/lib/tender-permissions";
@@ -38,10 +38,23 @@ export default async function TenderProtectedLayout({
 
   const currentUser = await getCurrentTenderUser();
   const role = currentUser?.role;
+  const chatHost = isTenderChatHost(headerStore.get("host"));
 
-  const links = TENDER_INTAKE_ONLY_MODE
+  const links = chatHost
+    ? [
+        ...(tenderHasCapability(role, "procurement_comments")
+          ? [{ title: "GPT-чат", href: "/chat" }]
+          : []),
+        ...(tenderHasCapability(role, "procurements_list")
+          ? [{ title: "Загрузка и распознавание", href: "/procurements/new" }]
+          : []),
+      ]
+    : TENDER_INTAKE_ONLY_MODE
     ? [
         { title: "Загрузка и распознавание", href: "/procurements/new" },
+        ...(tenderHasCapability(role, "procurement_comments")
+          ? [{ title: "GPT-чат", href: "/chat" }]
+          : []),
         ...(tenderHasCapability(role, "procurements_list")
           ? [{ title: "Архив", href: "/procurements/archive" }]
           : []),
@@ -58,6 +71,9 @@ export default async function TenderProtectedLayout({
           : []),
         ...(tenderHasCapability(role, "procurements_list")
           ? [{ title: "Закупки", href: "/procurements" }]
+          : []),
+        ...(tenderHasCapability(role, "procurement_comments")
+          ? [{ title: "GPT-чат", href: "/chat" }]
           : []),
         ...(tenderHasCapability(role, "companies_manage")
           ? [{ title: "Компании", href: "/companies" }]

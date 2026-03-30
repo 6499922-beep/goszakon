@@ -10,9 +10,10 @@ export const dynamic = "force-dynamic";
 const ARCHIVE_FILE_PATTERN = /\.(zip|rar|7z)$/i;
 const MAX_HISTORY_MESSAGES = 8;
 const MAX_HISTORY_CHARS = 9000;
-const MAX_FILE_BLOCKS = 8;
-const MAX_FILE_BLOCK_CHARS = 6000;
-const MAX_FILE_CONTEXT_CHARS = 32000;
+const MAX_FILE_BLOCKS = 6;
+const MAX_FILE_BLOCK_CHARS = 4500;
+const MAX_FILE_CONTEXT_CHARS = 24000;
+const MAX_FILE_SUMMARY_CHARS = 1400;
 
 function getOpenAiOutputText(payload: any) {
   const outputs = Array.isArray(payload?.output) ? payload.output : [];
@@ -61,6 +62,57 @@ function getOpenAiWebSources(payload: any) {
   }
 
   return [...unique.values()].slice(0, 10);
+}
+
+async function requestOpenAiResponse({
+  apiKey,
+  model,
+  prompt,
+  useWebSearch,
+  reasoningEffort = "medium",
+}: {
+  apiKey: string;
+  model: string;
+  prompt: string;
+  useWebSearch?: boolean;
+  reasoningEffort?: "low" | "medium" | "high";
+}) {
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      reasoning: {
+        effort: reasoningEffort,
+      },
+      ...(useWebSearch
+        ? {
+            tools: [{ type: "web_search" }],
+          }
+        : {}),
+      input: [
+        {
+          role: "user",
+          content: [{ type: "input_text", text: prompt }],
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    if (response.status === 429 && /Request too large|tokens per min|TPM/i.test(errorText)) {
+      throw new Error(
+        "Запрос получился слишком большим для модели. Попробуйте повторить вопрос короче или прикрепить меньше файлов за один раз."
+      );
+    }
+    throw new Error(`OpenAI API error: ${response.status} ${errorText.slice(0, 500)}`);
+  }
+
+  return response.json();
 }
 
 function trimForPrompt(value: string | null | undefined, limit: number) {
@@ -270,6 +322,37 @@ export async function POST(request: Request) {
       MAX_FILE_CONTEXT_CHARS
     );
 
+    const fileAnalyses: string[] = [];
+    for (const block of limitedFileBlocks) {
+      const filePrompt = `
+Ты читаешь один прикреплённый файл внутри рабочего чата GOSZAKON.
+Сделай короткую, плотную выжимку по этому одному файлу.
+
+Что нужно вернуть:
+- что это за документ;
+- ключевые факты и цифры;
+- если есть: сумма, НМЦК, сроки, штрафы, требования, стороны договора;
+- что важно проверить вручную;
+- если текст слабый или шумный, честно скажи это.
+
+Ответ максимум 8 коротких строк, без воды.
+
+Файл:
+${block}
+`.trim();
+
+      const filePayload = await requestOpenAiResponse({
+        apiKey,
+        model,
+        prompt: filePrompt,
+        reasoningEffort: "low",
+      });
+      const fileAnswer =
+        trimForPrompt(getOpenAiOutputText(filePayload), MAX_FILE_SUMMARY_CHARS) ||
+        "Короткую выжимку по файлу собрать не удалось.";
+      fileAnalyses.push(fileAnswer);
+    }
+
     const prompt = `
 Ты — полноценный рабочий GPT-ассистент внутри внутреннего чата GOSZAKON.
 Отвечай по-русски, уверенно, по делу и как в обычном чате, а не как в жёстком анализе.
@@ -291,48 +374,20 @@ ${attachedFilesOnly ? "- отвечай только по прикреплённ
 История чата:
 ${historyText || "История пока пустая."}
 
-${limitedFileBlocks.length > 0 ? `Прикреплённые файлы и извлечённый текст:\n${limitedFileBlocks.join("\n\n---\n\n")}` : ""}
+${fileAnalyses.length > 0 ? `Короткие выжимки по прикреплённым файлам:\n${fileAnalyses.map((item, index) => `${index + 1}. ${item}`).join("\n\n")}` : ""}
+${fileAnalyses.length === 0 && limitedFileBlocks.length > 0 ? `Прикреплённые файлы и извлечённый текст:\n${limitedFileBlocks.join("\n\n---\n\n")}` : ""}
 
 Последний вопрос:
 ${message || "Проанализируй прикреплённые файлы и помоги сотруднику по ним."}
 `.trim();
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        reasoning: {
-          effort: "medium",
-        },
-        ...(useWebSearch
-          ? {
-              tools: [{ type: "web_search" }],
-            }
-          : {}),
-        input: [
-          {
-            role: "user",
-            content: [{ type: "input_text", text: prompt }],
-          },
-        ],
-      }),
+    const payload = await requestOpenAiResponse({
+      apiKey,
+      model,
+      prompt,
+      useWebSearch,
+      reasoningEffort: "medium",
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      if (response.status === 429 && /Request too large|tokens per min|TPM/i.test(errorText)) {
-        throw new Error(
-          "Запрос получился слишком большим для модели. Я уже сократил контекст, попробуйте повторить вопрос короче или прикрепить меньше файлов за один раз."
-        );
-      }
-      throw new Error(`OpenAI API error: ${response.status} ${errorText.slice(0, 500)}`);
-    }
-
-    const payload = await response.json();
     const answer =
       getOpenAiOutputText(payload) || "Не удалось получить содержательный ответ.";
     const webSources = useWebSearch ? getOpenAiWebSources(payload) : [];

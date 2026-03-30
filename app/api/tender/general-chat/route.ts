@@ -77,42 +77,57 @@ async function requestOpenAiResponse({
   useWebSearch?: boolean;
   reasoningEffort?: "low" | "medium" | "high";
 }) {
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      reasoning: {
-        effort: reasoningEffort,
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
       },
-      ...(useWebSearch
-        ? {
-            tools: [{ type: "web_search" }],
-          }
-        : {}),
-      input: [
-        {
-          role: "user",
-          content: [{ type: "input_text", text: prompt }],
+      body: JSON.stringify({
+        model,
+        reasoning: {
+          effort: reasoningEffort,
         },
-      ],
-    }),
-  });
+        ...(useWebSearch
+          ? {
+              tools: [{ type: "web_search" }],
+            }
+          : {}),
+        input: [
+          {
+            role: "user",
+            content: [{ type: "input_text", text: prompt }],
+          },
+        ],
+      }),
+    });
 
-  if (!response.ok) {
+    if (response.ok) {
+      return response.json();
+    }
+
     const errorText = await response.text();
     if (response.status === 429 && /Request too large|tokens per min|TPM/i.test(errorText)) {
       throw new Error(
         "Запрос получился слишком большим для модели. Попробуйте повторить вопрос короче или прикрепить меньше файлов за один раз."
       );
     }
-    throw new Error(`OpenAI API error: ${response.status} ${errorText.slice(0, 500)}`);
-  }
 
-  return response.json();
+    const isRetryable =
+      response.status === 429 ||
+      response.status === 500 ||
+      response.status === 502 ||
+      response.status === 503 ||
+      response.status === 504;
+
+    if (!isRetryable || attempt === 2) {
+      throw new Error(`OpenAI API error: ${response.status} ${errorText.slice(0, 500)}`);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+  }
+  throw new Error("Не удалось получить ответ GPT после повторных попыток.");
 }
 
 function trimForPrompt(value: string | null | undefined, limit: number) {
@@ -341,15 +356,20 @@ export async function POST(request: Request) {
 ${block}
 `.trim();
 
-      const filePayload = await requestOpenAiResponse({
-        apiKey,
-        model,
-        prompt: filePrompt,
-        reasoningEffort: "low",
-      });
-      const fileAnswer =
-        trimForPrompt(getOpenAiOutputText(filePayload), MAX_FILE_SUMMARY_CHARS) ||
-        "Короткую выжимку по файлу собрать не удалось.";
+      let fileAnswer = "";
+      try {
+        const filePayload = await requestOpenAiResponse({
+          apiKey,
+          model,
+          prompt: filePrompt,
+          reasoningEffort: "low",
+        });
+        fileAnswer =
+          trimForPrompt(getOpenAiOutputText(filePayload), MAX_FILE_SUMMARY_CHARS) ||
+          "Короткую выжимку по файлу собрать не удалось.";
+      } catch {
+        fileAnswer = `Файл удалось прочитать не полностью. Черновой контекст: ${trimForPrompt(block, 700)}`;
+      }
       fileAnalyses.push(fileAnswer);
     }
 

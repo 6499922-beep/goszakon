@@ -401,37 +401,39 @@ export function TenderGeneralChat({
             }}
           />
 
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#0d5bd7]/15 bg-[#f7fbff] px-4 py-3">
-            <div>
-              <div className="text-sm font-semibold text-[#081a4b]">Прикрепить документы</div>
-              <div className="text-xs text-slate-500">
-                Нажми `Добавить файлы` или просто перетащи документы в поле ниже.
+          <div className="mb-4 rounded-[1.75rem] border border-[#0d5bd7]/20 bg-[linear-gradient(135deg,#0d5bd7_0%,#0b4fc0_100%)] px-5 py-4 text-white shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="text-lg font-bold tracking-tight">Прикрепить документы</div>
+                <div className="mt-1 text-sm text-white/85">
+                  Нажми на кнопку или просто перетащи файлы в большую зону ниже.
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isPending}
-                className="rounded-full bg-[#0d5bd7] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0b4fc0] disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                Добавить файлы
-              </button>
-              {selectedFiles.length > 0 ? (
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedFiles([]);
-                    setActivePreviewIndex(0);
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = "";
-                    }
-                  }}
-                  className="rounded-full border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isPending}
+                  className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-[#0d5bd7] transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-white/60"
                 >
-                  Очистить все
+                  Добавить файлы
                 </button>
-              ) : null}
+                {selectedFiles.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedFiles([]);
+                      setActivePreviewIndex(0);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}
+                    className="rounded-full border border-white/30 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+                  >
+                    Очистить все
+                  </button>
+                ) : null}
+              </div>
             </div>
           </div>
 
@@ -445,8 +447,48 @@ export function TenderGeneralChat({
               const files = Array.from(event.dataTransfer.files ?? []);
               addFiles(files);
             }}
-            className="rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50/70 p-3 transition hover:border-[#0d5bd7]/40 hover:bg-white"
+            className="rounded-[1.75rem] border-2 border-dashed border-[#0d5bd7]/25 bg-[#f7fbff] p-4 transition hover:border-[#0d5bd7]/55 hover:bg-white"
           >
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-[#0d5bd7]/10 bg-white px-4 py-3">
+              <div>
+                <div className="text-sm font-semibold text-[#081a4b]">Зона загрузки файлов</div>
+                <div className="text-xs text-slate-500">
+                  PDF, DOC, DOCX, XLS, XLSX, TXT. Архивы запрещены.
+                </div>
+              </div>
+              <div className="rounded-full bg-[#0d5bd7]/8 px-3 py-1.5 text-xs font-semibold text-[#0d5bd7]">
+                Перетащите файлы сюда
+              </div>
+            </div>
+
+            {selectedFiles.length > 0 ? (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {sortedSelectedFiles.map(({ file, index }) => (
+                  <button
+                    type="button"
+                    key={`selected-top-${file.name}-${index}`}
+                    onClick={() => setActivePreviewIndex(index)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      index === activePreviewIndex
+                        ? "border-[#0d5bd7] bg-white text-[#0d5bd7]"
+                        : "border-white bg-white/70 text-slate-700 hover:border-[#0d5bd7]/30"
+                    }`}
+                  >
+                    {file.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isPending}
+              className="sr-only"
+            >
+              Добавить файлы
+            </button>
+
             <textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}

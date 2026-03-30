@@ -108,11 +108,35 @@ export default async function TenderGeneralChatPage({
     redirect("/tender/chat");
   }
 
+  const initialAttachments = await prisma.tenderChatAttachment.findMany({
+    where: { threadId: thread.id },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    select: {
+      id: true,
+      title: true,
+      fileName: true,
+      documentKind: true,
+      extractionNote: true,
+      storagePath: true,
+      createdAt: true,
+    },
+  });
+
   return (
     <TenderGeneralChat
       threadId={thread.id}
       currentThreadId={thread.id}
       threadTitle={thread.title}
+      initialAttachments={initialAttachments.map((item) => ({
+        id: item.id,
+        title: item.title,
+        fileName: item.fileName,
+        documentKind: item.documentKind || "Документ",
+        extractionNote: item.extractionNote || "Файл сохранён на сервере",
+        storagePath: item.storagePath,
+        createdAt: item.createdAt.toISOString(),
+      }))}
       threadOptions={availableThreads.map((item) => ({
         id: item.id,
         title: item.title,

@@ -15,6 +15,7 @@ const MAX_HISTORY_CHARS = 9000;
 const MAX_FILE_BLOCKS = 4;
 const MAX_FILE_BLOCK_CHARS = 3200;
 const MAX_FILE_CONTEXT_CHARS = 12000;
+const MAX_ATTACHMENT_SUMMARY_CHARS = 1400;
 
 function getOpenAiOutputText(payload: any) {
   const outputs = Array.isArray(payload?.output) ? payload.output : [];
@@ -146,6 +147,116 @@ async function requestOpenAiResponse({
     await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
   }
   throw new Error("Не удалось получить ответ GPT после повторных попыток.");
+}
+
+async function buildAttachmentSummary({
+  apiKey,
+  model,
+  title,
+  documentKind,
+  extractionNote,
+  extractedText,
+}: {
+  apiKey: string;
+  model: string;
+  title: string;
+  documentKind: string | null;
+  extractionNote: string | null;
+  extractedText: string | null;
+}) {
+  const text = extractedText?.trim();
+
+  if (!text) {
+    return extractionNote?.trim() || "Текст автоматически не извлечён.";
+  }
+
+  const prompt = `
+Ты готовишь серверную память по одному вложению рабочего чата GOSZAKON.
+Нужно сделать очень короткую, но полезную выжимку по файлу, чтобы потом по ней можно было строить ответы без повторного чтения всего документа.
+
+Формат:
+- 1 строка: что это за документ
+- 2-5 строк: главные факты, цифры, условия или риски
+- без воды
+- без вводных фраз
+- по-русски
+
+Название файла: ${title}
+Тип документа: ${documentKind || "Документ"}
+Статус чтения: ${extractionNote || "Текст извлечён"}
+
+Текст файла:
+${trimForPrompt(text, 12000)}
+  `.trim();
+
+  try {
+    const payload = await requestOpenAiResponse({
+      apiKey,
+      model,
+      prompt,
+      useWebSearch: false,
+      reasoningEffort: "low",
+      timeoutMs: 18000,
+    });
+    return getOpenAiOutputText(payload) || trimForPrompt(text, MAX_ATTACHMENT_SUMMARY_CHARS);
+  } catch {
+    return trimForPrompt(text, MAX_ATTACHMENT_SUMMARY_CHARS);
+  }
+}
+
+async function ensureAttachmentSummaries({
+  prisma,
+  apiKey,
+  model,
+  attachments,
+}: {
+  prisma: ReturnType<typeof getPrisma>;
+  apiKey: string;
+  model: string;
+  attachments: Array<{
+    id: number;
+    title: string;
+    documentKind: string | null;
+    extractionNote: string | null;
+    extractedText: string | null;
+    summaryText: string | null;
+  }>;
+}) {
+  const updates: Array<{ id: number; summaryText: string }> = [];
+
+  for (const attachment of attachments) {
+    if (attachment.summaryText?.trim()) continue;
+
+    const summaryText = await buildAttachmentSummary({
+      apiKey,
+      model,
+      title: attachment.title,
+      documentKind: attachment.documentKind,
+      extractionNote: attachment.extractionNote,
+      extractedText: attachment.extractedText,
+    });
+
+    updates.push({ id: attachment.id, summaryText });
+  }
+
+  if (updates.length > 0) {
+    await Promise.all(
+      updates.map((item) =>
+        prisma.tenderChatAttachment.update({
+          where: { id: item.id },
+          data: { summaryText: item.summaryText },
+        })
+      )
+    );
+  }
+
+  return attachments.map((attachment) => {
+    const updated = updates.find((item) => item.id === attachment.id);
+    return {
+      ...attachment,
+      summaryText: updated?.summaryText || attachment.summaryText,
+    };
+  });
 }
 
 function trimForPrompt(value: string | null | undefined, limit: number) {
@@ -283,6 +394,12 @@ export async function POST(request: Request) {
     }
 
     const userName = currentUser.name?.trim() || currentUser.email?.trim() || "Сотрудник";
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error("OPENAI_API_KEY is not configured");
+    }
+
+    const model = process.env.OPENAI_CHAT_MODEL || process.env.OPENAI_MODEL || "gpt-5";
     const extractedFileBlocks: string[] = [];
     const fileSummary: string[] = [];
     const fileReadStates: string[] = [];
@@ -411,6 +528,37 @@ export async function POST(request: Request) {
         })),
       });
     }
+    const createdAttachments = attachmentRows.length
+      ? await prisma.tenderChatAttachment.findMany({
+          where: { messageId: userMessage.id },
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            title: true,
+            fileName: true,
+            documentKind: true,
+            extractionNote: true,
+            storagePath: true,
+            extractedText: true,
+            summaryText: true,
+            createdAt: true,
+          },
+        })
+      : [];
+
+    const preparedCreatedAttachments = await ensureAttachmentSummaries({
+      prisma,
+      apiKey,
+      model,
+      attachments: createdAttachments.map((item) => ({
+        id: item.id,
+        title: item.title,
+        documentKind: item.documentKind,
+        extractionNote: item.extractionNote,
+        extractedText: item.extractedText,
+        summaryText: item.summaryText,
+      })),
+    });
 
     const userMessageBody =
       fileSummary.length > 0
@@ -442,15 +590,15 @@ export async function POST(request: Request) {
         documentKind: true,
         extractionNote: true,
         extractedText: true,
+        summaryText: true,
       },
     });
-
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error("OPENAI_API_KEY is not configured");
-    }
-
-    const model = process.env.OPENAI_CHAT_MODEL || process.env.OPENAI_MODEL || "gpt-5";
+    const preparedRecentAttachments = await ensureAttachmentSummaries({
+      prisma,
+      apiKey,
+      model,
+      attachments: recentAttachments,
+    });
     const historyItems = recentMessages
       .slice(-MAX_HISTORY_MESSAGES)
       .map(
@@ -459,8 +607,21 @@ export async function POST(request: Request) {
       );
     const historyText = squeezeItemsToBudget(historyItems, MAX_HISTORY_CHARS).join("\n");
 
-    const limitedFileBlocks = squeezeItemsToBudget(
-      extractedFileBlocks
+    const attachmentMemoryBlocks = squeezeItemsToBudget(
+      [
+        ...preparedCreatedAttachments.map((item) =>
+          [
+            `Файл: ${item.title}`,
+            `Короткая память: ${trimForPrompt(item.summaryText || item.extractedText || item.extractionNote || "", MAX_ATTACHMENT_SUMMARY_CHARS)}`,
+          ].join("\n")
+        ),
+        ...preparedRecentAttachments.map((item) =>
+          [
+            `Файл: ${item.title}`,
+            `Короткая память: ${trimForPrompt(item.summaryText || item.extractedText || item.extractionNote || "", MAX_ATTACHMENT_SUMMARY_CHARS)}`,
+          ].join("\n")
+        ),
+      ]
         .slice(0, MAX_FILE_BLOCKS)
         .map((block) => trimForPrompt(block, MAX_FILE_BLOCK_CHARS)),
       MAX_FILE_CONTEXT_CHARS
@@ -485,16 +646,20 @@ ${attachedFilesOnly ? "- отвечай только по прикреплённ
 История чата:
 ${historyText || "История пока пустая."}
 
-${recentAttachments.length > 0 ? `Память сервера по последним файлам в этой ветке:\n${recentAttachments
+${preparedRecentAttachments.length > 0 ? `Память сервера по последним файлам в этой ветке:\n${preparedRecentAttachments
   .map(
     (item, index) =>
       `${index + 1}. ${item.title} — ${item.documentKind || "Документ"} — ${item.extractionNote || "без статуса"}${
-        item.extractedText ? `\n${trimForPrompt(item.extractedText, 900)}` : ""
+        item.summaryText
+          ? `\n${trimForPrompt(item.summaryText, MAX_ATTACHMENT_SUMMARY_CHARS)}`
+          : item.extractedText
+            ? `\n${trimForPrompt(item.extractedText, 900)}`
+            : ""
       }`
   )
   .join("\n\n")}` : ""}
 ${fileReadStates.length > 0 ? `Прикреплённые файлы:\n${fileReadStates.map((item, index) => `${index + 1}. ${item}`).join("\n")}` : ""}
-${limitedFileBlocks.length > 0 ? `Извлечённый текст по файлам:\n${limitedFileBlocks.join("\n\n---\n\n")}` : ""}
+${attachmentMemoryBlocks.length > 0 ? `Короткая память по файлам:\n${attachmentMemoryBlocks.join("\n\n---\n\n")}` : ""}
 
 Последний вопрос:
 ${message || "Проанализируй прикреплённые файлы и помоги сотруднику по ним."}
@@ -523,7 +688,7 @@ ${historyText || "История пока пустая."}
 ${fileReadStates.length > 0 ? fileReadStates.map((item, index) => `${index + 1}. ${item}`).join("\n") : "Файлы не приложены."}
 
 Короткий контекст:
-${limitedFileBlocks.length > 0 ? limitedFileBlocks.map((item, index) => `${index + 1}. ${trimForPrompt(item, 900)}`).join("\n\n") : "Извлечённого текста нет."}
+${attachmentMemoryBlocks.length > 0 ? attachmentMemoryBlocks.map((item, index) => `${index + 1}. ${trimForPrompt(item, 900)}`).join("\n\n") : "Извлечённого текста нет."}
 
 Вопрос:
 ${message || "Проанализируй прикреплённые файлы и помоги сотруднику по ним."}
@@ -600,6 +765,15 @@ ${message || "Проанализируй прикреплённые файлы �
         body: assistantMessage.body,
         createdAt: assistantMessage.createdAt.toISOString(),
       },
+      attachments: createdAttachments.map((item) => ({
+        id: item.id,
+        title: item.title,
+        fileName: item.fileName,
+        documentKind: item.documentKind || "Документ",
+        extractionNote: item.extractionNote || "Файл сохранён на сервере",
+        storagePath: item.storagePath,
+        createdAt: item.createdAt.toISOString(),
+      })),
     });
   } catch (error) {
     console.error("[general-chat] failed", error);

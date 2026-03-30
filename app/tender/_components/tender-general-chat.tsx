@@ -16,6 +16,15 @@ type TenderGeneralChatProps = {
   currentThreadId: number;
   threadTitle: string;
   initialMessages: GeneralChatMessage[];
+  initialAttachments: Array<{
+    id: number;
+    title: string;
+    fileName: string;
+    documentKind: string;
+    extractionNote: string;
+    storagePath?: string | null;
+    createdAt: string;
+  }>;
   userLabel: string;
   threadOptions: Array<{
     id: number;
@@ -210,10 +219,12 @@ export function TenderGeneralChat({
   currentThreadId,
   threadTitle,
   initialMessages,
+  initialAttachments,
   userLabel,
   threadOptions,
 }: TenderGeneralChatProps) {
   const [messages, setMessages] = useState(initialMessages);
+  const [storedAttachments, setStoredAttachments] = useState(initialAttachments);
   const [draft, setDraft] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
@@ -470,6 +481,15 @@ export function TenderGeneralChat({
             error?: string;
             userMessage?: GeneralChatMessage;
             assistantMessage?: GeneralChatMessage;
+            attachments?: Array<{
+              id: number;
+              title: string;
+              fileName: string;
+              documentKind: string;
+              extractionNote: string;
+              storagePath?: string | null;
+              createdAt: string;
+            }>;
           }
         | null;
 
@@ -485,6 +505,17 @@ export function TenderGeneralChat({
         payload.userMessage as GeneralChatMessage,
         payload.assistantMessage as GeneralChatMessage,
       ]);
+      if (payload.attachments?.length) {
+        setStoredAttachments((current) => {
+          const next = [...payload.attachments!, ...current];
+          const seen = new Set<number>();
+          return next.filter((item) => {
+            if (seen.has(item.id)) return false;
+            seen.add(item.id);
+            return true;
+          });
+        });
+      }
     } catch (submitError) {
       setMessages((current) =>
         current.filter(
@@ -858,6 +889,31 @@ export function TenderGeneralChat({
         </div>
 
         <div className="mt-5 rounded-[1.5rem] bg-[#fafbfc] px-4 py-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Файлы ветки
+          </div>
+          {storedAttachments.length > 0 ? (
+            <div className="mt-3 space-y-2">
+              {storedAttachments.slice(0, 8).map((item) => (
+                <a
+                  key={item.id}
+                  href={`/tender/chat/attachments/${item.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block rounded-2xl bg-white px-3 py-3 transition hover:ring-1 hover:ring-[#0d5bd7]"
+                >
+                  <div className="truncate text-sm font-medium text-slate-700">{item.title}</div>
+                  <div className="mt-1 text-xs text-slate-500">{item.documentKind}</div>
+                  <div className="mt-1 text-xs text-[#0d5bd7]">Открыть файл</div>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-3 text-sm leading-6 text-slate-500">Пока нет сохранённых файлов.</div>
+          )}
+        </div>
+
+        <div className="mt-4 rounded-[1.5rem] bg-[#fafbfc] px-4 py-4">
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
             Файлы к отправке
           </div>

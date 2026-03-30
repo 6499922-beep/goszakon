@@ -503,144 +503,141 @@ export function TenderGeneralChat({
   }
 
   return (
-    <section className="grid gap-6 xl:h-[calc(100vh-8.5rem)] xl:grid-cols-[260px_minmax(0,1fr)_320px] xl:overflow-hidden">
-      <aside className="hidden xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:rounded-[2rem] xl:border xl:border-slate-200 xl:bg-[#fbfcff] xl:p-4 xl:shadow-sm">
-        <div className="flex items-center justify-between px-2 pb-4">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-              GOSZAKON
-            </div>
-            <div className="mt-1 text-lg font-semibold text-[#081a4b]">GPT-чат</div>
+    <section className="grid gap-4 xl:h-[calc(100vh-7.5rem)] xl:grid-cols-[280px_minmax(0,1fr)_320px] xl:overflow-hidden">
+      <aside className="hidden xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:rounded-[2rem] xl:border xl:border-slate-200 xl:bg-[#f7f7f8]">
+        <div className="border-b border-slate-200 px-4 py-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+            GOSZAKON
           </div>
-          <div className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500">
-            Pro
-          </div>
+          <div className="mt-2 text-xl font-semibold text-[#111827]">GPT-чат</div>
+          <button
+            type="button"
+            onClick={() => window.location.assign("/tender/chat")}
+            className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+          >
+            Новый чат
+          </button>
         </div>
 
-        <a
-          href="/tender/chat"
-          className="mb-4 rounded-2xl border border-[#0d5bd7]/20 bg-white px-4 py-3 text-sm font-semibold text-[#081a4b] transition hover:border-[#0d5bd7]/45 hover:bg-[#f7fbff]"
-        >
-          Новый чат
-        </a>
-
-        <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
-          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
             Текущий чат
           </div>
-          <div className="mt-2 text-sm font-semibold text-[#081a4b]">{threadTitle}</div>
-          <div className="mt-1 text-xs leading-6 text-slate-500">
-            {sortedMessages.length > 0
-              ? `${sortedMessages.length} сообщений в этой ветке`
-              : "Новая ветка для работы с документами и вопросами"}
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
+            <div className="line-clamp-2 text-sm font-semibold text-[#111827]">{threadTitle}</div>
+            <div className="mt-2 text-xs leading-5 text-slate-500">
+              {sortedMessages.length > 0
+                ? `${sortedMessages.length} сообщений в этой ветке`
+                : "Новая ветка без сообщений"}
+            </div>
           </div>
-          <div className="mt-3 rounded-xl bg-[#f7fbff] px-3 py-2 text-xs leading-6 text-slate-600">
-            Работаешь как в обычном чате: задаёшь вопрос, прикрепляешь файлы, получаешь ответ здесь же.
-          </div>
-        </div>
 
-        <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
-          <div className="px-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+          <div className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
             Последние темы
           </div>
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 space-y-1">
             {recentUserTopics.length > 0 ? (
               recentUserTopics.map((topic, index) => (
                 <button
                   key={`${topic}-${index}`}
                   type="button"
                   onClick={() => askQuestion(topic)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-left text-sm leading-6 text-slate-700 transition hover:border-[#0d5bd7]/30 hover:bg-[#f7fbff]"
+                  className="w-full rounded-2xl px-3 py-3 text-left text-sm text-slate-700 transition hover:bg-white"
                 >
-                  {topic}
+                  <div className="line-clamp-2">{topic}</div>
                 </button>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-4 text-sm leading-6 text-slate-500">
-                Здесь будут появляться последние темы из твоих сообщений.
+              <div className="rounded-2xl px-3 py-3 text-sm text-slate-500">
+                Темы появятся после первых сообщений.
               </div>
             )}
           </div>
+        </div>
 
-          <div className="mt-5 px-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+        <div className="border-t border-slate-200 px-4 py-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
             Аккаунт
           </div>
-          <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm leading-6 text-slate-600">
-            <div className="font-semibold text-[#081a4b]">{userLabel}</div>
-            <div className="mt-1 text-xs text-slate-500">Личная история чата хранится на вашем сервере.</div>
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
+            <div className="text-sm font-semibold text-[#111827]">{userLabel}</div>
+            <div className="mt-1 text-xs leading-5 text-slate-500">
+              Личная история чата хранится на вашем сервере.
+            </div>
           </div>
         </div>
       </aside>
 
-      <div className="flex min-h-[84vh] flex-col rounded-[2rem] border border-slate-200 bg-white shadow-sm xl:min-h-0 xl:h-full xl:overflow-hidden">
-        <div className="border-b border-slate-200 px-6 py-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-            GPT-чат
+      <div className="flex min-h-[84vh] flex-col rounded-[2rem] border border-slate-200 bg-white xl:min-h-0 xl:h-full xl:overflow-hidden">
+        <div className="border-b border-slate-100 px-8 py-5">
+          <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-lg font-semibold text-[#111827]">{threadTitle}</div>
+              <div className="mt-1 text-sm text-slate-500">
+                Работаю как обычный чат: можно писать вопрос, прикладывать документы и продолжать диалог.
+              </div>
+            </div>
           </div>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
-            {threadTitle}
-          </h1>
-          <p className="mt-2 text-sm leading-7 text-slate-500">
-            Это отдельная рабочая страница общения со мной. Сюда можно свободно
-            прикреплять документы и работать с ними как в полноценном чате.
-          </p>
         </div>
 
-        <div
-          ref={viewportRef}
-          className="flex-1 space-y-4 overflow-y-auto px-6 py-6 xl:min-h-0"
-        >
+        <div ref={viewportRef} className="flex-1 overflow-y-auto px-8 py-8 xl:min-h-0">
           {sortedMessages.length > 0 ? (
-            sortedMessages.map((message) => {
-              const parsed = parseStoredSources(message.body);
-              const isAssistant = message.role === "assistant";
-              return (
-                <article
-                  key={message.id}
-                  className={`max-w-[85%] rounded-3xl px-5 py-4 shadow-sm ${
-                    isAssistant
-                      ? "border border-slate-200 bg-slate-50 text-slate-800"
-                      : "ml-auto bg-[#0d5bd7] text-white"
-                  }`}
-                >
-                  <div
-                    className={`text-xs font-semibold uppercase tracking-[0.14em] ${
-                      isAssistant ? "text-slate-400" : "text-white/70"
-                    }`}
+            <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
+              {sortedMessages.map((message) => {
+                const parsed = parseStoredSources(message.body);
+                const isAssistant = message.role === "assistant";
+                return (
+                  <article
+                    key={message.id}
+                    className={isAssistant ? "w-full" : "ml-auto w-full max-w-[78%]"}
                   >
-                    {message.authorName}
-                  </div>
-                  <div className="mt-3">
                     {isAssistant ? (
-                      renderAssistantMarkdown(parsed.text)
-                    ) : (
-                      <div className="whitespace-pre-wrap text-sm leading-7">{parsed.text}</div>
-                    )}
-                  </div>
-                  {parsed.sources.length > 0 ? (
-                    <div className="mt-4 space-y-2 rounded-2xl border border-slate-200 bg-white/70 p-3 text-sm text-slate-700">
-                      <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                        Источники
+                      <div className="rounded-[2rem] bg-white px-2 py-1 text-slate-800">
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                          {message.authorName}
+                        </div>
+                        <div className="mt-3">{renderAssistantMarkdown(parsed.text)}</div>
+                        {parsed.sources.length > 0 ? (
+                          <div className="mt-5 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                              Источники
+                            </div>
+                            {parsed.sources.map((source) => (
+                              <a
+                                key={source.url}
+                                href={source.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block text-[#0d5bd7] underline-offset-2 hover:underline"
+                              >
+                                {source.title}
+                              </a>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
-                      {parsed.sources.map((source) => (
-                        <a
-                          key={source.url}
-                          href={source.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block text-[#0d5bd7] underline-offset-2 hover:underline"
-                        >
-                          {source.title}
-                        </a>
-                      ))}
-                    </div>
-                  ) : null}
-                </article>
-              );
-            })
+                    ) : (
+                      <div className="rounded-[1.75rem] bg-[#111827] px-5 py-4 text-white shadow-sm">
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-white/60">
+                          {message.authorName}
+                        </div>
+                        <div className="mt-3 whitespace-pre-wrap text-sm leading-7">{parsed.text}</div>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
           ) : (
-            <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center text-slate-500">
-              История пока пустая. Можно сразу начать работать со мной как в обычном чате.
+            <div className="flex h-full items-center justify-center">
+              <div className="max-w-2xl text-center">
+                <div className="text-4xl font-medium tracking-tight text-[#111827]">
+                  Готов, когда ты готов.
+                </div>
+                <div className="mt-4 text-base leading-8 text-slate-500">
+                  Задай вопрос, прикрепи документы кнопкой снизу слева или просто перетащи их в поле ввода.
+                </div>
+              </div>
             </div>
           )}
           <div ref={endRef} />
@@ -648,7 +645,7 @@ export function TenderGeneralChat({
 
         <form
           onSubmit={handleSubmit}
-          className="border-t border-slate-200 bg-white px-6 py-5 xl:shrink-0"
+          className="border-t border-slate-100 bg-white px-6 py-5 xl:shrink-0"
           ref={composerRef}
         >
           <input
@@ -664,41 +661,33 @@ export function TenderGeneralChat({
             }}
           />
 
-          <div className="mb-4 rounded-[1.75rem] border border-[#0d5bd7]/20 bg-[linear-gradient(135deg,#0d5bd7_0%,#0b4fc0_100%)] px-5 py-4 text-white shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <div className="text-lg font-bold tracking-tight">Прикрепить документы</div>
-                <div className="mt-1 text-sm text-white/85">
-                  Нажми на кнопку или просто перетащи файлы в большую зону ниже.
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isSubmitting}
-                  className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-[#0d5bd7] transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-white/60"
-                >
-                  Добавить файлы
-                </button>
-                {selectedFiles.length > 0 ? (
+          {selectedFiles.length > 0 ? (
+            <div className="mx-auto mb-3 flex w-full max-w-4xl flex-wrap gap-2">
+              {sortedSelectedFiles.map(({ file, index }) => {
+                const key = `${file.name}:${file.size}:${file.lastModified}`;
+                const preview = previewCache[key];
+                const statusLabel =
+                  preview?.statusLabel || (isPreviewLoading ? "Читаю файл..." : "Ожидает чтения");
+
+                return (
                   <button
                     type="button"
-                    onClick={() => {
-                      setSelectedFiles([]);
-                      setActivePreviewIndex(0);
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                      }
-                    }}
-                    className="rounded-full border border-white/30 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+                    key={`${file.name}-${index}`}
+                    onClick={() => removeFileAtIndex(index)}
+                    className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
                   >
-                    Очистить все
+                    {file.name} · {statusLabel} ×
                   </button>
-                ) : null}
-              </div>
+                );
+              })}
             </div>
-          </div>
+          ) : null}
+
+          {error ? (
+            <div className="mx-auto mt-3 w-full max-w-4xl rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          ) : null}
 
           <div
             onDragOver={(event) => {
@@ -709,123 +698,66 @@ export function TenderGeneralChat({
               event.preventDefault();
               const files = Array.from(event.dataTransfer.files ?? []);
               addFiles(files);
-              requestAnimationFrame(() => {
-                composerRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-              });
             }}
-            className="rounded-[1.75rem] border-2 border-dashed border-[#0d5bd7]/25 bg-[#f7fbff] p-4 transition hover:border-[#0d5bd7]/55 hover:bg-white"
+            className="mx-auto w-full max-w-4xl rounded-[2rem] border border-slate-200 bg-white px-4 py-4 shadow-sm"
           >
-            <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-[#0d5bd7]/10 bg-white px-4 py-3">
-              <div>
-                <div className="text-sm font-semibold text-[#081a4b]">Зона загрузки файлов</div>
-                <div className="text-xs text-slate-500">
-                  PDF, DOC, DOCX, XLS, XLSX, TXT. Архивы запрещены.
-                </div>
-              </div>
-              <div className="rounded-full bg-[#0d5bd7]/8 px-3 py-1.5 text-xs font-semibold text-[#0d5bd7]">
-                Перетащите файлы сюда
-              </div>
+            <div className="flex items-end gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSubmitting}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-2xl text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                aria-label="Добавить файлы"
+              >
+                +
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSubmitting}
+                className="sr-only"
+              >
+                Добавить файлы
+              </button>
+
+              <textarea
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    const form = event.currentTarget.form;
+                    if (form && (draft.trim() || selectedFiles.length > 0) && !isSubmitting) {
+                      form.requestSubmit();
+                    }
+                  }
+                }}
+                rows={3}
+                placeholder="Спроси ChatGPT"
+                className="min-h-[3rem] flex-1 resize-none border-0 bg-transparent px-1 py-2 text-[15px] leading-7 text-slate-800 outline-none"
+              />
+
+              <button
+                type="submit"
+                disabled={isSubmitting || (!draft.trim() && selectedFiles.length === 0)}
+                className="rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSubmitting ? "Думаю..." : "Отправить"}
+              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isSubmitting}
-              className="mb-4 flex w-full items-center justify-center gap-4 rounded-[1.5rem] border border-[#0d5bd7]/20 bg-white px-6 py-5 text-left transition hover:border-[#0d5bd7]/45 hover:bg-[#fafdff] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0d5bd7] text-3xl text-white shadow-sm">
-                +
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
+              <div className="text-xs text-slate-400">
+                PDF, DOC, DOCX, XLS, XLSX, TXT. Нажми `+` или перетащи файлы прямо сюда.
               </div>
-              <div className="min-w-0">
-                <div className="text-base font-bold text-[#081a4b]">
-                  Нажмите, чтобы выбрать файлы
-                </div>
-                <div className="mt-1 text-sm text-slate-500">
-                  Или перетащите PDF, DOC, DOCX, XLS, XLSX, TXT прямо в эту область
-                </div>
+              <div className="text-xs text-slate-400">
+                Enter — отправить, Shift + Enter — новая строка
               </div>
-            </button>
-
-            {selectedFiles.length > 0 ? (
-              <div className="mb-3 flex flex-wrap gap-2">
-                {sortedSelectedFiles.map(({ file, index }) => (
-                  <button
-                    type="button"
-                    key={`selected-top-${file.name}-${index}`}
-                    onClick={() => setActivePreviewIndex(index)}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                      index === activePreviewIndex
-                        ? "border-[#0d5bd7] bg-white text-[#0d5bd7]"
-                        : "border-white bg-white/70 text-slate-700 hover:border-[#0d5bd7]/30"
-                    }`}
-                  >
-                    {file.name}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isSubmitting}
-              className="sr-only"
-            >
-              Добавить файлы
-            </button>
-
-            <textarea
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  const form = event.currentTarget.form;
-                  if (form && (draft.trim() || selectedFiles.length > 0) && !isSubmitting) {
-                    form.requestSubmit();
-                  }
-                }
-              }}
-              rows={4}
-              placeholder="Напиши вопрос или просто прикрепи документы. Сюда же можно перетащить файлы мышкой."
-              className="w-full rounded-3xl border border-slate-300 bg-white px-4 py-4 text-sm leading-7 text-slate-800 outline-none transition focus:border-[#0d5bd7]"
-            />
+            </div>
           </div>
 
-          {selectedFiles.length > 0 ? (
-            <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                Прикреплённые файлы
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {sortedSelectedFiles.map(({ file, index }) => {
-                  const key = `${file.name}:${file.size}:${file.lastModified}`;
-                  const preview = previewCache[key];
-                  const statusLabel =
-                    preview?.statusLabel || (isPreviewLoading ? "Читаю файл..." : "Ожидает чтения");
-
-                  return (
-                  <button
-                    type="button"
-                    key={`${file.name}-${index}`}
-                    onClick={() => removeFileAtIndex(index)}
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
-                  >
-                    {file.name} · {statusLabel} ×
-                  </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-
-          {error ? (
-            <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          ) : null}
-
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mx-auto mt-4 flex w-full max-w-4xl flex-wrap gap-2">
             {QUICK_PROMPTS.map((prompt) => (
               <button
                 key={prompt}
@@ -849,21 +781,6 @@ export function TenderGeneralChat({
                 Собрать выжимку по файлам
               </button>
             ) : null}
-          </div>
-
-          <div className="mt-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="text-xs text-slate-400">
-                Enter — отправить, Shift + Enter — новая строка
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={isSubmitting || (!draft.trim() && selectedFiles.length === 0)}
-              className="rounded-2xl bg-[#081a4b] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0d2568] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isSubmitting ? "Анализирую..." : selectedFiles.length > 0 ? "Отправить с файлами" : "Спросить"}
-            </button>
           </div>
         </form>
       </div>

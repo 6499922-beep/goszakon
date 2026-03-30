@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type GeneralChatMessage = {
   id: number;
@@ -85,10 +85,11 @@ export function TenderGeneralChat({
   const [error, setError] = useState<string | null>(null);
   const [procurementOnlyMode, setProcurementOnlyMode] = useState(false);
   const [attachedFilesOnlyMode, setAttachedFilesOnlyMode] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const composerRef = useRef<HTMLFormElement | null>(null);
   const storageKey = `general-chat-mode:${threadId}`;
   const activePreviewFile = selectedFiles[activePreviewIndex] ?? null;
   const activePreviewKey = activePreviewFile
@@ -140,7 +141,7 @@ export function TenderGeneralChat({
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [sortedMessages, isPending]);
+  }, [sortedMessages, isSubmitting]);
 
   useEffect(() => {
     return () => {
@@ -207,7 +208,7 @@ export function TenderGeneralChat({
   }
 
   function askQuestion(question: string) {
-    if (isPending) return;
+    if (isSubmitting) return;
     setDraft(question);
   }
 
@@ -225,7 +226,7 @@ export function TenderGeneralChat({
     const hasFiles = selectedFiles.length > 0;
     const filesToUpload = [...selectedFiles];
 
-    if ((!question && !hasFiles) || isPending) return;
+    if ((!question && !hasFiles) || isSubmitting) return;
 
     setError(null);
     const optimisticUserMessage: GeneralChatMessage = {
@@ -236,83 +237,107 @@ export function TenderGeneralChat({
         question || (hasFiles ? "Проанализируй прикреплённые файлы и помоги по ним." : ""),
       createdAt: new Date().toISOString(),
     };
+    const optimisticAssistantMessage: GeneralChatMessage = {
+      id: optimisticUserMessage.id - 1,
+      role: "assistant",
+      authorName: "GPT",
+      body: hasFiles
+        ? "Получил файлы. Сейчас читаю их, разбираю структуру и готовлю ответ..."
+        : "Думаю над ответом...",
+      createdAt: new Date(Date.now() + 1).toISOString(),
+    };
 
     setDraft("");
     setSelectedFiles([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-    setMessages((current) => [...current, optimisticUserMessage]);
+    setMessages((current) => [...current, optimisticUserMessage, optimisticAssistantMessage]);
+    setIsSubmitting(true);
 
-    startTransition(async () => {
-      try {
-        if (filesToUpload.some((file) => ARCHIVE_FILE_PATTERN.test(file.name))) {
-          throw new Error(
-            "Архивы ZIP/RAR/7Z прикреплять нельзя. Загружайте только сами документы: PDF, DOC, DOCX, XLS, XLSX, TXT."
-          );
-        }
+    requestAnimationFrame(() => {
+      composerRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
 
-        const response =
-          filesToUpload.length > 0
-            ? await fetch("/api/tender/general-chat", {
-                method: "POST",
-                body: (() => {
-                  const formData = new FormData();
-                  formData.set("threadId", String(threadId));
-                  formData.set("message", question);
-                  formData.set("useWebSearch", String(!procurementOnlyMode));
-                  formData.set("attachedFilesOnly", String(attachedFilesOnlyMode));
-                  filesToUpload.forEach((file) => formData.append("files", file));
-                  return formData;
-                })(),
-              })
-            : await fetch("/api/tender/general-chat", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  threadId,
-                  message: question,
-                  useWebSearch: !procurementOnlyMode,
-                  attachedFilesOnly: attachedFilesOnlyMode,
-                }),
-              });
-
-        const payload = (await response.json().catch(() => null)) as
-          | {
-              ok?: boolean;
-              error?: string;
-              userMessage?: GeneralChatMessage;
-              assistantMessage?: GeneralChatMessage;
-            }
-          | null;
-
-        if (!response.ok || !payload?.ok || !payload.userMessage || !payload.assistantMessage) {
-          throw new Error(payload?.error || "Не удалось получить ответ GPT.");
-        }
-
-        setMessages((current) => [
-          ...current.filter((item) => item.id !== optimisticUserMessage.id),
-          payload.userMessage as GeneralChatMessage,
-          payload.assistantMessage as GeneralChatMessage,
-        ]);
-      } catch (submitError) {
-        setMessages((current) =>
-          current.filter((item) => item.id !== optimisticUserMessage.id)
-        );
-        setDraft(question);
-        setSelectedFiles(filesToUpload);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-        setError(
-          submitError instanceof Error
-            ? submitError.message
-            : "Не удалось получить ответ GPT."
+    try {
+      if (filesToUpload.some((file) => ARCHIVE_FILE_PATTERN.test(file.name))) {
+        throw new Error(
+          "Архивы ZIP/RAR/7Z прикреплять нельзя. Загружайте только сами документы: PDF, DOC, DOCX, XLS, XLSX, TXT."
         );
       }
-    });
+
+      const response =
+        filesToUpload.length > 0
+          ? await fetch("/api/tender/general-chat", {
+              method: "POST",
+              body: (() => {
+                const formData = new FormData();
+                formData.set("threadId", String(threadId));
+                formData.set("message", question);
+                formData.set("useWebSearch", String(!procurementOnlyMode));
+                formData.set("attachedFilesOnly", String(attachedFilesOnlyMode));
+                filesToUpload.forEach((file) => formData.append("files", file));
+                return formData;
+              })(),
+            })
+          : await fetch("/api/tender/general-chat", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                threadId,
+                message: question,
+                useWebSearch: !procurementOnlyMode,
+                attachedFilesOnly: attachedFilesOnlyMode,
+              }),
+            });
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            error?: string;
+            userMessage?: GeneralChatMessage;
+            assistantMessage?: GeneralChatMessage;
+          }
+        | null;
+
+      if (!response.ok || !payload?.ok || !payload.userMessage || !payload.assistantMessage) {
+        throw new Error(payload?.error || "Не удалось получить ответ GPT.");
+      }
+
+      setMessages((current) => [
+        ...current.filter(
+          (item) =>
+            item.id !== optimisticUserMessage.id && item.id !== optimisticAssistantMessage.id
+        ),
+        payload.userMessage as GeneralChatMessage,
+        payload.assistantMessage as GeneralChatMessage,
+      ]);
+    } catch (submitError) {
+      setMessages((current) =>
+        current.filter(
+          (item) =>
+            item.id !== optimisticUserMessage.id && item.id !== optimisticAssistantMessage.id
+        )
+      );
+      setDraft(question);
+      setSelectedFiles(filesToUpload);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Не удалось получить ответ GPT."
+      );
+    } finally {
+      setIsSubmitting(false);
+      requestAnimationFrame(() => {
+        endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      });
+    }
   }
 
   return (
@@ -387,7 +412,11 @@ export function TenderGeneralChat({
           <div ref={endRef} />
         </div>
 
-        <form onSubmit={handleSubmit} className="border-t border-slate-200 px-6 py-5">
+        <form
+          onSubmit={handleSubmit}
+          className="border-t border-slate-200 px-6 py-5"
+          ref={composerRef}
+        >
           <input
             ref={fileInputRef}
             type="file"
@@ -413,7 +442,7 @@ export function TenderGeneralChat({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isPending}
+                  disabled={isSubmitting}
                   className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-[#0d5bd7] transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-white/60"
                 >
                   Добавить файлы
@@ -446,6 +475,9 @@ export function TenderGeneralChat({
               event.preventDefault();
               const files = Array.from(event.dataTransfer.files ?? []);
               addFiles(files);
+              requestAnimationFrame(() => {
+                composerRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              });
             }}
             className="rounded-[1.75rem] border-2 border-dashed border-[#0d5bd7]/25 bg-[#f7fbff] p-4 transition hover:border-[#0d5bd7]/55 hover:bg-white"
           >
@@ -464,7 +496,7 @@ export function TenderGeneralChat({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={isPending}
+              disabled={isSubmitting}
               className="mb-4 flex w-full items-center justify-center gap-4 rounded-[1.5rem] border border-[#0d5bd7]/20 bg-white px-6 py-5 text-left transition hover:border-[#0d5bd7]/45 hover:bg-[#fafdff] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0d5bd7] text-3xl text-white shadow-sm">
@@ -502,7 +534,7 @@ export function TenderGeneralChat({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={isPending}
+              disabled={isSubmitting}
               className="sr-only"
             >
               Добавить файлы
@@ -515,7 +547,7 @@ export function TenderGeneralChat({
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
                   const form = event.currentTarget.form;
-                  if (form && (draft.trim() || selectedFiles.length > 0) && !isPending) {
+                  if (form && (draft.trim() || selectedFiles.length > 0) && !isSubmitting) {
                     form.requestSubmit();
                   }
                 }
@@ -586,10 +618,10 @@ export function TenderGeneralChat({
             </div>
             <button
               type="submit"
-              disabled={isPending || (!draft.trim() && selectedFiles.length === 0)}
+              disabled={isSubmitting || (!draft.trim() && selectedFiles.length === 0)}
               className="rounded-2xl bg-[#081a4b] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0d2568] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isPending ? "Думаю..." : selectedFiles.length > 0 ? "Отправить с файлами" : "Спросить"}
+              {isSubmitting ? "Анализирую..." : selectedFiles.length > 0 ? "Отправить с файлами" : "Спросить"}
             </button>
           </div>
         </form>

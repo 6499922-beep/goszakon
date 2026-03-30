@@ -216,6 +216,124 @@ function renderAssistantMarkdown(text: string) {
   return <div className="space-y-4">{blocks}</div>;
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function assistantMarkdownToWordHtml(text: string) {
+  const lines = text.split("\n");
+  const htmlParts: string[] = [];
+  let paragraphLines: string[] = [];
+  let listItems: string[] = [];
+
+  const formatInline = (input: string) => {
+    const escaped = escapeHtml(input);
+    return escaped
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(
+        /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+        '<a href="$2">$1</a>'
+      );
+  };
+
+  const flushParagraph = () => {
+    if (paragraphLines.length === 0) return;
+    const paragraphText = paragraphLines.join(" ").trim();
+    if (paragraphText) {
+      htmlParts.push(`<p>${formatInline(paragraphText)}</p>`);
+    }
+    paragraphLines = [];
+  };
+
+  const flushList = () => {
+    if (listItems.length === 0) return;
+    htmlParts.push(
+      `<ul>${listItems.map((item) => `<li>${formatInline(item)}</li>`).join("")}</ul>`
+    );
+    listItems = [];
+  };
+
+  lines.forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (!line) {
+      flushParagraph();
+      flushList();
+      return;
+    }
+
+    if (/^#{1,4}\s+/.test(line)) {
+      flushParagraph();
+      flushList();
+      const level = Math.min(4, line.match(/^#+/)?.[0].length ?? 1);
+      const content = line.replace(/^#{1,4}\s+/, "");
+      const tag = level === 1 ? "h1" : level === 2 ? "h2" : level === 3 ? "h3" : "h4";
+      htmlParts.push(`<${tag}>${formatInline(content)}</${tag}>`);
+      return;
+    }
+
+    if (/^[-•]\s+/.test(line) || /^\d+\.\s+/.test(line)) {
+      flushParagraph();
+      listItems.push(line.replace(/^[-•]\s+/, "").replace(/^\d+\.\s+/, ""));
+      return;
+    }
+
+    paragraphLines.push(line);
+  });
+
+  flushParagraph();
+  flushList();
+
+  return htmlParts.join("");
+}
+
+function downloadAssistantMessageAsWord(title: string, body: string) {
+  const safeTitle =
+    title
+      .replace(/[^\p{L}\p{N}\s._-]+/gu, "")
+      .replace(/\s+/g, "-")
+      .slice(0, 80) || "gpt-answer";
+  const html = `<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>${escapeHtml(title)}</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.55; color: #111827; }
+      h1, h2, h3, h4 { color: #0f172a; margin: 18px 0 8px; }
+      p { margin: 10px 0; }
+      ul { margin: 10px 0 10px 22px; }
+      li { margin: 6px 0; }
+      .meta { color: #64748b; font-size: 10pt; margin-bottom: 18px; }
+      a { color: #0d5bd7; text-decoration: underline; }
+    </style>
+  </head>
+  <body>
+    <h1>${escapeHtml(title)}</h1>
+    <div class="meta">Сформировано в GPT-чате GOSZAKON · ${escapeHtml(
+      new Date().toLocaleString("ru-RU")
+    )}</div>
+    ${assistantMarkdownToWordHtml(body)}
+  </body>
+</html>`;
+
+  const blob = new Blob(["\ufeff", html], {
+    type: "application/msword;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${safeTitle}.doc`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function TenderGeneralChat({
   threadId,
   currentThreadId,
@@ -705,6 +823,17 @@ export function TenderGeneralChat({
                         ) : (
                           <div className="mt-4 text-[16px]">{renderAssistantMarkdown(parsed.text)}</div>
                         )}
+                        {!isPendingAssistantMessage && parsed.text.trim() ? (
+                          <div className="mt-5 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => downloadAssistantMessageAsWord(threadTitle, parsed.text)}
+                              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-[#0d5bd7] hover:text-[#0d5bd7]"
+                            >
+                              Скачать в Word
+                            </button>
+                          </div>
+                        ) : null}
                         {!isPendingAssistantMessage && parsed.sources.length > 0 ? (
                           <div className="mt-6 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
                             <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">

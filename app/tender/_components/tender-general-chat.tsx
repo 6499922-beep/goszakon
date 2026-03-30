@@ -461,6 +461,25 @@ export function TenderGeneralChat({
               </div>
             </div>
 
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isPending}
+              className="mb-4 flex w-full items-center justify-center gap-4 rounded-[1.5rem] border border-[#0d5bd7]/20 bg-white px-6 py-5 text-left transition hover:border-[#0d5bd7]/45 hover:bg-[#fafdff] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0d5bd7] text-3xl text-white shadow-sm">
+                +
+              </div>
+              <div className="min-w-0">
+                <div className="text-base font-bold text-[#081a4b]">
+                  Нажмите, чтобы выбрать файлы
+                </div>
+                <div className="mt-1 text-sm text-slate-500">
+                  Или перетащите PDF, DOC, DOCX, XLS, XLSX, TXT прямо в эту область
+                </div>
+              </div>
+            </button>
+
             {selectedFiles.length > 0 ? (
               <div className="mb-3 flex flex-wrap gap-2">
                 {sortedSelectedFiles.map(({ file, index }) => (

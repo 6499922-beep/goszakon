@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type GeneralChatMessage = {
@@ -71,6 +72,131 @@ function parseStoredSources(body: string) {
     .filter((item): item is { title: string; url: string } => Boolean(item));
 
   return { text, sources };
+}
+
+function renderInlineMarkdown(text: string) {
+  const nodes: ReactNode[] = [];
+  const pattern = /(\*\*[^*]+\*\*|\[[^\]]+\]\((https?:\/\/[^\s)]+)\))/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null = null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(text.slice(lastIndex, match.index));
+    }
+
+    const token = match[0];
+    if (token.startsWith("**") && token.endsWith("**")) {
+      nodes.push(
+        <strong key={`${match.index}-bold`} className="font-semibold text-[#081a4b]">
+          {token.slice(2, -2)}
+        </strong>
+      );
+    } else {
+      const linkMatch = token.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+      if (linkMatch) {
+        nodes.push(
+          <a
+            key={`${match.index}-link`}
+            href={linkMatch[2]}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[#0d5bd7] underline underline-offset-2"
+          >
+            {linkMatch[1]}
+          </a>
+        );
+      } else {
+        nodes.push(token);
+      }
+    }
+
+    lastIndex = match.index + token.length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+
+  return nodes;
+}
+
+function renderAssistantMarkdown(text: string) {
+  const lines = text.split("\n");
+  const blocks: ReactNode[] = [];
+  let paragraphLines: string[] = [];
+  let listItems: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraphLines.length === 0) return;
+    const paragraphText = paragraphLines.join(" ").trim();
+    if (!paragraphText) {
+      paragraphLines = [];
+      return;
+    }
+
+    blocks.push(
+      <p key={`p-${blocks.length}`} className="text-[15px] leading-8 text-slate-700">
+        {renderInlineMarkdown(paragraphText)}
+      </p>
+    );
+    paragraphLines = [];
+  };
+
+  const flushList = () => {
+    if (listItems.length === 0) return;
+    blocks.push(
+      <ul key={`ul-${blocks.length}`} className="space-y-2 pl-5 text-[15px] leading-8 text-slate-700 list-disc">
+        {listItems.map((item, index) => (
+          <li key={`li-${index}`}>{renderInlineMarkdown(item)}</li>
+        ))}
+      </ul>
+    );
+    listItems = [];
+  };
+
+  lines.forEach((rawLine) => {
+    const line = rawLine.trim();
+
+    if (!line) {
+      flushParagraph();
+      flushList();
+      return;
+    }
+
+    if (/^#{1,4}\s+/.test(line)) {
+      flushParagraph();
+      flushList();
+      const level = Math.min(4, (line.match(/^#+/)?.[0].length ?? 1));
+      const content = line.replace(/^#{1,4}\s+/, "");
+      const className =
+        level === 1
+          ? "text-2xl font-bold text-[#081a4b]"
+          : level === 2
+            ? "text-xl font-bold text-[#081a4b]"
+            : "text-lg font-semibold text-[#081a4b]";
+
+      blocks.push(
+        <h3 key={`h-${blocks.length}`} className={className}>
+          {renderInlineMarkdown(content)}
+        </h3>
+      );
+      return;
+    }
+
+    if (/^[-•]\s+/.test(line) || /^\d+\.\s+/.test(line)) {
+      flushParagraph();
+      listItems.push(line.replace(/^[-•]\s+/, "").replace(/^\d+\.\s+/, ""));
+      return;
+    }
+
+    paragraphLines.push(line);
+  });
+
+  flushParagraph();
+  flushList();
+
+  return <div className="space-y-4">{blocks}</div>;
 }
 
 export function TenderGeneralChat({
@@ -400,8 +526,12 @@ export function TenderGeneralChat({
                   >
                     {message.authorName}
                   </div>
-                  <div className="mt-2 whitespace-pre-wrap text-sm leading-7">
-                    {parsed.text}
+                  <div className="mt-3">
+                    {isAssistant ? (
+                      renderAssistantMarkdown(parsed.text)
+                    ) : (
+                      <div className="whitespace-pre-wrap text-sm leading-7">{parsed.text}</div>
+                    )}
                   </div>
                   {parsed.sources.length > 0 ? (
                     <div className="mt-4 space-y-2 rounded-2xl border border-slate-200 bg-white/70 p-3 text-sm text-slate-700">

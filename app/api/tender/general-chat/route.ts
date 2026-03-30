@@ -3,9 +3,11 @@ import { NextResponse } from "next/server";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
+import { prepareTenderUploadDocuments } from "@/lib/tender-intake";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+const ARCHIVE_FILE_PATTERN = /\.(zip|rar|7z)$/i;
 
 function getOpenAiOutputText(payload: any) {
   const outputs = Array.isArray(payload?.output) ? payload.output : [];
@@ -81,6 +83,38 @@ async function getOrCreateThread(userId: number) {
   });
 }
 
+async function parseIncomingRequest(request: Request) {
+  const contentType = request.headers.get("content-type") || "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    const rawFiles = formData.getAll("files");
+    const files = rawFiles.filter((item): item is File => item instanceof File && item.size > 0);
+
+    return {
+      threadId: Number(formData.get("threadId") ?? 0),
+      message: String(formData.get("message") ?? "").trim(),
+      useWebSearch: String(formData.get("useWebSearch") ?? "true") === "true",
+      attachedFilesOnly: String(formData.get("attachedFilesOnly") ?? "false") === "true",
+      files,
+    };
+  }
+
+  const body = (await request.json().catch(() => ({}))) as {
+    threadId?: number;
+    message?: string;
+    useWebSearch?: boolean;
+  };
+
+  return {
+    threadId: Number(body.threadId ?? 0),
+    message: String(body.message ?? "").trim(),
+    useWebSearch: Boolean(body.useWebSearch),
+    attachedFilesOnly: Boolean((body as any).attachedFilesOnly),
+    files: [] as File[],
+  };
+}
+
 export async function POST(request: Request) {
   try {
     const currentUser = await getCurrentTenderUser();
@@ -92,28 +126,32 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = (await request.json().catch(() => ({}))) as {
-      threadId?: number;
-      message?: string;
-      useWebSearch?: boolean;
-    };
+    const { threadId, message, useWebSearch, attachedFilesOnly, files } = await parseIncomingRequest(request);
 
-    const message = String(body.message ?? "").trim();
-    const useWebSearch = Boolean(body.useWebSearch);
-
-    if (!message) {
+    if (!message && files.length === 0) {
       return NextResponse.json(
-        { ok: false, error: "Нужно ввести сообщение." },
+        { ok: false, error: "Нужно ввести сообщение или прикрепить файлы." },
+        { status: 400 }
+      );
+    }
+
+    if (files.some((file) => ARCHIVE_FILE_PATTERN.test(file.name))) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Архивы ZIP/RAR/7Z загружать нельзя. Прикрепляйте только сами документы: PDF, DOC, DOCX, XLS, XLSX, TXT.",
+        },
         { status: 400 }
       );
     }
 
     const prisma = getPrisma();
     const thread =
-      Number.isInteger(Number(body.threadId)) && Number(body.threadId) > 0
+      Number.isInteger(threadId) && threadId > 0
         ? await prisma.tenderChatThread.findFirst({
             where: {
-              id: Number(body.threadId),
+              id: threadId,
               ownerId: currentUser.id,
               kind: TenderChatThreadKind.GENERAL,
             },
@@ -128,11 +166,41 @@ export async function POST(request: Request) {
     }
 
     const userName = currentUser.name?.trim() || currentUser.email?.trim() || "Сотрудник";
+    const extractedFileBlocks: string[] = [];
+    const fileSummary: string[] = [];
+
+    for (const file of files) {
+      const preparedDocuments = await prepareTenderUploadDocuments({
+        name: file.name,
+        type: file.type || "application/octet-stream",
+        size: file.size,
+        buffer: Buffer.from(await file.arrayBuffer()),
+      });
+
+      for (const prepared of preparedDocuments) {
+        fileSummary.push(prepared.title);
+        if (prepared.extractedText?.trim()) {
+          extractedFileBlocks.push(`Файл: ${prepared.title}\n${prepared.extractedText.trim()}`);
+        } else {
+          extractedFileBlocks.push(
+            `Файл: ${prepared.title}\nТекст автоматически не извлечён. Используй название и формат файла как контекст.`
+          );
+        }
+      }
+    }
+
+    const userMessageBody =
+      fileSummary.length > 0
+        ? `${message || "Проанализируй прикреплённые файлы."}\n\nФайлы:\n${fileSummary
+            .map((title) => `- ${title}`)
+            .join("\n")}`
+        : message;
+
     const userMessage = await prisma.tenderChatMessage.create({
       data: {
         threadId: thread.id,
         role: TenderChatMessageRole.USER,
-        body: message,
+        body: userMessageBody,
         authorId: currentUser.id,
         authorName: userName,
       },
@@ -152,7 +220,10 @@ export async function POST(request: Request) {
     const model = process.env.OPENAI_CHAT_MODEL || process.env.OPENAI_MODEL || "gpt-5";
     const historyText = recentMessages
       .slice(-12)
-      .map((item) => `${item.authorName || (item.role === "ASSISTANT" ? "GPT" : "Пользователь")}: ${trimForPrompt(item.body, 1500)}`)
+          .map(
+            (item) =>
+              `${item.authorName || (item.role === "ASSISTANT" ? "GPT" : "Пользователь")}: ${trimForPrompt(item.body, 1500)}`
+          )
       .join("\n");
 
     const prompt = `
@@ -167,12 +238,15 @@ export async function POST(request: Request) {
 - если данных не хватает, скажи это прямо;
 - если вопрос юридически чувствительный, отмечай риск и неопределённость;
 - если уместно, предлагай следующий практический шаг.
+${attachedFilesOnly ? "- отвечай только по прикреплённым файлам и прямому вопросу, не опирайся на интернет и общие знания, кроме базовой интерпретации документа;" : ""}
 
 История чата:
 ${historyText || "История пока пустая."}
 
+${extractedFileBlocks.length > 0 ? `Прикреплённые файлы и извлечённый текст:\n${extractedFileBlocks.join("\n\n---\n\n")}` : ""}
+
 Последний вопрос:
-${message}
+${message || "Проанализируй прикреплённые файлы и помоги сотруднику по ним."}
 `.trim();
 
     const response = await fetch("https://api.openai.com/v1/responses", {
@@ -230,7 +304,7 @@ ${message}
       data: {
         title:
           thread.title === "Личный чат"
-            ? trimForPrompt(message, 80) || "Личный чат"
+            ? trimForPrompt(message || fileSummary[0] || "Личный чат", 80) || "Личный чат"
             : thread.title,
       },
     });

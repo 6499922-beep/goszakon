@@ -26,6 +26,88 @@ export type TenderPreparedSourceDocument = {
   file: TenderUploadedFile;
 };
 
+function decodeBasicHtmlEntities(value: string) {
+  return value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+}
+
+function normalizeHtmlText(value: string) {
+  return decodeBasicHtmlEntities(value)
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/\r/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+function stripHtmlTagsPreservingText(value: string) {
+  return normalizeHtmlText(value.replace(/<[^>]+>/g, " "));
+}
+
+function extractStructuredTextFromDocxHtml(html: string) {
+  const sections: string[] = [];
+
+  const tableMatches = [...html.matchAll(/<table[\s\S]*?<\/table>/gi)];
+  let normalizedHtml = html;
+
+  tableMatches.forEach((match, tableIndex) => {
+    const tableHtml = match[0];
+    const rowMatches = [...tableHtml.matchAll(/<tr[\s\S]*?<\/tr>/gi)];
+    const tableLines = rowMatches
+      .map((rowMatch, rowIndex) => {
+        const cellMatches = [...rowMatch[0].matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+        const cells = cellMatches
+          .map((cellMatch) => stripHtmlTagsPreservingText(cellMatch[1]))
+          .map((cell) => cell.trim())
+          .filter(Boolean);
+
+        if (cells.length === 0) return null;
+        return rowIndex === 0
+          ? `Колонки: ${cells.join(" | ")}`
+          : `Строка ${rowIndex}: ${cells.join(" | ")}`;
+      })
+      .filter((line): line is string => Boolean(line));
+
+    const replacement =
+      tableLines.length > 0
+        ? `\n\nТаблица ${tableIndex + 1}:\n${tableLines.join("\n")}\n\n`
+        : "\n\n";
+    normalizedHtml = normalizedHtml.replace(tableHtml, replacement);
+  });
+
+  const headingMatches = [
+    ...normalizedHtml.matchAll(/<(h[1-6]|p|li)[^>]*>([\s\S]*?)<\/\1>/gi),
+  ];
+
+  headingMatches.forEach((match) => {
+    const tag = match[1].toLowerCase();
+    const text = stripHtmlTagsPreservingText(match[2]);
+    if (!text) return;
+
+    if (tag.startsWith("h")) {
+      sections.push(`Раздел: ${text}`);
+      return;
+    }
+
+    if (tag === "li") {
+      sections.push(`- ${text}`);
+      return;
+    }
+
+    sections.push(text);
+  });
+
+  const structured = normalizeHtmlText(sections.join("\n"));
+  return structured.length > 0 ? structured : null;
+}
+
 async function withTemporaryFile<T>(
   file: TenderUploadedFile,
   callback: (absolutePath: string) => Promise<T>
@@ -498,6 +580,20 @@ function buildWorkbookPricingLines(headers: string[], rows: string[][]) {
   return lines;
 }
 
+function buildWorkbookSheetOverview(rows: string[][]) {
+  const nonEmptyRows = rows.filter((row) => row.some((cell) => cell.length > 0));
+  const numericCells = nonEmptyRows
+    .flatMap((row) => row)
+    .filter((cell) => parseWorkbookAmount(cell) != null).length;
+  const totalRows = nonEmptyRows.filter(isWorkbookTotalRow).length;
+
+  return {
+    rowCount: nonEmptyRows.length,
+    numericCells,
+    totalRows,
+  };
+}
+
 function buildWorkbookTotalLines(headers: string[], rows: string[][]) {
   const totalRows = rows.filter(isWorkbookTotalRow).slice(0, 8);
   if (totalRows.length === 0) return [];
@@ -653,6 +749,10 @@ function extractStructuredTextFromWorkbook(buffer: Buffer) {
     }
 
     const summaryLines = [`Лист: ${sheetName}`];
+    const overview = buildWorkbookSheetOverview(rows);
+    summaryLines.push(
+      `Сводка листа: строк ${overview.rowCount}, числовых ячеек ${overview.numericCells}, итоговых строк ${overview.totalRows}`
+    );
 
     blocks.forEach((block, index) => {
       summaryLines.push(
@@ -724,14 +824,24 @@ export async function extractTextFromTenderUpload(file: TenderUploadedFile) {
 
   if (!isPlainText) {
     if (name.endsWith(".docx")) {
-      const docxResult = await mammoth.extractRawText({ buffer });
-      const extractedText = docxResult.value.trim();
+      const [rawTextResult, htmlResult] = await Promise.all([
+        mammoth.extractRawText({ buffer }),
+        mammoth.convertToHtml({ buffer }),
+      ]);
+      const rawText = rawTextResult.value.trim();
+      const structuredHtmlText = extractStructuredTextFromDocxHtml(htmlResult.value || "");
+      const extractedText =
+        structuredHtmlText && structuredHtmlText.length >= Math.max(200, rawText.length * 0.45)
+          ? structuredHtmlText
+          : rawText;
 
       return {
         extractedText: extractedText.length > 0 ? extractedText : null,
         extractionNote:
           extractedText.length > 0
-            ? "Текст из DOCX удалось извлечь автоматически."
+            ? structuredHtmlText
+              ? "DOCX прочитан по разделам, спискам и таблицам."
+              : "Текст из DOCX удалось извлечь автоматически."
             : "DOCX загружен, но текст для анализа извлечь не удалось.",
       };
     }

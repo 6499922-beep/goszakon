@@ -373,6 +373,8 @@ export function TenderGeneralChat({
   const [preparedArchiveAttachments, setPreparedArchiveAttachments] = useState<
     PreparedArchiveAttachment[]
   >([]);
+  const [selectedArchiveAttachmentIds, setSelectedArchiveAttachmentIds] = useState<number[]>([]);
+  const [attachedArchiveAttachmentIds, setAttachedArchiveAttachmentIds] = useState<number[]>([]);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
   const [previewCache, setPreviewCache] = useState<Record<string, SelectedFilePreview>>({});
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
@@ -448,8 +450,15 @@ export function TenderGeneralChat({
       })
       .filter((value): value is number => value !== null && Number.isInteger(value) && value > 0);
 
-    return [...new Set([...fileAttachmentIds, ...preparedArchiveAttachments.map((item) => item.attachmentId)])];
-  }, [preparedArchiveAttachments, previewCache, selectedFiles]);
+    return [...new Set([...fileAttachmentIds, ...attachedArchiveAttachmentIds])];
+  }, [attachedArchiveAttachmentIds, previewCache, selectedFiles]);
+  const attachedArchiveAttachments = useMemo(
+    () =>
+      preparedArchiveAttachments.filter((item) =>
+        attachedArchiveAttachmentIds.includes(item.attachmentId)
+      ),
+    [attachedArchiveAttachmentIds, preparedArchiveAttachments]
+  );
   useEffect(() => {
     setThreadList(threadOptions);
   }, [threadOptions]);
@@ -634,6 +643,44 @@ export function TenderGeneralChat({
     setPreparedArchiveAttachments((current) =>
       current.filter((item) => item.attachmentId !== attachmentId)
     );
+    setSelectedArchiveAttachmentIds((current) =>
+      current.filter((item) => item !== attachmentId)
+    );
+    setAttachedArchiveAttachmentIds((current) =>
+      current.filter((item) => item !== attachmentId)
+    );
+  }
+
+  function toggleArchiveCandidate(attachmentId: number) {
+    setSelectedArchiveAttachmentIds((current) =>
+      current.includes(attachmentId)
+        ? current.filter((item) => item !== attachmentId)
+        : [...current, attachmentId]
+    );
+  }
+
+  function addSelectedArchiveAttachmentsToChat() {
+    if (selectedArchiveAttachmentIds.length === 0) return;
+
+    setAttachedArchiveAttachmentIds((current) => {
+      const next = [...current, ...selectedArchiveAttachmentIds];
+      return [...new Set(next)];
+    });
+    setSelectedArchiveAttachmentIds([]);
+  }
+
+  function addAllArchiveAttachmentsToChat() {
+    const ids = preparedArchiveAttachments.map((item) => item.attachmentId);
+    if (ids.length === 0) return;
+
+    setAttachedArchiveAttachmentIds(ids);
+    setSelectedArchiveAttachmentIds([]);
+  }
+
+  function removeArchiveAttachmentFromChat(attachmentId: number) {
+    setAttachedArchiveAttachmentIds((current) =>
+      current.filter((item) => item !== attachmentId)
+    );
   }
 
   async function handleArchiveUpload(files: FileList | null) {
@@ -673,6 +720,10 @@ export function TenderGeneralChat({
           seen.add(item.attachmentId);
           return true;
         });
+      });
+      setSelectedArchiveAttachmentIds((current) => {
+        const next = [...current, ...payload.attachments!.map((item) => item.attachmentId)];
+        return [...new Set(next)];
       });
     } catch (archiveError) {
       setError(
@@ -753,8 +804,9 @@ export function TenderGeneralChat({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const question = draft.trim();
-    const hasFiles = selectedFiles.length > 0 || preparedArchiveAttachments.length > 0;
+    const hasFiles = selectedFiles.length > 0 || attachedArchiveAttachmentIds.length > 0;
     const filesToUpload = [...selectedFiles];
+    const archiveAttachmentsToSend = [...attachedArchiveAttachmentIds];
     const attachmentIds = combinedAttachmentIds;
 
     if ((!question && !hasFiles) || isSubmitting) return;
@@ -780,7 +832,8 @@ export function TenderGeneralChat({
 
     setDraft("");
     setSelectedFiles([]);
-    setPreparedArchiveAttachments([]);
+    setAttachedArchiveAttachmentIds([]);
+    setSelectedArchiveAttachmentIds([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -869,6 +922,7 @@ export function TenderGeneralChat({
       );
       setDraft(question);
       setSelectedFiles(filesToUpload);
+      setAttachedArchiveAttachmentIds(archiveAttachmentsToSend);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -1207,7 +1261,7 @@ export function TenderGeneralChat({
             </div>
           </div>
 
-          {selectedFiles.length > 0 ? (
+          {selectedFiles.length > 0 || attachedArchiveAttachments.length > 0 ? (
             <div className="mx-auto mt-4 flex w-full max-w-4xl flex-wrap gap-2">
               <button
                 type="button"
@@ -1293,21 +1347,59 @@ export function TenderGeneralChat({
             {isArchiveLoading ? "Распаковываю архив..." : "Загрузить ZIP / RAR"}
           </button>
           <div className="mt-2 text-xs leading-5 text-slate-500">
-            Архив раскладывается на конечные документы и сразу добавляется в файлы к отправке.
+            Архив раскладывается на конечные документы. Ты сам отмечаешь, что добавить в чат.
           </div>
           {preparedArchiveAttachments.length > 0 ? (
             <div className="mt-3 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={addSelectedArchiveAttachmentsToChat}
+                  disabled={selectedArchiveAttachmentIds.length === 0}
+                  className="rounded-full bg-[#0d5bd7] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#0b4db7] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Добавить выбранное
+                </button>
+                <button
+                  type="button"
+                  onClick={addAllArchiveAttachmentsToChat}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-[#0d5bd7] hover:text-[#0d5bd7]"
+                >
+                  Добавить всё
+                </button>
+              </div>
               {preparedArchiveAttachments.slice(0, 6).map((item) => (
                 <div key={item.attachmentId} className="rounded-2xl bg-white px-3 py-3">
-                  <div className="truncate text-sm font-medium text-slate-700">{item.fileName}</div>
-                  <div className="mt-1 text-xs text-slate-500">{item.documentKind || "Документ"}</div>
-                  <div className="mt-1 text-xs text-emerald-700">{item.statusLabel || "Готов к отправке"}</div>
+                  <label className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedArchiveAttachmentIds.includes(item.attachmentId)}
+                      onChange={() => toggleArchiveCandidate(item.attachmentId)}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-[#0d5bd7] focus:ring-[#0d5bd7]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-slate-700">
+                        {item.fileName}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {item.documentKind || "Документ"}
+                      </div>
+                      <div className="mt-1 text-xs text-emerald-700">
+                        {item.statusLabel || "Готов к добавлению"}
+                      </div>
+                      {attachedArchiveAttachmentIds.includes(item.attachmentId) ? (
+                        <div className="mt-1 text-xs font-semibold text-[#0d5bd7]">
+                          Уже добавлен в чат
+                        </div>
+                      ) : null}
+                    </div>
+                  </label>
                   <button
                     type="button"
                     onClick={() => removePreparedArchiveAttachment(item.attachmentId)}
                     className="mt-2 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
                   >
-                    Убрать
+                    Удалить из списка
                   </button>
                 </div>
               ))}
@@ -1344,9 +1436,9 @@ export function TenderGeneralChat({
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
             Файлы к отправке
           </div>
-          {selectedFiles.length > 0 || preparedArchiveAttachments.length > 0 ? (
+          {selectedFiles.length > 0 || attachedArchiveAttachments.length > 0 ? (
             <div className="mt-3 space-y-2">
-              {preparedArchiveAttachments.map((item) => (
+              {attachedArchiveAttachments.map((item) => (
                 <div
                   key={`prepared-${item.attachmentId}`}
                   className="flex items-center justify-between gap-3 rounded-2xl bg-white px-3 py-2"
@@ -1358,7 +1450,7 @@ export function TenderGeneralChat({
                   </div>
                   <button
                     type="button"
-                    onClick={() => removePreparedArchiveAttachment(item.attachmentId)}
+                    onClick={() => removeArchiveAttachmentFromChat(item.attachmentId)}
                     className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
                   >
                     Убрать

@@ -278,38 +278,51 @@ export async function POST(request: Request) {
     const fileReadStates: string[] = [];
 
     for (const file of files) {
-      const preparedDocuments = await prepareTenderUploadDocuments({
-        name: file.name,
-        type: file.type || "application/octet-stream",
-        size: file.size,
-        buffer: Buffer.from(await file.arrayBuffer()),
-      });
+      try {
+        const preparedDocuments = await prepareTenderUploadDocuments({
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          size: file.size,
+          buffer: Buffer.from(await file.arrayBuffer()),
+        });
 
-      for (const prepared of preparedDocuments) {
-        fileSummary.push(`${prepared.title} — ${prepared.documentKind}`);
-        fileReadStates.push(
-          `${prepared.title} — ${prepared.documentKind} — ${prepared.extractionNote}`
-        );
-        if (prepared.extractedText?.trim()) {
-          extractedFileBlocks.push(
-            [
-              `Файл: ${prepared.title}`,
-              `Тип: ${prepared.documentKind}`,
-              `Статус чтения: ${prepared.extractionNote}`,
-              "Извлечённый текст:",
-              prepared.extractedText.trim(),
-            ].join("\n")
+        for (const prepared of preparedDocuments) {
+          fileSummary.push(`${prepared.title} — ${prepared.documentKind}`);
+          fileReadStates.push(
+            `${prepared.title} — ${prepared.documentKind} — ${prepared.extractionNote}`
           );
-        } else {
-          extractedFileBlocks.push(
-            [
-              `Файл: ${prepared.title}`,
-              `Тип: ${prepared.documentKind}`,
-              `Статус чтения: ${prepared.extractionNote}`,
-              "Текст автоматически не извлечён. Используй тип документа, название файла и доступный контекст, но не придумывай содержание.",
-            ].join("\n")
-          );
+          if (prepared.extractedText?.trim()) {
+            extractedFileBlocks.push(
+              [
+                `Файл: ${prepared.title}`,
+                `Тип: ${prepared.documentKind}`,
+                `Статус чтения: ${prepared.extractionNote}`,
+                "Извлечённый текст:",
+                prepared.extractedText.trim(),
+              ].join("\n")
+            );
+          } else {
+            extractedFileBlocks.push(
+              [
+                `Файл: ${prepared.title}`,
+                `Тип: ${prepared.documentKind}`,
+                `Статус чтения: ${prepared.extractionNote}`,
+                "Текст автоматически не извлечён. Используй тип документа, название файла и доступный контекст, но не придумывай содержание.",
+              ].join("\n")
+            );
+          }
         }
+      } catch (fileError) {
+        console.error("[general-chat] file-prepare failed", file.name, fileError);
+        fileSummary.push(`${file.name} — файл не удалось подготовить`);
+        fileReadStates.push(`${file.name} — неизвестный тип — файл не удалось прочитать автоматически`);
+        extractedFileBlocks.push(
+          [
+            `Файл: ${file.name}`,
+            "Статус чтения: файл не удалось прочитать автоматически.",
+            "Не игнорируй этот факт в ответе. Скажи честно, что по этому вложению автоматическое чтение сорвалось.",
+          ].join("\n")
+        );
       }
     }
 

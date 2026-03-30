@@ -51,6 +51,7 @@ const QUICK_PROMPTS = [
 ];
 
 const ARCHIVE_FILE_PATTERN = /\.(zip|rar|7z)$/i;
+const PENDING_ASSISTANT_BODY = "__GENERAL_CHAT_PENDING__";
 
 function getFileTypePriority(file: File) {
   const name = file.name.toLowerCase();
@@ -259,6 +260,16 @@ export function TenderGeneralChat({
       ),
     [messages]
   );
+  const hasPendingAssistant = useMemo(
+    () =>
+      sortedMessages.some(
+        (message) =>
+          message.role === "assistant" &&
+          (message.body === PENDING_ASSISTANT_BODY ||
+            message.body === "Получил запрос. Читаю файлы и готовлю ответ...")
+      ),
+    [sortedMessages]
+  );
   const sortedSelectedFiles = useMemo(
     () =>
       selectedFiles
@@ -306,6 +317,43 @@ export function TenderGeneralChat({
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [sortedMessages, isSubmitting]);
+
+  useEffect(() => {
+    if (!hasPendingAssistant) return;
+
+    let cancelled = false;
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await fetch(`/api/tender/general-chat?threadId=${threadId}`, {
+          method: "GET",
+          cache: "no-store",
+        });
+        const payload = (await response.json().catch(() => null)) as
+          | {
+              ok?: boolean;
+              messages?: GeneralChatMessage[];
+              attachments?: TenderGeneralChatProps["initialAttachments"];
+            }
+          | null;
+
+        if (!response.ok || !payload?.ok || !payload.messages || cancelled) {
+          return;
+        }
+
+        setMessages(payload.messages);
+        if (payload.attachments) {
+          setStoredAttachments(payload.attachments);
+        }
+      } catch {
+        // keep polling quietly
+      }
+    }, 2500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [hasPendingAssistant, threadId]);
 
   useEffect(() => {
     return () => {
@@ -634,6 +682,10 @@ export function TenderGeneralChat({
               {sortedMessages.map((message) => {
                 const parsed = parseStoredSources(message.body);
                 const isAssistant = message.role === "assistant";
+                const isPendingAssistantMessage =
+                  isAssistant &&
+                  (message.body === PENDING_ASSISTANT_BODY ||
+                    message.body === "Получил запрос. Читаю файлы и готовлю ответ...");
                 return (
                   <article
                     key={message.id}
@@ -644,8 +696,15 @@ export function TenderGeneralChat({
                         <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
                           {message.authorName}
                         </div>
-                        <div className="mt-4 text-[16px]">{renderAssistantMarkdown(parsed.text)}</div>
-                        {parsed.sources.length > 0 ? (
+                        {isPendingAssistantMessage ? (
+                          <div className="mt-4 flex items-center gap-3 text-[16px] text-slate-600">
+                            <span className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-[#0d5bd7]" />
+                            Готовлю ответ...
+                          </div>
+                        ) : (
+                          <div className="mt-4 text-[16px]">{renderAssistantMarkdown(parsed.text)}</div>
+                        )}
+                        {!isPendingAssistantMessage && parsed.sources.length > 0 ? (
                           <div className="mt-6 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
                             <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
                               Источники

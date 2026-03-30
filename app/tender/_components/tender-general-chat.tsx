@@ -487,8 +487,8 @@ export function TenderGeneralChat({
   }
 
   return (
-    <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="flex min-h-[84vh] flex-col rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+    <section className="grid gap-6 xl:h-[calc(100vh-8.5rem)] xl:grid-cols-[minmax(0,1fr)_320px] xl:overflow-hidden">
+      <div className="flex min-h-[84vh] flex-col rounded-[2rem] border border-slate-200 bg-white shadow-sm xl:min-h-0 xl:h-full xl:overflow-hidden">
         <div className="border-b border-slate-200 px-6 py-5">
           <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
             GPT-чат
@@ -504,7 +504,7 @@ export function TenderGeneralChat({
 
         <div
           ref={viewportRef}
-          className="flex-1 space-y-4 overflow-y-auto px-6 py-6"
+          className="flex-1 space-y-4 overflow-y-auto px-6 py-6 xl:min-h-0"
         >
           {sortedMessages.length > 0 ? (
             sortedMessages.map((message) => {
@@ -564,7 +564,7 @@ export function TenderGeneralChat({
 
         <form
           onSubmit={handleSubmit}
-          className="border-t border-slate-200 px-6 py-5"
+          className="border-t border-slate-200 bg-white px-6 py-5 xl:shrink-0"
           ref={composerRef}
         >
           <input
@@ -784,7 +784,7 @@ export function TenderGeneralChat({
         </form>
       </div>
 
-      <aside className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+      <aside className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm xl:h-full xl:overflow-y-auto">
         <div className="text-sm font-medium uppercase tracking-[0.16em] text-slate-400">
           Режим работы
         </div>

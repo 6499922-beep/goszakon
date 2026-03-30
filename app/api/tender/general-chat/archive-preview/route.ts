@@ -11,7 +11,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const SUPPORTED_ARCHIVE_PATTERN = /\.(zip|rar)$/i;
-const SUPPORTED_DOC_PATTERN = /\.(pdf|doc|docx|xls|xlsx|txt|csv|md)$/i;
+const SUPPORTED_DOC_PATTERN = /\.(pdf|doc|docx|docm|rtf|xls|xlsx|xlsm|txt|csv|md)$/i;
+const NESTED_ARCHIVE_PATTERN = /\.(zip|rar)$/i;
 
 function sanitizeAttachmentFileName(fileName: string) {
   return fileName
@@ -19,6 +20,10 @@ function sanitizeAttachmentFileName(fileName: string) {
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 180);
+}
+
+function normalizeArchiveEntryName(fileName: string) {
+  return fileName.replace(/\\/g, "/").trim().replace(/\s+/g, " ");
 }
 
 function getMimeTypeByName(fileName: string) {
@@ -40,7 +45,7 @@ async function extractZipEntries(buffer: Buffer) {
     .getEntries()
     .filter((entry) => !entry.isDirectory)
     .map((entry) => ({
-      fileName: entry.entryName.split("/").filter(Boolean).join("/"),
+      fileName: normalizeArchiveEntryName(entry.entryName.split("/").filter(Boolean).join("/")),
       buffer: entry.getData(),
     }));
 }
@@ -54,9 +59,46 @@ async function extractRarEntries(buffer: Buffer) {
   return [...extracted.files]
     .filter((item) => !item.fileHeader.flags.directory && item.extraction)
     .map((item) => ({
-      fileName: item.fileHeader.name,
+      fileName: normalizeArchiveEntryName(item.fileHeader.name),
       buffer: Buffer.from(item.extraction as Uint8Array),
     }));
+}
+
+async function extractArchiveEntries(buffer: Buffer, fileName: string) {
+  return fileName.toLowerCase().endsWith(".zip")
+    ? extractZipEntries(buffer)
+    : extractRarEntries(buffer);
+}
+
+async function collectSupportedDocuments(
+  entries: Array<{ fileName: string; buffer: Buffer }>,
+  depth = 0
+): Promise<Array<{ fileName: string; buffer: Buffer }>> {
+  const documents: Array<{ fileName: string; buffer: Buffer }> = [];
+
+  for (const entry of entries) {
+    const normalizedName = normalizeArchiveEntryName(entry.fileName);
+
+    if (SUPPORTED_DOC_PATTERN.test(normalizedName)) {
+      documents.push({
+        fileName: normalizedName,
+        buffer: entry.buffer,
+      });
+      continue;
+    }
+
+    if (depth < 2 && NESTED_ARCHIVE_PATTERN.test(normalizedName)) {
+      try {
+        const nestedEntries = await extractArchiveEntries(entry.buffer, normalizedName);
+        const nestedDocuments = await collectSupportedDocuments(nestedEntries, depth + 1);
+        documents.push(...nestedDocuments);
+      } catch {
+        // quietly skip broken nested archives and continue with the rest
+      }
+    }
+  }
+
+  return documents;
 }
 
 export async function POST(request: Request) {
@@ -109,13 +151,9 @@ export async function POST(request: Request) {
     }
 
     const archiveBuffer = Buffer.from(await file.arrayBuffer());
-    const extractedEntries = file.name.toLowerCase().endsWith(".zip")
-      ? await extractZipEntries(archiveBuffer)
-      : await extractRarEntries(archiveBuffer);
-
-    const documentEntries = extractedEntries
-      .filter((item) => SUPPORTED_DOC_PATTERN.test(item.fileName))
-      .slice(0, 40);
+    const extractedEntries = await extractArchiveEntries(archiveBuffer, file.name);
+    const documentEntries = (await collectSupportedDocuments(extractedEntries))
+      .slice(0, 60);
 
     if (documentEntries.length === 0) {
       return NextResponse.json(

@@ -178,12 +178,25 @@ export async function POST(request: Request) {
       });
 
       for (const prepared of preparedDocuments) {
-        fileSummary.push(prepared.title);
+        fileSummary.push(`${prepared.title} — ${prepared.documentKind}`);
         if (prepared.extractedText?.trim()) {
-          extractedFileBlocks.push(`Файл: ${prepared.title}\n${prepared.extractedText.trim()}`);
+          extractedFileBlocks.push(
+            [
+              `Файл: ${prepared.title}`,
+              `Тип: ${prepared.documentKind}`,
+              `Статус чтения: ${prepared.extractionNote}`,
+              "Извлечённый текст:",
+              prepared.extractedText.trim(),
+            ].join("\n")
+          );
         } else {
           extractedFileBlocks.push(
-            `Файл: ${prepared.title}\nТекст автоматически не извлечён. Используй название и формат файла как контекст.`
+            [
+              `Файл: ${prepared.title}`,
+              `Тип: ${prepared.documentKind}`,
+              `Статус чтения: ${prepared.extractionNote}`,
+              "Текст автоматически не извлечён. Используй тип документа, название файла и доступный контекст, но не придумывай содержание.",
+            ].join("\n")
           );
         }
       }
@@ -238,6 +251,10 @@ export async function POST(request: Request) {
 - если данных не хватает, скажи это прямо;
 - если вопрос юридически чувствительный, отмечай риск и неопределённость;
 - если уместно, предлагай следующий практический шаг.
+- сначала кратко пойми каждый прикреплённый файл по отдельности;
+- затем собери общий вывод;
+- если какой-то файл не удалось прочитать, явно скажи это;
+- не делай вид, что прочитал файл, если текст из него не извлёкся;
 ${attachedFilesOnly ? "- отвечай только по прикреплённым файлам и прямому вопросу, не опирайся на интернет и общие знания, кроме базовой интерпретации документа;" : ""}
 
 История чата:

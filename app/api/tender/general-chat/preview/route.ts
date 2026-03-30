@@ -58,6 +58,9 @@ export async function POST(request: Request) {
       preview: {
         fileName: file.name,
         fileType: file.type || "application/octet-stream",
+        documentKind: preparedDocuments[0]?.documentKind || "Документ",
+        extracted: mergedText.length > 0,
+        statusLabel: mergedText.length > 0 ? "Текст извлечён" : "Текст не извлечён",
         text: mergedText.slice(0, 6000),
         note: preparedDocuments[0]?.extractionNote || "Файл подготовлен к анализу.",
       },

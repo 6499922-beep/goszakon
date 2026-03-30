@@ -20,6 +20,9 @@ type TenderGeneralChatProps = {
 type SelectedFilePreview = {
   fileName: string;
   fileType: string;
+  documentKind?: string;
+  extracted?: boolean;
+  statusLabel?: string;
   note: string;
   text: string;
 };
@@ -152,32 +155,49 @@ export function TenderGeneralChat({
   }, [activeObjectUrl]);
 
   useEffect(() => {
-    if (!activePreviewFile || !activePreviewKey || previewCache[activePreviewKey]) {
+    const filesNeedingPreview = selectedFiles
+      .map((file) => ({
+        file,
+        key: `${file.name}:${file.size}:${file.lastModified}`,
+      }))
+      .filter(({ key }) => !previewCache[key]);
+
+    if (filesNeedingPreview.length === 0) {
       return;
     }
 
     let cancelled = false;
-    setIsPreviewLoading(true);
+    setIsPreviewLoading(Boolean(activePreviewFile));
 
-    const formData = new FormData();
-    formData.set("file", activePreviewFile);
+    Promise.all(
+      filesNeedingPreview.map(async ({ file, key }) => {
+        const formData = new FormData();
+        formData.set("file", file);
 
-    fetch("/api/tender/general-chat/preview", {
-      method: "POST",
-      body: formData,
-    })
-      .then(async (response) => {
+        const response = await fetch("/api/tender/general-chat/preview", {
+          method: "POST",
+          body: formData,
+        });
+
         const payload = (await response.json().catch(() => null)) as
           | { ok?: boolean; error?: string; preview?: SelectedFilePreview }
           | null;
         if (!response.ok || !payload?.ok || !payload.preview) {
-          throw new Error(payload?.error || "Не удалось построить предпросмотр файла.");
+          throw new Error(payload?.error || `Не удалось прочитать файл ${file.name}.`);
         }
+
+        return { key, preview: payload.preview as SelectedFilePreview };
+      })
+    )
+      .then((results) => {
         if (!cancelled) {
-          setPreviewCache((current) => ({
-            ...current,
-            [activePreviewKey]: payload.preview as SelectedFilePreview,
-          }));
+          setPreviewCache((current) => {
+            const next = { ...current };
+            results.forEach(({ key, preview }) => {
+              next[key] = preview;
+            });
+            return next;
+          });
         }
       })
       .catch((previewError) => {
@@ -198,7 +218,7 @@ export function TenderGeneralChat({
     return () => {
       cancelled = true;
     };
-  }, [activePreviewFile, activePreviewKey, previewCache]);
+  }, [activePreviewFile, previewCache, selectedFiles]);
 
   function addFiles(nextFiles: File[]) {
     if (nextFiles.length === 0) return;
@@ -564,16 +584,23 @@ export function TenderGeneralChat({
                 Прикреплённые файлы
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
-                {sortedSelectedFiles.map(({ file, index }) => (
+                {sortedSelectedFiles.map(({ file, index }) => {
+                  const key = `${file.name}:${file.size}:${file.lastModified}`;
+                  const preview = previewCache[key];
+                  const statusLabel =
+                    preview?.statusLabel || (isPreviewLoading ? "Читаю файл..." : "Ожидает чтения");
+
+                  return (
                   <button
                     type="button"
                     key={`${file.name}-${index}`}
                     onClick={() => removeFileAtIndex(index)}
                     className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
                   >
-                    {file.name} ×
+                    {file.name} · {statusLabel} ×
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : null}
@@ -693,7 +720,18 @@ export function TenderGeneralChat({
           </div>
           {selectedFiles.length > 0 ? (
             <div className="mt-3 space-y-2">
-              {sortedSelectedFiles.map(({ file, index }) => (
+              {sortedSelectedFiles.map(({ file, index }) => {
+                const key = `${file.name}:${file.size}:${file.lastModified}`;
+                const preview = previewCache[key];
+                const statusLabel =
+                  preview?.statusLabel || (isPreviewLoading ? "Читаю файл..." : "Ожидает чтения");
+                const statusTone = preview?.extracted
+                  ? "text-emerald-700"
+                  : preview
+                    ? "text-amber-700"
+                    : "text-slate-400";
+
+                return (
                 <div
                   key={`${file.name}-sidebar-${index}`}
                   className={`flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 transition ${
@@ -701,26 +739,28 @@ export function TenderGeneralChat({
                       ? "border-[#0d5bd7] bg-[#f7fbff]"
                       : "border-slate-200 bg-slate-50"
                   }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setActivePreviewIndex(index)}
-                    className="min-w-0 flex-1 text-left"
                   >
-                    <div className="truncate text-sm font-medium text-slate-700">{file.name}</div>
-                    <div className="text-xs text-slate-400">
-                      {(file.size / 1024 / 1024).toFixed(file.size > 1024 * 1024 ? 1 : 2)} МБ
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeFileAtIndex(index)}
-                    className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
-                  >
-                    Убрать
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setActivePreviewIndex(index)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <div className="truncate text-sm font-medium text-slate-700">{file.name}</div>
+                      <div className={`text-xs ${statusTone}`}>{statusLabel}</div>
+                      <div className="text-xs text-slate-400">
+                        {preview?.documentKind || "Документ"} · {(file.size / 1024 / 1024).toFixed(file.size > 1024 * 1024 ? 1 : 2)} МБ
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeFileAtIndex(index)}
+                      className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                    >
+                      Убрать
+                    </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="mt-3 text-sm leading-6 text-slate-500">
@@ -743,6 +783,10 @@ export function TenderGeneralChat({
             <div className="mt-3 space-y-3">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
                 <div className="text-sm font-semibold text-slate-800">{activePreviewFile.name}</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {activePreview?.documentKind ? `${activePreview.documentKind} · ` : ""}
+                  {activePreview?.statusLabel || "Файл готов к отправке в чат."}
+                </div>
                 <div className="mt-1 text-xs text-slate-500">
                   {activePreview?.note || "Файл готов к отправке в чат."}
                 </div>

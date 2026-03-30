@@ -30,6 +30,8 @@ type TenderGeneralChatProps = {
     id: number;
     title: string;
     messageCount: number;
+    updatedAt: string;
+    preview: string;
   }>;
 };
 
@@ -46,6 +48,22 @@ type SelectedFilePreview = {
 
 const ARCHIVE_FILE_PATTERN = /\.(zip|rar|7z)$/i;
 const PENDING_ASSISTANT_BODY = "__GENERAL_CHAT_PENDING__";
+
+function formatThreadMeta(updatedAt: string, messageCount: number) {
+  const date = new Date(updatedAt);
+  const timeLabel = Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleDateString("ru-RU", {
+        day: "2-digit",
+        month: "2-digit",
+      });
+
+  if (messageCount <= 0) {
+    return timeLabel ? `${timeLabel} · пусто` : "Пустой чат";
+  }
+
+  return timeLabel ? `${messageCount} сообщ. · ${timeLabel}` : `${messageCount} сообщений`;
+}
 
 function getFileTypePriority(file: File) {
   const name = file.name.toLowerCase();
@@ -349,10 +367,12 @@ export function TenderGeneralChat({
   const [procurementOnlyMode, setProcurementOnlyMode] = useState(false);
   const [attachedFilesOnlyMode, setAttachedFilesOnlyMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openThreadMenuId, setOpenThreadMenuId] = useState<number | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const composerRef = useRef<HTMLFormElement | null>(null);
+  const sidebarRef = useRef<HTMLDivElement | null>(null);
   const storageKey = `general-chat-mode:${threadId}`;
   const activePreviewFile = selectedFiles[activePreviewIndex] ?? null;
   const activePreviewKey = activePreviewFile
@@ -395,6 +415,16 @@ export function TenderGeneralChat({
         }),
     [selectedFiles]
   );
+  const visibleThreads = useMemo(() => {
+    const currentThread = threadList.find((item) => item.id === currentThreadId) || null;
+    const rest = threadList.filter((item) => {
+      if (item.id === currentThreadId) return false;
+      if (item.messageCount > 0) return true;
+      return item.title.trim() !== "Новый чат";
+    });
+
+    return currentThread ? [currentThread, ...rest] : rest;
+  }, [threadList, currentThreadId]);
   useEffect(() => {
     setThreadList(threadOptions);
   }, [threadOptions]);
@@ -418,6 +448,17 @@ export function TenderGeneralChat({
       procurementOnlyMode ? "procurement-only" : "web-default"
     );
   }, [procurementOnlyMode, storageKey]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!sidebarRef.current) return;
+      if (sidebarRef.current.contains(event.target as Node)) return;
+      setOpenThreadMenuId(null);
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -593,6 +634,7 @@ export function TenderGeneralChat({
           item.id === payload.thread!.id ? { ...item, title: payload.thread!.title } : item
         )
       );
+      setOpenThreadMenuId(null);
 
       if (targetThreadId === currentThreadId) {
         setCurrentTitle(payload.thread.title);
@@ -620,6 +662,7 @@ export function TenderGeneralChat({
         throw new Error(payload?.error || "Не удалось удалить чат.");
       }
 
+      setOpenThreadMenuId(null);
       window.location.assign(`/tender/chat?thread=${payload.fallbackThreadId}`);
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Не удалось удалить чат.");
@@ -767,7 +810,10 @@ export function TenderGeneralChat({
 
   return (
     <section className="grid gap-3 xl:h-[calc(100vh-7.5rem)] xl:grid-cols-[250px_minmax(0,1fr)_280px] xl:overflow-hidden">
-      <aside className="hidden xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:rounded-[1.5rem] xl:bg-[#eef2f7] xl:px-3 xl:py-3">
+      <aside
+        ref={sidebarRef}
+        className="hidden xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:rounded-[1.5rem] xl:bg-[#f3f4f6] xl:px-2 xl:py-2"
+      >
         <div className="px-3 py-3">
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
             GOSZAKON
@@ -782,49 +828,73 @@ export function TenderGeneralChat({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+        <div className="min-h-0 flex-1 overflow-y-auto px-1 py-2">
           <div className="space-y-1">
-            {threadList.length > 0 ? (
-              threadList.map((thread) => (
+            {visibleThreads.length > 0 ? (
+              visibleThreads.map((thread) => (
                 <div
                   key={thread.id}
-                  className={`group rounded-2xl px-3 py-3 transition ${
-                    thread.id === currentThreadId
-                      ? "bg-white shadow-sm ring-1 ring-slate-200"
-                      : "hover:bg-white/80"
+                  className={`group relative rounded-xl transition ${
+                    thread.id === currentThreadId ? "bg-white shadow-sm" : "hover:bg-white/70"
                   }`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => window.location.assign(`/tender/chat?thread=${thread.id}`)}
-                    className="w-full text-left"
-                  >
-                    <div className="line-clamp-2 text-sm font-medium text-[#111827]">
-                      {thread.title}
-                    </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {thread.messageCount > 0 ? `${thread.messageCount} сообщений` : "Пустой чат"}
-                    </div>
-                  </button>
-                  <div
-                    className={`mt-2 flex items-center gap-2 transition ${
-                      thread.id === currentThreadId ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                    }`}
-                  >
+                  <div className="flex items-start gap-2 px-3 py-3">
                     <button
                       type="button"
-                      onClick={() => renameThread(thread.id, thread.title)}
-                      className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-200"
+                      onClick={() => window.location.assign(`/tender/chat?thread=${thread.id}`)}
+                      className="min-w-0 flex-1 text-left"
                     >
-                      Переименовать
+                      <div className="line-clamp-2 text-[13px] font-medium leading-5 text-[#111827]">
+                        {thread.title}
+                      </div>
+                      <div className="mt-1 line-clamp-1 text-[11px] leading-4 text-slate-500">
+                        {thread.preview
+                          ? thread.preview
+                              .replace(/\s+/g, " ")
+                              .replace(/^Файлы:\s*/i, "")
+                              .slice(0, 70)
+                          : "Без сообщений"}
+                      </div>
+                      <div className="mt-1 text-[11px] text-slate-400">
+                        {formatThreadMeta(thread.updatedAt, thread.messageCount)}
+                      </div>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteThread(thread.id)}
-                      className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-100"
-                    >
-                      Удалить
-                    </button>
+                    <div className="relative shrink-0">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenThreadMenuId((current) =>
+                            current === thread.id ? null : thread.id
+                          )
+                        }
+                        className={`flex h-8 w-8 items-center justify-center rounded-full text-base transition ${
+                          openThreadMenuId === thread.id || thread.id === currentThreadId
+                            ? "bg-slate-100 text-slate-700"
+                            : "text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                        }`}
+                        aria-label="Действия с чатом"
+                      >
+                        …
+                      </button>
+                      {openThreadMenuId === thread.id ? (
+                        <div className="absolute right-0 top-9 z-20 min-w-[170px] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                          <button
+                            type="button"
+                            onClick={() => renameThread(thread.id, thread.title)}
+                            className="w-full rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                          >
+                            Переименовать
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteThread(thread.id)}
+                            className="mt-1 w-full rounded-xl px-3 py-2 text-left text-sm text-rose-700 transition hover:bg-rose-50"
+                          >
+                            Удалить
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               ))
@@ -837,7 +907,7 @@ export function TenderGeneralChat({
         </div>
 
         <div className="px-3 py-3">
-          <div className="mt-2 rounded-2xl bg-white px-4 py-4 shadow-sm">
+          <div className="mt-2 rounded-2xl bg-white px-4 py-3 shadow-sm">
             <div className="text-sm font-semibold text-[#111827]">{userLabel}</div>
           </div>
         </div>
@@ -878,7 +948,7 @@ export function TenderGeneralChat({
                             Готовлю ответ...
                           </div>
                         ) : (
-                          <div className="mt-4 text-[16px]">{renderAssistantMarkdown(parsed.text)}</div>
+                          <div className="mt-4 text-[16px] leading-8">{renderAssistantMarkdown(parsed.text)}</div>
                         )}
                         {!isPendingAssistantMessage && parsed.text.trim() ? (
                           <div className="mt-5 flex items-center gap-2">

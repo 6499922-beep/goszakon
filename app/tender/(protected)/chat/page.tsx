@@ -58,6 +58,13 @@ export default async function TenderGeneralChatPage({
       _count: {
         select: { messages: true },
       },
+      messages: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: {
+          body: true,
+        },
+      },
     },
   });
 
@@ -146,6 +153,8 @@ export default async function TenderGeneralChatPage({
         id: item.id,
         title: item.title,
         messageCount: item._count.messages,
+        updatedAt: item.updatedAt.toISOString(),
+        preview: item.messages[0]?.body || "",
       }))}
       userLabel={currentUser.name?.trim() || currentUser.email || "Вы"}
       initialMessages={thread.messages.map((message) => ({

@@ -401,6 +401,40 @@ export function TenderGeneralChat({
             }}
           />
 
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#0d5bd7]/15 bg-[#f7fbff] px-4 py-3">
+            <div>
+              <div className="text-sm font-semibold text-[#081a4b]">Прикрепить документы</div>
+              <div className="text-xs text-slate-500">
+                Нажми `Добавить файлы` или просто перетащи документы в поле ниже.
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isPending}
+                className="rounded-full bg-[#0d5bd7] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0b4fc0] disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                Добавить файлы
+              </button>
+              {selectedFiles.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedFiles([]);
+                    setActivePreviewIndex(0);
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = "";
+                    }
+                  }}
+                  className="rounded-full border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+                >
+                  Очистить все
+                </button>
+              ) : null}
+            </div>
+          </div>
+
           <div
             onDragOver={(event) => {
               event.preventDefault();
@@ -485,29 +519,6 @@ export function TenderGeneralChat({
 
           <div className="mt-4 flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isPending}
-                className="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Добавить файлы
-              </button>
-              {selectedFiles.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedFiles([]);
-                    setActivePreviewIndex(0);
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = "";
-                    }
-                  }}
-                  className="rounded-full border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
-                >
-                  Очистить все
-                </button>
-              ) : null}
               <div className="text-xs text-slate-400">
                 Enter — отправить, Shift + Enter — новая строка
               </div>

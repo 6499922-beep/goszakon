@@ -34,6 +34,7 @@ type TenderGeneralChatProps = {
 };
 
 type SelectedFilePreview = {
+  attachmentId?: number;
   fileName: string;
   fileType: string;
   documentKind?: string;
@@ -382,6 +383,7 @@ export function TenderGeneralChat({
       filesNeedingPreview.map(async ({ file, key }) => {
         const formData = new FormData();
         formData.set("file", file);
+        formData.set("threadId", String(threadId));
 
         const response = await fetch("/api/tender/general-chat/preview", {
           method: "POST",
@@ -454,6 +456,12 @@ export function TenderGeneralChat({
     const question = draft.trim();
     const hasFiles = selectedFiles.length > 0;
     const filesToUpload = [...selectedFiles];
+    const attachmentIds = filesToUpload
+      .map((file) => {
+        const key = `${file.name}:${file.size}:${file.lastModified}`;
+        return previewCache[key]?.attachmentId ?? null;
+      })
+      .filter((value): value is number => value !== null && Number.isInteger(value) && value > 0);
 
     if ((!question && !hasFiles) || isSubmitting) return;
 
@@ -496,32 +504,25 @@ export function TenderGeneralChat({
         );
       }
 
-      const response =
-        filesToUpload.length > 0
-          ? await fetch("/api/tender/general-chat", {
-              method: "POST",
-              body: (() => {
-                const formData = new FormData();
-                formData.set("threadId", String(threadId));
-                formData.set("message", question);
-                formData.set("useWebSearch", String(!procurementOnlyMode));
-                formData.set("attachedFilesOnly", String(attachedFilesOnlyMode));
-                filesToUpload.forEach((file) => formData.append("files", file));
-                return formData;
-              })(),
-            })
-          : await fetch("/api/tender/general-chat", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                threadId,
-                message: question,
-                useWebSearch: !procurementOnlyMode,
-                attachedFilesOnly: attachedFilesOnlyMode,
-              }),
-            });
+      if (filesToUpload.length > 0 && attachmentIds.length !== filesToUpload.length) {
+        throw new Error(
+          "Не все файлы успели сохраниться на сервере. Подождите пару секунд и отправьте запрос ещё раз."
+        );
+      }
+
+      const response = await fetch("/api/tender/general-chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          threadId,
+          message: question,
+          useWebSearch: !procurementOnlyMode,
+          attachedFilesOnly: attachedFilesOnlyMode,
+          attachmentIds,
+        }),
+      });
 
       const payload = (await response.json().catch(() => null)) as
         | {

@@ -109,7 +109,12 @@ export default async function TenderGeneralChatPage({
   }
 
   const initialAttachments = await prisma.tenderChatAttachment.findMany({
-    where: { threadId: thread.id },
+    where: {
+      threadId: thread.id,
+      messageId: {
+        not: null,
+      },
+    },
     orderBy: { createdAt: "desc" },
     take: 20,
     select: {

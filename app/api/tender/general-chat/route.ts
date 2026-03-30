@@ -331,7 +331,12 @@ async function loadThreadState(threadId: number, userId: number) {
   if (!thread) return null;
 
   const attachments = await prisma.tenderChatAttachment.findMany({
-    where: { threadId: thread.id },
+    where: {
+      threadId: thread.id,
+      messageId: {
+        not: null,
+      },
+    },
     orderBy: { createdAt: "desc" },
     take: 20,
     select: {
@@ -383,6 +388,7 @@ async function parseIncomingRequest(request: Request) {
       useWebSearch: String(formData.get("useWebSearch") ?? "true") === "true",
       attachedFilesOnly: String(formData.get("attachedFilesOnly") ?? "false") === "true",
       files,
+      attachmentIds: [] as number[],
     };
   }
 
@@ -390,6 +396,7 @@ async function parseIncomingRequest(request: Request) {
     threadId?: number;
     message?: string;
     useWebSearch?: boolean;
+    attachmentIds?: number[];
   };
 
   return {
@@ -398,6 +405,9 @@ async function parseIncomingRequest(request: Request) {
     useWebSearch: Boolean(body.useWebSearch),
     attachedFilesOnly: Boolean((body as any).attachedFilesOnly),
     files: [] as File[],
+    attachmentIds: Array.isArray(body.attachmentIds)
+      ? body.attachmentIds.map((item) => Number(item)).filter((item) => Number.isInteger(item) && item > 0)
+      : [],
   };
 }
 
@@ -412,9 +422,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const { threadId, message, useWebSearch, attachedFilesOnly, files } = await parseIncomingRequest(request);
+    const { threadId, message, useWebSearch, attachedFilesOnly, files, attachmentIds } =
+      await parseIncomingRequest(request);
 
-    if (!message && files.length === 0) {
+    if (!message && files.length === 0 && attachmentIds.length === 0) {
       return NextResponse.json(
         { ok: false, error: "Нужно ввести сообщение или прикрепить файлы." },
         { status: 400 }
@@ -458,7 +469,6 @@ export async function POST(request: Request) {
     }
 
     const model = process.env.OPENAI_CHAT_MODEL || process.env.OPENAI_MODEL || "gpt-5";
-    const extractedFileBlocks: string[] = [];
     const fileSummary: string[] = [];
     const fileReadStates: string[] = [];
 
@@ -525,38 +535,11 @@ export async function POST(request: Request) {
           fileReadStates.push(
             `${prepared.title} — ${prepared.documentKind} — ${prepared.extractionNote}`
           );
-          if (prepared.extractedText?.trim()) {
-            extractedFileBlocks.push(
-              [
-                `Файл: ${prepared.title}`,
-                `Тип: ${prepared.documentKind}`,
-                `Статус чтения: ${prepared.extractionNote}`,
-                "Извлечённый текст:",
-                prepared.extractedText.trim(),
-              ].join("\n")
-            );
-          } else {
-            extractedFileBlocks.push(
-              [
-                `Файл: ${prepared.title}`,
-                `Тип: ${prepared.documentKind}`,
-                `Статус чтения: ${prepared.extractionNote}`,
-                "Текст автоматически не извлечён. Используй тип документа, название файла и доступный контекст, но не придумывай содержание.",
-              ].join("\n")
-            );
-          }
         }
       } catch (fileError) {
         console.error("[general-chat] file-prepare failed", file.name, fileError);
         fileSummary.push(`${file.name} — файл не удалось подготовить`);
         fileReadStates.push(`${file.name} — неизвестный тип — файл не удалось прочитать автоматически`);
-        extractedFileBlocks.push(
-          [
-            `Файл: ${file.name}`,
-            "Статус чтения: файл не удалось прочитать автоматически.",
-            "Не игнорируй этот факт в ответе. Скажи честно, что по этому вложению автоматическое чтение сорвалось.",
-          ].join("\n")
-        );
         attachmentRows.push({
           title: file.name,
           fileName: file.name,
@@ -568,6 +551,40 @@ export async function POST(request: Request) {
           extractedText: null,
         });
       }
+    }
+
+    const pendingAttachments =
+      attachmentIds.length > 0
+        ? await prisma.tenderChatAttachment.findMany({
+            where: {
+              id: {
+                in: attachmentIds,
+              },
+              threadId: thread.id,
+              messageId: null,
+            },
+            orderBy: { createdAt: "desc" },
+            select: {
+              id: true,
+              title: true,
+              fileName: true,
+              documentKind: true,
+              extractionNote: true,
+              storagePath: true,
+              extractedText: true,
+              summaryText: true,
+              createdAt: true,
+            },
+          })
+        : [];
+
+    for (const attachment of pendingAttachments) {
+      fileSummary.push(`${attachment.title} — ${attachment.documentKind || "Документ"}`);
+      fileReadStates.push(
+        `${attachment.title} — ${attachment.documentKind || "Документ"} — ${
+          attachment.extractionNote || "Файл сохранён на сервере"
+        }`
+      );
     }
 
     if (attachmentRows.length > 0) {
@@ -586,7 +603,24 @@ export async function POST(request: Request) {
         })),
       });
     }
+
+    if (pendingAttachments.length > 0) {
+      await prisma.tenderChatAttachment.updateMany({
+        where: {
+          id: {
+            in: pendingAttachments.map((item) => item.id),
+          },
+          threadId: thread.id,
+          messageId: null,
+        },
+        data: {
+          messageId: userMessage.id,
+        },
+      });
+    }
+
     const createdAttachments = attachmentRows.length
+      || pendingAttachments.length
       ? await prisma.tenderChatAttachment.findMany({
           where: { messageId: userMessage.id },
           orderBy: { createdAt: "desc" },
@@ -634,8 +668,13 @@ export async function POST(request: Request) {
         orderBy: { createdAt: "asc" },
         take: 20,
       });
-      const recentAttachments = await prisma.tenderChatAttachment.findMany({
-        where: { threadId: thread.id },
+    const recentAttachments = await prisma.tenderChatAttachment.findMany({
+        where: {
+          threadId: thread.id,
+          messageId: {
+            not: null,
+          },
+        },
         orderBy: { createdAt: "desc" },
         take: 10,
         select: {

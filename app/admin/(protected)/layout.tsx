@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ReactNode } from "react";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { isAdminPanelEnabled } from "@/lib/admin-access";
 import { ADMIN_COOKIE_NAME, verifyAdminSession } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,10 @@ export default async function AdminProtectedLayout({
 }: {
   children: ReactNode;
 }) {
+  if (!isAdminPanelEnabled()) {
+    notFound();
+  }
+
   const cookieStore = await cookies();
   const session = await verifyAdminSession(
     cookieStore.get(ADMIN_COOKIE_NAME)?.value

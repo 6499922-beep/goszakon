@@ -1,7 +1,8 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { getPrisma } from "@/lib/prisma";
+import { isAdminPanelEnabled } from "@/lib/admin-access";
 import {
   ADMIN_COOKIE_NAME,
   createAdminSession,
@@ -17,6 +18,10 @@ type PageProps = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminSignInPage({ searchParams }: PageProps) {
+  if (!isAdminPanelEnabled()) {
+    notFound();
+  }
+
   const params = await searchParams;
   const cookieStore = await cookies();
   const existingSession = await verifyAdminSession(

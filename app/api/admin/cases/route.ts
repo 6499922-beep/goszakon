@@ -25,9 +25,7 @@ function buildRedirect(request: Request, path: string, error?: string) {
 
 export async function POST(request: Request) {
   const auth = await requireAdmin();
-  if (!auth.ok) {
-    return buildRedirect(request, "/admin/signin");
-  }
+  if (!auth.ok) return auth.response;
 
   try {
     const formData = await request.formData();

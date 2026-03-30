@@ -1,8 +1,19 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { isAdminPanelEnabled, isAdminPath } from "@/lib/admin-access";
 import { isTenderChatHost, isTenderHost } from "@/lib/tender-host";
 
 export function proxy(request: NextRequest) {
+  if (!isAdminPanelEnabled() && isAdminPath(request.nextUrl.pathname)) {
+    return new NextResponse("Not Found", {
+      status: 404,
+      headers: {
+        "cache-control": "no-store",
+        "content-type": "text/plain; charset=utf-8",
+      },
+    });
+  }
+
   const host = request.headers.get("host");
 
   if (!isTenderHost(host)) {

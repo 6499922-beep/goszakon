@@ -7,7 +7,7 @@ cd "$ROOT_DIR"
 "$ROOT_DIR/scripts/verify-release.sh"
 
 git push origin main
-PROD_HOST="${PROD_HOST:-185.185.142.238}"
+PROD_HOST="${PROD_HOST:-138.124.118.116}"
 PROD_PATH="${PROD_PATH:-/root/goszakon}"
 PROD_DEPLOY_SCRIPT="${PROD_DEPLOY_SCRIPT:-$PROD_PATH/deploy.sh}"
 

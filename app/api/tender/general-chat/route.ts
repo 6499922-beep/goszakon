@@ -432,6 +432,34 @@ async function getOrCreateThread(userId: number) {
   });
 }
 
+async function getOrCreateFallbackThread(userId: number, excludeThreadId?: number) {
+  const prisma = getPrisma();
+  const existing = await prisma.tenderChatThread.findFirst({
+    where: {
+      ownerId: userId,
+      kind: TenderChatThreadKind.GENERAL,
+      ...(excludeThreadId
+        ? {
+            id: {
+              not: excludeThreadId,
+            },
+          }
+        : {}),
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  if (existing) return existing;
+
+  return prisma.tenderChatThread.create({
+    data: {
+      ownerId: userId,
+      title: "Новый чат",
+      kind: TenderChatThreadKind.GENERAL,
+    },
+  });
+}
+
 async function loadThreadState(threadId: number, userId: number) {
   const prisma = getPrisma();
   const thread = await prisma.tenderChatThread.findFirst({
@@ -1039,6 +1067,118 @@ export async function GET(request: Request) {
       {
         ok: false,
         error: error instanceof Error ? error.message : "Не удалось загрузить состояние чата.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const currentUser = await getCurrentTenderUser();
+
+    if (!currentUser || !tenderHasCapability(currentUser.role, "procurement_comments")) {
+      return NextResponse.json({ ok: false, error: "Недостаточно прав." }, { status: 403 });
+    }
+
+    const body = (await request.json().catch(() => ({}))) as {
+      threadId?: number;
+      title?: string;
+    };
+
+    const threadId = Number(body.threadId ?? 0);
+    const title = String(body.title ?? "").trim().slice(0, 120);
+
+    if (!Number.isInteger(threadId) || threadId <= 0) {
+      return NextResponse.json({ ok: false, error: "Некорректный чат." }, { status: 400 });
+    }
+
+    if (!title) {
+      return NextResponse.json({ ok: false, error: "Нужно указать название чата." }, { status: 400 });
+    }
+
+    const prisma = getPrisma();
+    const thread = await prisma.tenderChatThread.findFirst({
+      where: {
+        id: threadId,
+        ownerId: currentUser.id,
+        kind: TenderChatThreadKind.GENERAL,
+      },
+    });
+
+    if (!thread) {
+      return NextResponse.json({ ok: false, error: "Чат не найден." }, { status: 404 });
+    }
+
+    const updated = await prisma.tenderChatThread.update({
+      where: { id: thread.id },
+      data: { title },
+      select: {
+        id: true,
+        title: true,
+      },
+    });
+
+    return NextResponse.json({ ok: true, thread: updated });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          error instanceof Error ? error.message : "Не удалось переименовать чат.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const currentUser = await getCurrentTenderUser();
+
+    if (!currentUser || !tenderHasCapability(currentUser.role, "procurement_comments")) {
+      return NextResponse.json({ ok: false, error: "Недостаточно прав." }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const threadId = Number(searchParams.get("threadId") ?? 0);
+
+    if (!Number.isInteger(threadId) || threadId <= 0) {
+      return NextResponse.json({ ok: false, error: "Некорректный чат." }, { status: 400 });
+    }
+
+    const prisma = getPrisma();
+    const thread = await prisma.tenderChatThread.findFirst({
+      where: {
+        id: threadId,
+        ownerId: currentUser.id,
+        kind: TenderChatThreadKind.GENERAL,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!thread) {
+      return NextResponse.json({ ok: false, error: "Чат не найден." }, { status: 404 });
+    }
+
+    await prisma.tenderChatThread.delete({
+      where: { id: thread.id },
+    });
+
+    const fallbackThread = await getOrCreateFallbackThread(currentUser.id, thread.id);
+
+    return NextResponse.json({
+      ok: true,
+      deletedThreadId: thread.id,
+      fallbackThreadId: fallbackThread.id,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : "Не удалось удалить чат.",
       },
       { status: 500 }
     );

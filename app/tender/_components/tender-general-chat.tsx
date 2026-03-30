@@ -44,13 +44,6 @@ type SelectedFilePreview = {
   text: string;
 };
 
-const QUICK_PROMPTS = [
-  "Помоги оценить риск участия в закупке.",
-  "Как лучше анализировать договор по 223-ФЗ?",
-  "Что проверить в НМЦК и Excel в первую очередь?",
-  "Составь план проверки закупки перед подачей.",
-];
-
 const ARCHIVE_FILE_PATTERN = /\.(zip|rar|7z)$/i;
 const PENDING_ASSISTANT_BODY = "__GENERAL_CHAT_PENDING__";
 
@@ -345,6 +338,8 @@ export function TenderGeneralChat({
 }: TenderGeneralChatProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [storedAttachments, setStoredAttachments] = useState(initialAttachments);
+  const [threadList, setThreadList] = useState(threadOptions);
+  const [currentTitle, setCurrentTitle] = useState(threadTitle);
   const [draft, setDraft] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
@@ -400,22 +395,13 @@ export function TenderGeneralChat({
         }),
     [selectedFiles]
   );
-  const recentUserTopics = useMemo(() => {
-    const seen = new Set<string>();
+  useEffect(() => {
+    setThreadList(threadOptions);
+  }, [threadOptions]);
 
-    return [...sortedMessages]
-      .filter((message) => message.role === "user")
-      .reverse()
-      .map((message) => message.body.split("\n")[0]?.trim() || "Сообщение без названия")
-      .map((line) => line.replace(/^Файлы:\s*/i, "").trim())
-      .filter((line) => line.length > 0)
-      .filter((line) => {
-        if (seen.has(line)) return false;
-        seen.add(line);
-        return true;
-      })
-      .slice(0, 8);
-  }, [sortedMessages]);
+  useEffect(() => {
+    setCurrentTitle(threadTitle);
+  }, [threadTitle]);
 
   useEffect(() => {
     const savedMode = window.localStorage.getItem(storageKey);
@@ -450,6 +436,7 @@ export function TenderGeneralChat({
         const payload = (await response.json().catch(() => null)) as
           | {
               ok?: boolean;
+              thread?: { id: number; title: string };
               messages?: GeneralChatMessage[];
               attachments?: TenderGeneralChatProps["initialAttachments"];
             }
@@ -460,6 +447,14 @@ export function TenderGeneralChat({
         }
 
         setMessages(payload.messages);
+        if (payload.thread?.title) {
+          setCurrentTitle(payload.thread.title);
+          setThreadList((current) =>
+            current.map((item) =>
+              item.id === threadId ? { ...item, title: payload.thread!.title } : item
+            )
+          );
+        }
         if (payload.attachments) {
           setStoredAttachments(payload.attachments);
         }
@@ -567,6 +562,68 @@ export function TenderGeneralChat({
       setActivePreviewIndex((prev) => Math.max(0, Math.min(prev, next.length - 1)));
       return next;
     });
+  }
+
+  async function renameThread(targetThreadId: number, currentValue: string) {
+    const nextTitle = window.prompt("Новое название чата", currentValue)?.trim();
+    if (!nextTitle || nextTitle === currentValue) return;
+
+    try {
+      const response = await fetch("/api/tender/general-chat", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          threadId: targetThreadId,
+          title: nextTitle,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | { ok?: boolean; error?: string; thread?: { id: number; title: string } }
+        | null;
+
+      if (!response.ok || !payload?.ok || !payload.thread) {
+        throw new Error(payload?.error || "Не удалось переименовать чат.");
+      }
+
+      setThreadList((current) =>
+        current.map((item) =>
+          item.id === payload.thread!.id ? { ...item, title: payload.thread!.title } : item
+        )
+      );
+
+      if (targetThreadId === currentThreadId) {
+        setCurrentTitle(payload.thread.title);
+      }
+    } catch (renameError) {
+      setError(
+        renameError instanceof Error ? renameError.message : "Не удалось переименовать чат."
+      );
+    }
+  }
+
+  async function deleteThread(targetThreadId: number) {
+    const confirmed = window.confirm("Удалить этот чат целиком?");
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/tender/general-chat?threadId=${targetThreadId}`, {
+        method: "DELETE",
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { ok?: boolean; error?: string; fallbackThreadId?: number }
+        | null;
+
+      if (!response.ok || !payload?.ok || !payload.fallbackThreadId) {
+        throw new Error(payload?.error || "Не удалось удалить чат.");
+      }
+
+      window.location.assign(`/tender/chat?thread=${payload.fallbackThreadId}`);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Не удалось удалить чат.");
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -709,10 +766,10 @@ export function TenderGeneralChat({
   }
 
   return (
-    <section className="grid gap-3 xl:h-[calc(100vh-7.5rem)] xl:grid-cols-[260px_minmax(0,1fr)_300px] xl:overflow-hidden">
-      <aside className="hidden xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:rounded-[1.5rem] xl:bg-[#f3f4f6] xl:px-3 xl:py-3">
+    <section className="grid gap-3 xl:h-[calc(100vh-7.5rem)] xl:grid-cols-[250px_minmax(0,1fr)_280px] xl:overflow-hidden">
+      <aside className="hidden xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:rounded-[1.5rem] xl:bg-[#eef2f7] xl:px-3 xl:py-3">
         <div className="px-3 py-3">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
             GOSZAKON
           </div>
           <div className="mt-1.5 text-lg font-semibold text-[#111827]">GPT-чат</div>
@@ -726,41 +783,50 @@ export function TenderGeneralChat({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-          <div className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Текущий чат
-          </div>
-          <div className="mt-2 rounded-2xl bg-white px-4 py-4 shadow-sm">
-            <div className="line-clamp-2 text-sm font-semibold text-[#111827]">{threadTitle}</div>
-            <div className="mt-2 text-xs leading-5 text-slate-500">
-              {sortedMessages.length > 0
-                ? `${sortedMessages.length} сообщений в этой ветке`
-                : "Новая ветка без сообщений"}
-            </div>
-          </div>
-
-          <div className="mt-5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Последние темы
-          </div>
-          <div className="mt-2 space-y-1">
-            {threadOptions.length > 0 ? (
-              threadOptions.map((thread) => (
-                <button
+          <div className="space-y-1">
+            {threadList.length > 0 ? (
+              threadList.map((thread) => (
+                <div
                   key={thread.id}
-                  type="button"
-                  onClick={() => window.location.assign(`/tender/chat?thread=${thread.id}`)}
-                  className={`w-full rounded-2xl px-3 py-3 text-left text-sm transition ${
+                  className={`group rounded-2xl px-3 py-3 transition ${
                     thread.id === currentThreadId
-                      ? "bg-white text-[#111827] shadow-sm"
-                      : "text-slate-700 hover:bg-white/80"
+                      ? "bg-white shadow-sm ring-1 ring-slate-200"
+                      : "hover:bg-white/80"
                   }`}
                 >
-                  <div className="line-clamp-2 font-medium">{thread.title}</div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    {thread.messageCount > 0
-                      ? `${thread.messageCount} сообщений`
-                      : "Пустой чат"}
+                  <button
+                    type="button"
+                    onClick={() => window.location.assign(`/tender/chat?thread=${thread.id}`)}
+                    className="w-full text-left"
+                  >
+                    <div className="line-clamp-2 text-sm font-medium text-[#111827]">
+                      {thread.title}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {thread.messageCount > 0 ? `${thread.messageCount} сообщений` : "Пустой чат"}
+                    </div>
+                  </button>
+                  <div
+                    className={`mt-2 flex items-center gap-2 transition ${
+                      thread.id === currentThreadId ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => renameThread(thread.id, thread.title)}
+                      className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-200"
+                    >
+                      Переименовать
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteThread(thread.id)}
+                      className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-100"
+                    >
+                      Удалить
+                    </button>
                   </div>
-                </button>
+                </div>
               ))
             ) : (
               <div className="rounded-2xl px-3 py-3 text-sm text-slate-500">
@@ -771,14 +837,8 @@ export function TenderGeneralChat({
         </div>
 
         <div className="px-3 py-3">
-          <div className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Аккаунт
-          </div>
           <div className="mt-2 rounded-2xl bg-white px-4 py-4 shadow-sm">
             <div className="text-sm font-semibold text-[#111827]">{userLabel}</div>
-            <div className="mt-1 text-xs leading-5 text-slate-500">
-              Личная история чата хранится на вашем сервере.
-            </div>
           </div>
         </div>
       </aside>
@@ -787,10 +847,7 @@ export function TenderGeneralChat({
         <div className="px-8 py-4">
           <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4">
             <div className="min-w-0">
-              <div className="text-[15px] font-semibold text-[#111827]">{threadTitle}</div>
-              <div className="mt-1 text-sm text-slate-500">
-                Работаю как обычный чат: можно писать вопрос, прикладывать документы и продолжать диалог.
-              </div>
+              <div className="text-[15px] font-semibold text-[#111827]">{currentTitle}</div>
             </div>
           </div>
         </div>
@@ -994,18 +1051,8 @@ export function TenderGeneralChat({
             </div>
           </div>
 
-          <div className="mx-auto mt-4 flex w-full max-w-4xl flex-wrap gap-2">
-            {QUICK_PROMPTS.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                onClick={() => askQuestion(prompt)}
-                className="rounded-full border border-[#0d5bd7]/15 bg-[#0d5bd7]/5 px-3 py-2 text-xs font-medium text-[#0d5bd7] transition hover:border-[#0d5bd7]/30 hover:bg-[#0d5bd7]/10"
-              >
-                {prompt}
-              </button>
-            ))}
-            {selectedFiles.length > 0 ? (
+          {selectedFiles.length > 0 ? (
+            <div className="mx-auto mt-4 flex w-full max-w-4xl flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() =>
@@ -1017,8 +1064,8 @@ export function TenderGeneralChat({
               >
                 Собрать выжимку по файлам
               </button>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </form>
       </div>
 
@@ -1200,19 +1247,6 @@ export function TenderGeneralChat({
               )}
             </div>
           )}
-        </div>
-
-        <div className="mt-4 space-y-2">
-          {QUICK_PROMPTS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => askQuestion(item)}
-              className="w-full rounded-2xl bg-[#f7fbff] px-4 py-3 text-left text-sm font-medium text-[#0d5bd7] transition hover:bg-white"
-            >
-              {item}
-            </button>
-          ))}
         </div>
       </aside>
     </section>

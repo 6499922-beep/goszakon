@@ -511,27 +511,27 @@ export function TenderGeneralChat({
   }
 
   return (
-    <section className="grid gap-4 xl:h-[calc(100vh-7.5rem)] xl:grid-cols-[280px_minmax(0,1fr)_320px] xl:overflow-hidden">
-      <aside className="hidden xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:rounded-[2rem] xl:border xl:border-[#d8dde8] xl:bg-[#f3f4f6]">
-        <div className="border-b border-slate-200 px-4 py-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+    <section className="grid gap-3 xl:h-[calc(100vh-7.5rem)] xl:grid-cols-[260px_minmax(0,1fr)_300px] xl:overflow-hidden">
+      <aside className="hidden xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:rounded-[1.5rem] xl:bg-[#f3f4f6] xl:px-3 xl:py-3">
+        <div className="px-3 py-3">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
             GOSZAKON
           </div>
-          <div className="mt-2 text-xl font-semibold text-[#111827]">GPT-чат</div>
+          <div className="mt-1.5 text-lg font-semibold text-[#111827]">GPT-чат</div>
           <button
             type="button"
             onClick={() => window.location.assign(`/tender/chat?new=${Date.now()}`)}
-            className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            className="mt-4 w-full rounded-2xl bg-white px-4 py-3 text-left text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
           >
             Новый чат
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+        <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+          <div className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
             Текущий чат
           </div>
-          <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
+          <div className="mt-2 rounded-2xl bg-white px-4 py-4 shadow-sm">
             <div className="line-clamp-2 text-sm font-semibold text-[#111827]">{threadTitle}</div>
             <div className="mt-2 text-xs leading-5 text-slate-500">
               {sortedMessages.length > 0
@@ -540,10 +540,10 @@ export function TenderGeneralChat({
             </div>
           </div>
 
-          <div className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+          <div className="mt-5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
             Последние темы
           </div>
-          <div className="mt-3 space-y-1">
+          <div className="mt-2 space-y-1">
             {threadOptions.length > 0 ? (
               threadOptions.map((thread) => (
                 <button
@@ -552,8 +552,8 @@ export function TenderGeneralChat({
                   onClick={() => window.location.assign(`/tender/chat?thread=${thread.id}`)}
                   className={`w-full rounded-2xl px-3 py-3 text-left text-sm transition ${
                     thread.id === currentThreadId
-                      ? "bg-white text-[#111827] shadow-sm ring-1 ring-slate-200"
-                      : "text-slate-700 hover:bg-white"
+                      ? "bg-white text-[#111827] shadow-sm"
+                      : "text-slate-700 hover:bg-white/80"
                   }`}
                 >
                   <div className="line-clamp-2 font-medium">{thread.title}</div>
@@ -572,11 +572,11 @@ export function TenderGeneralChat({
           </div>
         </div>
 
-        <div className="border-t border-slate-200 px-4 py-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+        <div className="px-3 py-3">
+          <div className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
             Аккаунт
           </div>
-          <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
+          <div className="mt-2 rounded-2xl bg-white px-4 py-4 shadow-sm">
             <div className="text-sm font-semibold text-[#111827]">{userLabel}</div>
             <div className="mt-1 text-xs leading-5 text-slate-500">
               Личная история чата хранится на вашем сервере.
@@ -585,8 +585,8 @@ export function TenderGeneralChat({
         </div>
       </aside>
 
-      <div className="flex min-h-[84vh] flex-col rounded-[2rem] border border-slate-200 bg-white xl:min-h-0 xl:h-full xl:overflow-hidden">
-        <div className="border-b border-slate-100 px-8 py-4">
+      <div className="flex min-h-[84vh] flex-col rounded-[1.5rem] bg-white xl:min-h-0 xl:h-full xl:overflow-hidden">
+        <div className="px-8 py-4">
           <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4">
             <div className="min-w-0">
               <div className="text-[15px] font-semibold text-[#111827]">{threadTitle}</div>
@@ -662,7 +662,7 @@ export function TenderGeneralChat({
 
         <form
           onSubmit={handleSubmit}
-          className="border-t border-slate-100 bg-white px-6 py-4 xl:shrink-0"
+          className="bg-white px-6 pb-5 pt-2 xl:shrink-0"
           ref={composerRef}
         >
           <input
@@ -802,7 +802,7 @@ export function TenderGeneralChat({
         </form>
       </div>
 
-      <aside className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm xl:h-full xl:overflow-y-auto">
+      <aside className="rounded-[1.5rem] bg-white p-4 shadow-sm xl:h-full xl:overflow-y-auto">
         <div className="text-sm font-medium uppercase tracking-[0.16em] text-slate-400">
           Режим работы
         </div>
@@ -857,7 +857,7 @@ export function TenderGeneralChat({
           </button>
         </div>
 
-        <div className="mt-6 rounded-3xl border border-slate-200 bg-white px-4 py-4">
+        <div className="mt-5 rounded-[1.5rem] bg-[#fafbfc] px-4 py-4">
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
             Файлы к отправке
           </div>
@@ -877,10 +877,10 @@ export function TenderGeneralChat({
                 return (
                 <div
                   key={`${file.name}-sidebar-${index}`}
-                  className={`flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 transition ${
+                  className={`flex items-center justify-between gap-3 rounded-2xl px-3 py-2 transition ${
                     index === activePreviewIndex
-                      ? "border-[#0d5bd7] bg-[#f7fbff]"
-                      : "border-slate-200 bg-slate-50"
+                      ? "bg-white ring-1 ring-[#0d5bd7]"
+                      : "bg-white/70"
                   }`}
                   >
                     <button
@@ -897,7 +897,7 @@ export function TenderGeneralChat({
                     <button
                       type="button"
                       onClick={() => removeFileAtIndex(index)}
-                      className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                      className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
                     >
                       Убрать
                     </button>
@@ -910,7 +910,7 @@ export function TenderGeneralChat({
           )}
         </div>
 
-        <div className="mt-6 rounded-3xl border border-slate-200 bg-white px-4 py-4">
+        <div className="mt-4 rounded-[1.5rem] bg-[#fafbfc] px-4 py-4">
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
             Предпросмотр
           </div>
@@ -920,7 +920,7 @@ export function TenderGeneralChat({
             <div className="mt-3 text-sm leading-6 text-slate-500">Готовлю предпросмотр файла...</div>
           ) : (
             <div className="mt-3 space-y-3">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+              <div className="rounded-2xl bg-white px-3 py-3">
                 <div className="text-sm font-semibold text-slate-800">{activePreviewFile.name}</div>
                 <div className="mt-1 text-xs text-slate-500">
                   {activePreview?.documentKind ? `${activePreview.documentKind} · ` : ""}
@@ -945,11 +945,11 @@ export function TenderGeneralChat({
                   />
                 )
               ) : activePreview?.text ? (
-                <div className="max-h-[320px] overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-7 text-slate-700 whitespace-pre-wrap">
+                <div className="max-h-[320px] overflow-y-auto rounded-2xl bg-white px-4 py-3 text-sm leading-7 text-slate-700 whitespace-pre-wrap">
                   {activePreview.text}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-500">
+                <div className="rounded-2xl bg-white px-4 py-4 text-sm leading-6 text-slate-500">
                   Для этого формата встроенный визуальный предпросмотр ограничен, но файл будет проанализирован после отправки.
                 </div>
               )}
@@ -957,13 +957,13 @@ export function TenderGeneralChat({
           )}
         </div>
 
-        <div className="mt-6 space-y-2">
+        <div className="mt-4 space-y-2">
           {QUICK_PROMPTS.map((item) => (
             <button
               key={item}
               type="button"
               onClick={() => askQuestion(item)}
-              className="w-full rounded-2xl border border-[#cfe0ff] bg-[#f7fbff] px-4 py-3 text-left text-sm font-medium text-[#0d5bd7] transition hover:border-[#0d5bd7] hover:bg-white"
+              className="w-full rounded-2xl bg-[#f7fbff] px-4 py-3 text-left text-sm font-medium text-[#0d5bd7] transition hover:bg-white"
             >
               {item}
             </button>

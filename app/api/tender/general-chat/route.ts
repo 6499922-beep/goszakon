@@ -1,3 +1,5 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { TenderChatMessageRole, TenderChatThreadKind } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
@@ -169,6 +171,14 @@ function squeezeItemsToBudget(items: string[], maxChars: number) {
   return accepted;
 }
 
+function sanitizeAttachmentFileName(fileName: string) {
+  return fileName
+    .replace(/[^\p{L}\p{N}._-]+/gu, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 120);
+}
+
 async function getOrCreateThread(userId: number) {
   const prisma = getPrisma();
   const existing = await prisma.tenderChatThread.findFirst({
@@ -277,16 +287,65 @@ export async function POST(request: Request) {
     const fileSummary: string[] = [];
     const fileReadStates: string[] = [];
 
+    const userMessage = await prisma.tenderChatMessage.create({
+      data: {
+        threadId: thread.id,
+        role: TenderChatMessageRole.USER,
+        body: message || "Проанализируй прикреплённые файлы.",
+        authorId: currentUser.id,
+        authorName: userName,
+      },
+    });
+
+    const attachmentRows: Array<{
+      title: string;
+      fileName: string;
+      mimeType: string | null;
+      fileSize: number | null;
+      storagePath: string | null;
+      documentKind: string | null;
+      extractionNote: string | null;
+      extractedText: string | null;
+    }> = [];
+
     for (const file of files) {
       try {
+        const buffer = Buffer.from(await file.arrayBuffer());
         const preparedDocuments = await prepareTenderUploadDocuments({
           name: file.name,
           type: file.type || "application/octet-stream",
           size: file.size,
-          buffer: Buffer.from(await file.arrayBuffer()),
+          buffer,
         });
 
-        for (const prepared of preparedDocuments) {
+        const timestamp = Date.now();
+        const baseDir = path.join(
+          process.cwd(),
+          "public",
+          "docs",
+          "general-chat",
+          `thread-${thread.id}`
+        );
+        await mkdir(baseDir, { recursive: true });
+
+        for (const [index, prepared] of preparedDocuments.entries()) {
+          const safeName = sanitizeAttachmentFileName(prepared.fileName || file.name || prepared.title);
+          const storedFileName = `${timestamp}-${index}-${safeName || "attachment"}`;
+          const relativeStoragePath = `/docs/general-chat/thread-${thread.id}/${storedFileName}`;
+          const absoluteStoragePath = path.join(baseDir, storedFileName);
+          await writeFile(absoluteStoragePath, buffer);
+
+          attachmentRows.push({
+            title: prepared.title,
+            fileName: prepared.fileName || file.name,
+            mimeType: file.type || "application/octet-stream",
+            fileSize: file.size,
+            storagePath: relativeStoragePath,
+            documentKind: prepared.documentKind,
+            extractionNote: prepared.extractionNote,
+            extractedText: prepared.extractedText?.trim() || null,
+          });
+
           fileSummary.push(`${prepared.title} — ${prepared.documentKind}`);
           fileReadStates.push(
             `${prepared.title} — ${prepared.documentKind} — ${prepared.extractionNote}`
@@ -323,7 +382,34 @@ export async function POST(request: Request) {
             "Не игнорируй этот факт в ответе. Скажи честно, что по этому вложению автоматическое чтение сорвалось.",
           ].join("\n")
         );
+        attachmentRows.push({
+          title: file.name,
+          fileName: file.name,
+          mimeType: file.type || "application/octet-stream",
+          fileSize: file.size,
+          storagePath: null,
+          documentKind: "Не определён",
+          extractionNote: "Файл не удалось прочитать автоматически.",
+          extractedText: null,
+        });
       }
+    }
+
+    if (attachmentRows.length > 0) {
+      await prisma.tenderChatAttachment.createMany({
+        data: attachmentRows.map((item) => ({
+          threadId: thread.id,
+          messageId: userMessage.id,
+          title: item.title,
+          fileName: item.fileName,
+          mimeType: item.mimeType,
+          fileSize: item.fileSize,
+          storagePath: item.storagePath,
+          documentKind: item.documentKind,
+          extractionNote: item.extractionNote,
+          extractedText: item.extractedText,
+        })),
+      });
     }
 
     const userMessageBody =
@@ -331,22 +417,32 @@ export async function POST(request: Request) {
         ? `${message || "Проанализируй прикреплённые файлы."}\n\nФайлы:\n${fileSummary
             .map((title) => `- ${title}`)
             .join("\n")}`
-        : message;
+        : message || "Проанализируй прикреплённые файлы.";
 
-    const userMessage = await prisma.tenderChatMessage.create({
-      data: {
-        threadId: thread.id,
-        role: TenderChatMessageRole.USER,
-        body: userMessageBody,
-        authorId: currentUser.id,
-        authorName: userName,
-      },
-    });
+    if (userMessage.body !== userMessageBody) {
+      await prisma.tenderChatMessage.update({
+        where: { id: userMessage.id },
+        data: { body: userMessageBody },
+      });
+      userMessage.body = userMessageBody;
+    }
 
     const recentMessages = await prisma.tenderChatMessage.findMany({
       where: { threadId: thread.id },
       orderBy: { createdAt: "asc" },
       take: 20,
+    });
+    const recentAttachments = await prisma.tenderChatAttachment.findMany({
+      where: { threadId: thread.id },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        title: true,
+        documentKind: true,
+        extractionNote: true,
+        extractedText: true,
+      },
     });
 
     const apiKey = process.env.OPENAI_API_KEY;
@@ -389,6 +485,14 @@ ${attachedFilesOnly ? "- отвечай только по прикреплённ
 История чата:
 ${historyText || "История пока пустая."}
 
+${recentAttachments.length > 0 ? `Память сервера по последним файлам в этой ветке:\n${recentAttachments
+  .map(
+    (item, index) =>
+      `${index + 1}. ${item.title} — ${item.documentKind || "Документ"} — ${item.extractionNote || "без статуса"}${
+        item.extractedText ? `\n${trimForPrompt(item.extractedText, 900)}` : ""
+      }`
+  )
+  .join("\n\n")}` : ""}
 ${fileReadStates.length > 0 ? `Прикреплённые файлы:\n${fileReadStates.map((item, index) => `${index + 1}. ${item}`).join("\n")}` : ""}
 ${limitedFileBlocks.length > 0 ? `Извлечённый текст по файлам:\n${limitedFileBlocks.join("\n\n---\n\n")}` : ""}
 

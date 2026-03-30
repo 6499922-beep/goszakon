@@ -118,6 +118,7 @@ model TenderChatThread {
   kind      TenderChatThreadKind @default(GENERAL)
   owner     Admin                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   messages  TenderChatMessage[]
+  attachments TenderChatAttachment[]
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt
 
@@ -133,11 +134,34 @@ model TenderChatMessage {
   authorName String?
   thread     TenderChatThread      @relation(fields: [threadId], references: [id], onDelete: Cascade)
   author     Admin?                @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  attachments TenderChatAttachment[]
   createdAt  DateTime              @default(now())
   updatedAt  DateTime              @updatedAt
 
   @@index([threadId, createdAt])
   @@index([authorId])
+}
+
+model TenderChatAttachment {
+  id             Int               @id @default(autoincrement())
+  threadId       Int
+  messageId      Int?
+  title          String
+  fileName       String
+  mimeType       String?
+  fileSize       Int?
+  storagePath    String?
+  documentKind   String?
+  extractionNote String?
+  extractedText  String?           @db.Text
+  summaryText    String?           @db.Text
+  thread         TenderChatThread  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  message        TenderChatMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([threadId, createdAt])
+  @@index([messageId])
 }
 
 enum TenderUserRole {

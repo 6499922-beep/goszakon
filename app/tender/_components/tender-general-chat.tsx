@@ -13,9 +13,15 @@ type GeneralChatMessage = {
 
 type TenderGeneralChatProps = {
   threadId: number;
+  currentThreadId: number;
   threadTitle: string;
   initialMessages: GeneralChatMessage[];
   userLabel: string;
+  threadOptions: Array<{
+    id: number;
+    title: string;
+    messageCount: number;
+  }>;
 };
 
 type SelectedFilePreview = {
@@ -201,9 +207,11 @@ function renderAssistantMarkdown(text: string) {
 
 export function TenderGeneralChat({
   threadId,
+  currentThreadId,
   threadTitle,
   initialMessages,
   userLabel,
+  threadOptions,
 }: TenderGeneralChatProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [draft, setDraft] = useState("");
@@ -512,7 +520,7 @@ export function TenderGeneralChat({
           <div className="mt-2 text-xl font-semibold text-[#111827]">GPT-чат</div>
           <button
             type="button"
-            onClick={() => window.location.assign("/tender/chat")}
+            onClick={() => window.location.assign(`/tender/chat?new=${Date.now()}`)}
             className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
           >
             Новый чат
@@ -536,20 +544,29 @@ export function TenderGeneralChat({
             Последние темы
           </div>
           <div className="mt-3 space-y-1">
-            {recentUserTopics.length > 0 ? (
-              recentUserTopics.map((topic, index) => (
+            {threadOptions.length > 0 ? (
+              threadOptions.map((thread) => (
                 <button
-                  key={`${topic}-${index}`}
+                  key={thread.id}
                   type="button"
-                  onClick={() => askQuestion(topic)}
-                  className="w-full rounded-2xl px-3 py-3 text-left text-sm text-slate-700 transition hover:bg-white"
+                  onClick={() => window.location.assign(`/tender/chat?thread=${thread.id}`)}
+                  className={`w-full rounded-2xl px-3 py-3 text-left text-sm transition ${
+                    thread.id === currentThreadId
+                      ? "bg-white text-[#111827] shadow-sm ring-1 ring-slate-200"
+                      : "text-slate-700 hover:bg-white"
+                  }`}
                 >
-                  <div className="line-clamp-2">{topic}</div>
+                  <div className="line-clamp-2 font-medium">{thread.title}</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {thread.messageCount > 0
+                      ? `${thread.messageCount} сообщений`
+                      : "Пустой чат"}
+                  </div>
                 </button>
               ))
             ) : (
               <div className="rounded-2xl px-3 py-3 text-sm text-slate-500">
-                Темы появятся после первых сообщений.
+                Чаты появятся после первых сообщений.
               </div>
             )}
           </div>

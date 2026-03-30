@@ -840,11 +840,6 @@ export function TenderGeneralChat({
           </button>
         </div>
 
-        <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-7 text-slate-600">
-          История чата сохраняется на вашем сервере. Это отдельная страница общения со
-          мной без меню этапов и без рабочего тендерного шума.
-        </div>
-
         <div className="mt-6 rounded-3xl border border-slate-200 bg-white px-4 py-4">
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
             Файлы к отправке
@@ -894,9 +889,7 @@ export function TenderGeneralChat({
               })}
             </div>
           ) : (
-            <div className="mt-3 text-sm leading-6 text-slate-500">
-              Пока ничего не прикреплено. Можно добавить документы перед отправкой вопроса.
-            </div>
+            <div className="mt-3 text-sm leading-6 text-slate-500">Пока пусто.</div>
           )}
         </div>
 
@@ -905,9 +898,7 @@ export function TenderGeneralChat({
             Предпросмотр
           </div>
           {!activePreviewFile ? (
-            <div className="mt-3 text-sm leading-6 text-slate-500">
-              Выбери файл справа или перетащи новый в чат, чтобы посмотреть его перед отправкой.
-            </div>
+            <div className="mt-3 text-sm leading-6 text-slate-500">Файл не выбран.</div>
           ) : isPreviewLoading ? (
             <div className="mt-3 text-sm leading-6 text-slate-500">Готовлю предпросмотр файла...</div>
           ) : (

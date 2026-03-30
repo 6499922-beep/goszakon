@@ -46,6 +46,16 @@ type SelectedFilePreview = {
   text: string;
 };
 
+type PreparedArchiveAttachment = {
+  attachmentId: number;
+  fileName: string;
+  documentKind?: string;
+  extracted?: boolean;
+  statusLabel?: string;
+  note: string;
+  text: string;
+};
+
 const ARCHIVE_FILE_PATTERN = /\.(zip|rar|7z)$/i;
 const PENDING_ASSISTANT_BODY = "__GENERAL_CHAT_PENDING__";
 
@@ -360,9 +370,13 @@ export function TenderGeneralChat({
   const [currentTitle, setCurrentTitle] = useState(threadTitle);
   const [draft, setDraft] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [preparedArchiveAttachments, setPreparedArchiveAttachments] = useState<
+    PreparedArchiveAttachment[]
+  >([]);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
   const [previewCache, setPreviewCache] = useState<Record<string, SelectedFilePreview>>({});
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [isArchiveLoading, setIsArchiveLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [procurementOnlyMode, setProcurementOnlyMode] = useState(false);
   const [attachedFilesOnlyMode, setAttachedFilesOnlyMode] = useState(false);
@@ -371,6 +385,7 @@ export function TenderGeneralChat({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const archiveInputRef = useRef<HTMLInputElement | null>(null);
   const composerRef = useRef<HTMLFormElement | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
   const storageKey = `general-chat-mode:${threadId}`;
@@ -425,6 +440,16 @@ export function TenderGeneralChat({
 
     return currentThread ? [currentThread, ...rest] : rest;
   }, [threadList, currentThreadId]);
+  const combinedAttachmentIds = useMemo(() => {
+    const fileAttachmentIds = selectedFiles
+      .map((file) => {
+        const key = `${file.name}:${file.size}:${file.lastModified}`;
+        return previewCache[key]?.attachmentId ?? null;
+      })
+      .filter((value): value is number => value !== null && Number.isInteger(value) && value > 0);
+
+    return [...new Set([...fileAttachmentIds, ...preparedArchiveAttachments.map((item) => item.attachmentId)])];
+  }, [preparedArchiveAttachments, previewCache, selectedFiles]);
   useEffect(() => {
     setThreadList(threadOptions);
   }, [threadOptions]);
@@ -605,6 +630,62 @@ export function TenderGeneralChat({
     });
   }
 
+  function removePreparedArchiveAttachment(attachmentId: number) {
+    setPreparedArchiveAttachments((current) =>
+      current.filter((item) => item.attachmentId !== attachmentId)
+    );
+  }
+
+  async function handleArchiveUpload(files: FileList | null) {
+    const archive = files?.[0];
+    if (!archive) return;
+
+    setError(null);
+    setIsArchiveLoading(true);
+
+    try {
+      const formData = new FormData();
+      formData.set("archive", archive);
+      formData.set("threadId", String(threadId));
+
+      const response = await fetch("/api/tender/general-chat/archive-preview", {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            error?: string;
+            attachments?: PreparedArchiveAttachment[];
+          }
+        | null;
+
+      if (!response.ok || !payload?.ok || !payload.attachments) {
+        throw new Error(payload?.error || "Не удалось распаковать архив.");
+      }
+
+      setPreparedArchiveAttachments((current) => {
+        const next = [...current, ...payload.attachments!];
+        const seen = new Set<number>();
+        return next.filter((item) => {
+          if (seen.has(item.attachmentId)) return false;
+          seen.add(item.attachmentId);
+          return true;
+        });
+      });
+    } catch (archiveError) {
+      setError(
+        archiveError instanceof Error ? archiveError.message : "Не удалось распаковать архив."
+      );
+    } finally {
+      setIsArchiveLoading(false);
+      if (archiveInputRef.current) {
+        archiveInputRef.current.value = "";
+      }
+    }
+  }
+
   async function renameThread(targetThreadId: number, currentValue: string) {
     const nextTitle = window.prompt("Новое название чата", currentValue)?.trim();
     if (!nextTitle || nextTitle === currentValue) return;
@@ -672,14 +753,9 @@ export function TenderGeneralChat({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const question = draft.trim();
-    const hasFiles = selectedFiles.length > 0;
+    const hasFiles = selectedFiles.length > 0 || preparedArchiveAttachments.length > 0;
     const filesToUpload = [...selectedFiles];
-    const attachmentIds = filesToUpload
-      .map((file) => {
-        const key = `${file.name}:${file.size}:${file.lastModified}`;
-        return previewCache[key]?.attachmentId ?? null;
-      })
-      .filter((value): value is number => value !== null && Number.isInteger(value) && value > 0);
+    const attachmentIds = combinedAttachmentIds;
 
     if ((!question && !hasFiles) || isSubmitting) return;
 
@@ -704,6 +780,7 @@ export function TenderGeneralChat({
 
     setDraft("");
     setSelectedFiles([]);
+    setPreparedArchiveAttachments([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -722,7 +799,7 @@ export function TenderGeneralChat({
         );
       }
 
-      if (filesToUpload.length > 0 && attachmentIds.length !== filesToUpload.length) {
+      if (filesToUpload.length > 0 && attachmentIds.length < filesToUpload.length) {
         throw new Error(
           "Не все файлы успели сохраниться на сервере. Подождите пару секунд и отправьте запрос ещё раз."
         );
@@ -1024,6 +1101,15 @@ export function TenderGeneralChat({
               setError(null);
             }}
           />
+          <input
+            ref={archiveInputRef}
+            type="file"
+            accept=".zip,.rar"
+            className="sr-only"
+            onChange={(event) => {
+              void handleArchiveUpload(event.target.files);
+            }}
+          />
 
           {selectedFiles.length > 0 ? (
             <div className="mx-auto mb-3 flex w-full max-w-4xl flex-wrap gap-2">
@@ -1196,6 +1282,41 @@ export function TenderGeneralChat({
 
         <div className="mt-5 rounded-[1.5rem] bg-[#fafbfc] px-4 py-4">
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Архив
+          </div>
+          <button
+            type="button"
+            onClick={() => archiveInputRef.current?.click()}
+            disabled={isArchiveLoading}
+            className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-[#0d5bd7] hover:text-[#0d5bd7] disabled:opacity-50"
+          >
+            {isArchiveLoading ? "Распаковываю архив..." : "Загрузить ZIP / RAR"}
+          </button>
+          <div className="mt-2 text-xs leading-5 text-slate-500">
+            Архив раскладывается на конечные документы и сразу добавляется в файлы к отправке.
+          </div>
+          {preparedArchiveAttachments.length > 0 ? (
+            <div className="mt-3 space-y-2">
+              {preparedArchiveAttachments.slice(0, 6).map((item) => (
+                <div key={item.attachmentId} className="rounded-2xl bg-white px-3 py-3">
+                  <div className="truncate text-sm font-medium text-slate-700">{item.fileName}</div>
+                  <div className="mt-1 text-xs text-slate-500">{item.documentKind || "Документ"}</div>
+                  <div className="mt-1 text-xs text-emerald-700">{item.statusLabel || "Готов к отправке"}</div>
+                  <button
+                    type="button"
+                    onClick={() => removePreparedArchiveAttachment(item.attachmentId)}
+                    className="mt-2 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
+                  >
+                    Убрать
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-4 rounded-[1.5rem] bg-[#fafbfc] px-4 py-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
             Файлы ветки
           </div>
           {storedAttachments.length > 0 ? (
@@ -1223,8 +1344,27 @@ export function TenderGeneralChat({
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
             Файлы к отправке
           </div>
-          {selectedFiles.length > 0 ? (
+          {selectedFiles.length > 0 || preparedArchiveAttachments.length > 0 ? (
             <div className="mt-3 space-y-2">
+              {preparedArchiveAttachments.map((item) => (
+                <div
+                  key={`prepared-${item.attachmentId}`}
+                  className="flex items-center justify-between gap-3 rounded-2xl bg-white px-3 py-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-slate-700">{item.fileName}</div>
+                    <div className="text-xs text-emerald-700">{item.statusLabel || "Готов к отправке"}</div>
+                    <div className="text-xs text-slate-400">{item.documentKind || "Документ"}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removePreparedArchiveAttachment(item.attachmentId)}
+                    className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
+                  >
+                    Убрать
+                  </button>
+                </div>
+              ))}
               {sortedSelectedFiles.map(({ file, index }) => {
                 const key = `${file.name}:${file.size}:${file.lastModified}`;
                 const preview = previewCache[key];

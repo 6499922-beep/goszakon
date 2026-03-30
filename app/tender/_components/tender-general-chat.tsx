@@ -251,6 +251,22 @@ export function TenderGeneralChat({
         }),
     [selectedFiles]
   );
+  const recentUserTopics = useMemo(() => {
+    const seen = new Set<string>();
+
+    return [...sortedMessages]
+      .filter((message) => message.role === "user")
+      .reverse()
+      .map((message) => message.body.split("\n")[0]?.trim() || "Сообщение без названия")
+      .map((line) => line.replace(/^Файлы:\s*/i, "").trim())
+      .filter((line) => line.length > 0)
+      .filter((line) => {
+        if (seen.has(line)) return false;
+        seen.add(line);
+        return true;
+      })
+      .slice(0, 8);
+  }, [sortedMessages]);
 
   useEffect(() => {
     const savedMode = window.localStorage.getItem(storageKey);
@@ -487,13 +503,81 @@ export function TenderGeneralChat({
   }
 
   return (
-    <section className="grid gap-6 xl:h-[calc(100vh-8.5rem)] xl:grid-cols-[minmax(0,1fr)_320px] xl:overflow-hidden">
+    <section className="grid gap-6 xl:h-[calc(100vh-8.5rem)] xl:grid-cols-[260px_minmax(0,1fr)_320px] xl:overflow-hidden">
+      <aside className="hidden xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:rounded-[2rem] xl:border xl:border-slate-200 xl:bg-[#fbfcff] xl:p-4 xl:shadow-sm">
+        <div className="flex items-center justify-between px-2 pb-4">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              GOSZAKON
+            </div>
+            <div className="mt-1 text-lg font-semibold text-[#081a4b]">GPT-чат</div>
+          </div>
+          <div className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500">
+            Pro
+          </div>
+        </div>
+
+        <a
+          href="/tender/chat"
+          className="mb-4 rounded-2xl border border-[#0d5bd7]/20 bg-white px-4 py-3 text-sm font-semibold text-[#081a4b] transition hover:border-[#0d5bd7]/45 hover:bg-[#f7fbff]"
+        >
+          Новый чат
+        </a>
+
+        <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Текущий чат
+          </div>
+          <div className="mt-2 text-sm font-semibold text-[#081a4b]">{threadTitle}</div>
+          <div className="mt-1 text-xs leading-6 text-slate-500">
+            {sortedMessages.length > 0
+              ? `${sortedMessages.length} сообщений в этой ветке`
+              : "Новая ветка для работы с документами и вопросами"}
+          </div>
+          <div className="mt-3 rounded-xl bg-[#f7fbff] px-3 py-2 text-xs leading-6 text-slate-600">
+            Работаешь как в обычном чате: задаёшь вопрос, прикрепляешь файлы, получаешь ответ здесь же.
+          </div>
+        </div>
+
+        <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="px-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Последние темы
+          </div>
+          <div className="mt-3 space-y-2">
+            {recentUserTopics.length > 0 ? (
+              recentUserTopics.map((topic, index) => (
+                <button
+                  key={`${topic}-${index}`}
+                  type="button"
+                  onClick={() => askQuestion(topic)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-left text-sm leading-6 text-slate-700 transition hover:border-[#0d5bd7]/30 hover:bg-[#f7fbff]"
+                >
+                  {topic}
+                </button>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-4 text-sm leading-6 text-slate-500">
+                Здесь будут появляться последние темы из твоих сообщений.
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5 px-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Аккаунт
+          </div>
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm leading-6 text-slate-600">
+            <div className="font-semibold text-[#081a4b]">{userLabel}</div>
+            <div className="mt-1 text-xs text-slate-500">Личная история чата хранится на вашем сервере.</div>
+          </div>
+        </div>
+      </aside>
+
       <div className="flex min-h-[84vh] flex-col rounded-[2rem] border border-slate-200 bg-white shadow-sm xl:min-h-0 xl:h-full xl:overflow-hidden">
         <div className="border-b border-slate-200 px-6 py-5">
           <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
             GPT-чат
           </div>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#081a4b]">
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-[#081a4b]">
             {threadTitle}
           </h1>
           <p className="mt-2 text-sm leading-7 text-slate-500">

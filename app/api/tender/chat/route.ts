@@ -61,6 +61,25 @@ function trimForPrompt(value: string | null | undefined, limit: number) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, limit);
 }
 
+function squeezeItemsToBudget(items: string[], maxChars: number) {
+  const accepted: string[] = [];
+  let total = 0;
+
+  for (const item of items) {
+    if (!item) continue;
+    const next = item.length;
+    if (accepted.length > 0 && total + next > maxChars) break;
+    if (accepted.length === 0 && next > maxChars) {
+      accepted.push(item.slice(0, maxChars));
+      break;
+    }
+    accepted.push(item);
+    total += next;
+  }
+
+  return accepted;
+}
+
 function getDocumentPriority(kind: string | null | undefined, title: string | null | undefined) {
   const haystack = `${kind ?? ""} ${title ?? ""}`.toLowerCase();
   if (haystack.includes("извещ")) return 1;
@@ -148,10 +167,10 @@ export async function POST(request: Request) {
 
     const model = process.env.OPENAI_CHAT_MODEL || process.env.OPENAI_MODEL || "gpt-5";
     const aiAnalysisText = procurement.aiAnalysis
-      ? JSON.stringify(procurement.aiAnalysis, null, 2).slice(0, 6000)
+      ? JSON.stringify(procurement.aiAnalysis, null, 2).slice(0, 4000)
       : "Распознанные поля пока отсутствуют.";
 
-    const documentsText = [...procurement.sourceDocuments]
+    const documentItems = [...procurement.sourceDocuments]
       .sort(
         (left, right) =>
           getDocumentPriority(left.documentKind, left.title) -
@@ -164,13 +183,16 @@ export async function POST(request: Request) {
           "Текст не показан.";
         return `${index + 1}. ${document.title} [${document.documentKind || "Документ"}]\n${snippet}`;
       })
-      .slice(0, 8)
-      .join("\n\n");
+      .slice(0, 6);
+    const documentsText = squeezeItemsToBudget(documentItems, 7000).join("\n\n");
 
-    const historyText = procurement.stageComments
+    const historyText = squeezeItemsToBudget(
+      procurement.stageComments
       .slice(-8)
       .map((item) => `${item.authorName || "Участник"}: ${trimForPrompt(item.body, 1000)}`)
-      .join("\n");
+      ,
+      6000
+    ).join("\n");
 
     const prompt = `
 Ты работаешь как GPT-помощник внутри карточки конкретной закупки.
@@ -229,6 +251,11 @@ ${message}
 
     if (!response.ok) {
       const errorText = await response.text();
+      if (response.status === 429 && /Request too large|tokens per min|TPM/i.test(errorText)) {
+        throw new Error(
+          "Контекст по этой закупке оказался слишком большим для одного ответа. Сократите вопрос или откройте конкретный документ, и я отвечу точнее."
+        );
+      }
       throw new Error(`OpenAI API error: ${response.status} ${errorText.slice(0, 500)}`);
     }
 

@@ -64,17 +64,17 @@ export default function AboutUsPage() {
     <main className="min-h-screen bg-white text-slate-900">
       <section className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-6 py-20">
-          <div className="grid items-start gap-10 xl:grid-cols-[minmax(0,760px)_320px] xl:justify-between">
+          <div className="mx-auto max-w-5xl">
             <div>
               <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
                 О нас
               </div>
 
-              <h1 className="mt-6 max-w-[760px] text-5xl font-bold tracking-tight text-[#081a4b] md:text-6xl">
+              <h1 className="mt-6 max-w-4xl text-5xl font-bold tracking-tight text-[#081a4b] md:text-6xl">
                 GOSZAKON — проект, выросший из реальной практики в сфере закупок
               </h1>
 
-              <div className="mt-6 max-w-[760px] space-y-4">
+              <div className="mt-6 max-w-4xl space-y-4">
                 <p className="text-lg leading-9 text-slate-700">
                 Мы — практикующие участники рынка государственного заказа, которые более
                 10 лет работают в сфере закупок и знают систему не только по нормативной
@@ -111,36 +111,12 @@ export default function AboutUsPage() {
                 </a>
               </div>
             </div>
-
-            <div className="hidden xl:block">
-              <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-6 shadow-sm">
-                <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
-                  Коротко о проекте
-                </div>
-                <div className="mt-4 space-y-3">
-                  {stats.slice(0, 3).map((item) => (
-                    <div key={item.label} className="rounded-2xl bg-white p-4 shadow-sm">
-                      <div className="text-2xl font-bold text-[#081a4b]">{item.value}</div>
-                      <div className="mt-1 text-sm leading-6 text-slate-600">{item.label}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 rounded-2xl bg-[#081a4b] p-5 text-white">
-                  <div className="text-sm font-semibold uppercase tracking-[0.12em] text-white/60">
-                    По всей России
-                  </div>
-                  <p className="mt-3 text-sm leading-7 text-white/85">
-                    Подключаемся онлайн, выезжаем в регион и при необходимости работаем с командой клиента на месте.
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
 
-          <div className="mt-10 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="mx-auto mt-10 grid max-w-5xl gap-4 lg:grid-cols-2">
             <Link
               href="/cases"
-              className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:bg-white hover:shadow-sm"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
             >
               <div className="font-semibold text-[#081a4b]">Практика ФАС</div>
               <p className="mt-2 text-sm leading-7 text-slate-600">
@@ -149,29 +125,28 @@ export default function AboutUsPage() {
             </Link>
             <Link
               href="/spornye-praktiki"
-              className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:bg-white hover:shadow-sm"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
             >
               <div className="font-semibold text-[#081a4b]">Спорные практики</div>
               <p className="mt-2 text-sm leading-7 text-slate-600">
                 Разбираем перекосы, которые заказчики пытаются сделать обычной практикой.
               </p>
             </Link>
-          </div>
-
-          <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6">
-            <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Формат работы
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+              <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+                Формат работы
+              </div>
+              <p className="mt-3 text-sm leading-7 text-slate-700">
+                Онлайн-подключение к спору, жалобе или срочной закупочной ситуации. Выезд к клиенту в регион, если задачу удобнее решать на месте.
+              </p>
             </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
-              <div className="rounded-2xl bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm">
-                Онлайн-подключение к спору, жалобе или срочной закупочной ситуации.
+            <div className="rounded-3xl bg-[#081a4b] p-6 text-white shadow-sm">
+              <div className="text-sm font-semibold uppercase tracking-[0.12em] text-white/60">
+                По всей России
               </div>
-              <div className="rounded-2xl bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm">
-                Выезд к клиенту в регион, если задачу удобнее решать на месте.
-              </div>
-              <div className="rounded-2xl bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm">
-                Практическое обучение команды по документации, ФАС и спорным закупочным блокам.
-              </div>
+              <p className="mt-3 text-sm leading-7 text-white/85">
+                Подключаемся онлайн, выезжаем в регион и при необходимости работаем с командой клиента на месте.
+              </p>
             </div>
           </div>
 

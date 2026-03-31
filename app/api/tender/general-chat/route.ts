@@ -21,7 +21,6 @@ const MAX_RECENT_ATTACHMENT_CONTEXT_CHARS = 10000;
 const MAX_ATTACHMENT_SUMMARY_CHARS = 1800;
 const PENDING_ASSISTANT_BODY = "__GENERAL_CHAT_PENDING__";
 const PENDING_ASSISTANT_PREFIX = `${PENDING_ASSISTANT_BODY}\n`;
-const DIRECT_FILE_FALLBACK_PATTERN = /\.(pdf|docx?|xlsx?|xlsm|docm|rtf|txt|md|csv)$/i;
 
 type PendingAssistantMeta = {
   status: "pending" | "processing";
@@ -195,49 +194,6 @@ async function requestOpenAiResponse({
     await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
   }
   throw new Error("Не удалось получить ответ GPT после повторных попыток.");
-}
-
-async function uploadFileToOpenAi({
-  apiKey,
-  storagePath,
-  fileName,
-  mimeType,
-}: {
-  apiKey: string;
-  storagePath: string;
-  fileName: string;
-  mimeType: string | null;
-}) {
-  const absoluteStoragePath = path.join(process.cwd(), "public", storagePath.replace(/^\/+/, ""));
-  const buffer = await readFile(absoluteStoragePath);
-  const formData = new FormData();
-
-  formData.append("purpose", "user_data");
-  formData.append(
-    "file",
-    new Blob([buffer], { type: mimeType || "application/octet-stream" }),
-    fileName
-  );
-
-  const response = await fetch("https://api.openai.com/v1/files", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI file upload error: ${response.status} ${errorText.slice(0, 300)}`);
-  }
-
-  const payload = (await response.json()) as { id?: string };
-  if (!payload?.id) {
-    throw new Error("OpenAI file upload error: missing file id");
-  }
-
-  return payload.id;
 }
 
 async function buildAttachmentSummary({
@@ -721,29 +677,11 @@ async function resolvePendingAssistant({
     })),
   });
 
-  preparedAttachments = await ensureAttachmentSummaries({
-    prisma,
-    apiKey,
-    model,
-    attachments: preparedAttachments,
-  });
-
   const currentAttachments = preparedAttachments.filter((item) => item.messageId === meta.userMessageId);
   const previousAttachments = preparedAttachments
     .filter((item) => item.messageId !== meta.userMessageId)
-    .filter((item) => Boolean(item.summaryText || item.extractedText))
+    .filter((item) => Boolean(item.extractedText))
     .slice(0, 3);
-  const directEligibleAttachmentIds = new Set(
-    currentAttachments
-      .filter(
-        (item) =>
-          Boolean(item.storagePath) &&
-          !item.extractedText?.trim() &&
-          DIRECT_FILE_FALLBACK_PATTERN.test(item.fileName || item.title)
-      )
-      .slice(0, 4)
-      .map((item) => item.id)
-  );
 
   const historyItems = recentMessages
     .filter((item) => item.id !== assistantMessageId)
@@ -759,19 +697,10 @@ async function resolvePendingAssistant({
         [
           `Файл: ${item.title}`,
           `Тип: ${item.documentKind || "Документ"}`,
-          `Статус чтения: ${
-            directEligibleAttachmentIds.has(item.id)
-              ? "Оригинал файла приложен к GPT напрямую. Серверное извлечение текста может быть неполным."
-              : item.extractionNote || "Файл сохранён на сервере"
-          }`,
+          `Статус чтения: ${item.extractionNote || "Файл сохранён на сервере"}`,
           `Выжимка: ${trimForPrompt(
-            directEligibleAttachmentIds.has(item.id)
-              ? item.summaryText ||
-                  item.extractedText ||
-                  "Опирайся прежде всего на сам приложенный файл. Не делай вывод, что анализ невозможен, только из-за пустого серверного extraction."
-              : item.summaryText ||
-                  item.extractedText ||
-                  "Серверное извлечение текста не удалось. Если сам файл приложен к GPT напрямую, анализируй его по содержимому документа.",
+            item.extractedText ||
+              "Текст автоматически не извлечён. Используй это как ограничение и не придумывай содержимое документа.",
             1800
           )}`,
         ].join("\n")
@@ -788,7 +717,7 @@ async function resolvePendingAssistant({
           trimForPrompt(
             [
               `Файл: ${item.title}`,
-              `Выжимка: ${item.summaryText || item.extractedText || item.extractionNote || ""}`,
+              `Выжимка: ${item.extractedText || item.extractionNote || ""}`,
             ].join("\n"),
             1000
           )
@@ -799,13 +728,12 @@ async function resolvePendingAssistant({
   const prompt = `
 Ты — рабочий GPT-ассистент GOSZAKON внутри внутреннего чата.
 Отвечай по-русски, уверенно, конкретно и по существу.
-Главный источник истины сейчас — выжимки по прикреплённым файлам этой реплики.
+Главный источник истины сейчас — извлечённый текст по прикреплённым файлам этой реплики.
 
 Правила:
 - не придумывай факты;
 - если данных не хватает, скажи это прямо;
 - если файл прочитан не полностью, прямо отмечай это;
-- если к запросу приложен сам файл напрямую, анализируй и его содержимое, даже если серверное извлечение текста пустое;
 - делай практический вывод и следующий шаг, если это уместно;
 ${meta.attachedFilesOnly ? "- отвечай только по прикреплённым файлам этой реплики;" : ""}
 
@@ -822,33 +750,10 @@ ${userMessage?.body || "Проанализируй прикреплённые ф
   `.trim();
 
   try {
-    const directInputFiles = (
-      await Promise.all(
-        currentAttachments
-          .filter((item) => directEligibleAttachmentIds.has(item.id))
-          .slice(0, 4)
-          .map(async (item) => {
-            try {
-              const fileId = await uploadFileToOpenAi({
-                apiKey,
-                storagePath: item.storagePath as string,
-                fileName: item.fileName || item.title,
-                mimeType: item.mimeType,
-              });
-              return { fileId };
-            } catch (error) {
-              console.error("[general-chat] direct file fallback upload failed", item.id, error);
-              return null;
-            }
-          })
-      )
-    ).filter((item): item is { fileId: string } => Boolean(item));
-
     const payload = await requestOpenAiResponse({
       apiKey,
       model,
       prompt,
-      inputFiles: directInputFiles,
       useWebSearch: meta.useWebSearch && currentAttachments.length === 0,
       reasoningEffort: "high",
       timeoutMs: 90000,

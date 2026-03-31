@@ -265,7 +265,7 @@ export default async function CasesPage({ searchParams }: PageProps) {
           </p>
         </div>
 
-        <form className="hero-panel mt-8 rounded-[32px] border border-[rgba(8,26,75,0.08)] bg-[linear-gradient(135deg,rgba(8,26,75,0.06),rgba(255,255,255,0.98))] p-7 shadow-[0_30px_60px_rgba(15,23,42,0.08)]">
+        <form className="hero-panel mt-8 rounded-[32px] border border-[rgba(8,26,75,0.08)] bg-[linear-gradient(135deg,rgba(8,26,75,0.08),rgba(255,255,255,0.98))] p-7 shadow-[0_30px_60px_rgba(15,23,42,0.08)]">
           <div className="flex flex-col gap-5 border-b border-[rgba(8,26,75,0.08)] pb-6">
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-full bg-[#081a4b] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white">
@@ -287,20 +287,26 @@ export default async function CasesPage({ searchParams }: PageProps) {
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-12">
-            <div className="lg:col-span-12 xl:col-span-4">
+          <div className="mt-6 grid gap-4 lg:grid-cols-12">
+            <div className="lg:col-span-12">
               <label className="block text-sm font-medium text-slate-700">
-                Поиск
+                Главный поиск по базе
               </label>
-              <input
-                name="q"
-                defaultValue={q}
-                placeholder="Номер закупки, ИНН, заказчик, нарушение..."
-                className="mt-2 h-14 w-full rounded-2xl border border-slate-300 bg-white px-5 text-base outline-none focus:border-[#081a4b]"
-              />
+              <div className="mt-2 rounded-[28px] border border-[rgba(8,26,75,0.12)] bg-white p-2 shadow-[0_18px_40px_rgba(8,26,75,0.08)]">
+                <input
+                  name="q"
+                  defaultValue={q}
+                  placeholder="Номер закупки, ИНН, заказчик, нарушение..."
+                  className="h-16 w-full rounded-[20px] border border-transparent bg-[rgba(8,26,75,0.03)] px-5 text-lg outline-none placeholder:text-slate-400 focus:border-[#081a4b] focus:bg-white"
+                />
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-500">
+                Самый быстрый способ найти практику: введите номер закупки, ИНН заказчика,
+                название компании или ключевое нарушение.
+              </p>
             </div>
 
-            <div className="lg:col-span-4 xl:col-span-2">
+            <div className="lg:col-span-4 xl:col-span-3">
               <label className="block text-sm font-medium text-slate-700">
                 Регион
               </label>
@@ -318,7 +324,7 @@ export default async function CasesPage({ searchParams }: PageProps) {
               </select>
             </div>
 
-            <div className="lg:col-span-4 xl:col-span-2">
+            <div className="lg:col-span-4 xl:col-span-3">
               <label className="block text-sm font-medium text-slate-700">
                 Нарушение
               </label>
@@ -337,7 +343,7 @@ export default async function CasesPage({ searchParams }: PageProps) {
               </select>
             </div>
 
-            <div className="lg:col-span-4 xl:col-span-2">
+            <div className="lg:col-span-4 xl:col-span-3">
               <label className="block text-sm font-medium text-slate-700">
                 Категория
               </label>
@@ -359,7 +365,7 @@ export default async function CasesPage({ searchParams }: PageProps) {
               </select>
             </div>
 
-            <div className="lg:col-span-4 xl:col-span-2">
+            <div className="lg:col-span-12 xl:col-span-3">
               <label className="block text-sm font-medium text-slate-700">
                 Сортировка
               </label>

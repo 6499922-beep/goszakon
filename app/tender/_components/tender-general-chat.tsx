@@ -422,7 +422,7 @@ export function TenderGeneralChat({
       sortedMessages.some(
         (message) =>
           message.role === "assistant" &&
-          (message.body === PENDING_ASSISTANT_BODY ||
+          (message.body.startsWith(PENDING_ASSISTANT_BODY) ||
             message.body === "Получил запрос. Читаю файлы и готовлю ответ..." ||
             message.body.startsWith(REFINING_ASSISTANT_PREFIX))
       ),
@@ -1083,7 +1083,7 @@ export function TenderGeneralChat({
                 const isAssistant = message.role === "assistant";
                 const isPendingAssistantMessage =
                   isAssistant &&
-                  (message.body === PENDING_ASSISTANT_BODY ||
+                  (message.body.startsWith(PENDING_ASSISTANT_BODY) ||
                     message.body === "Получил запрос. Читаю файлы и готовлю ответ...");
                 const isRefiningAssistantMessage =
                   isAssistant && message.body.startsWith(REFINING_ASSISTANT_PREFIX);

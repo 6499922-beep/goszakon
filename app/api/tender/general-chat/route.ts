@@ -782,6 +782,28 @@ ${userMessage?.body || "Проанализируй прикреплённые ф
   }
 }
 
+function startPendingAssistantResolution(input: {
+  threadId: number;
+  assistantMessageId: number;
+  meta: PendingAssistantMeta;
+  apiKey: string;
+  model: string;
+}) {
+  setTimeout(() => {
+    const prisma = getPrisma();
+    resolvePendingAssistant({
+      prisma,
+      threadId: input.threadId,
+      assistantMessageId: input.assistantMessageId,
+      meta: input.meta,
+      apiKey: input.apiKey,
+      model: input.model,
+    }).catch((error) => {
+      console.error("[general-chat] background resolve failed", input.assistantMessageId, error);
+    });
+  }, 0);
+}
+
 async function parseIncomingRequest(request: Request) {
   const contentType = request.headers.get("content-type") || "";
 
@@ -1069,6 +1091,19 @@ export async function POST(request: Request) {
       nextTitle: message || fileSummary[0] || "Новый чат",
     });
 
+    startPendingAssistantResolution({
+      threadId: thread.id,
+      assistantMessageId: assistantMessage.id,
+      meta: {
+        status: "pending",
+        userMessageId: userMessage.id,
+        useWebSearch,
+        attachedFilesOnly,
+      },
+      apiKey,
+      model: process.env.OPENAI_CHAT_MODEL || process.env.OPENAI_MODEL || "gpt-5",
+    });
+
     return NextResponse.json({
       ok: true,
       thread: {
@@ -1133,34 +1168,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ ok: false, error: "Чат не найден." }, { status: 404 });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    const model = process.env.OPENAI_CHAT_MODEL || process.env.OPENAI_MODEL || "gpt-5";
-    if (apiKey) {
-      const pendingAssistants = state.messages.filter(
-        (message) => message.role === "assistant" && Boolean(decodePendingAssistantMeta(message.body))
-      );
-
-      for (const pendingMessage of pendingAssistants) {
-        const meta = decodePendingAssistantMeta(pendingMessage.body);
-        if (!meta) continue;
-
-        await resolvePendingAssistant({
-          prisma,
-          threadId,
-          assistantMessageId: pendingMessage.id,
-          meta,
-          apiKey,
-          model,
-        });
-      }
-    }
-
-    const refreshedState = await loadThreadState(threadId, currentUser.id);
-    if (!refreshedState) {
-      return NextResponse.json({ ok: false, error: "Чат не найден." }, { status: 404 });
-    }
-
-    return NextResponse.json({ ok: true, ...refreshedState });
+    return NextResponse.json({ ok: true, ...state });
   } catch (error) {
     return NextResponse.json(
       {

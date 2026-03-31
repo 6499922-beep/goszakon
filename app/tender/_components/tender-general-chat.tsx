@@ -58,6 +58,7 @@ type PreparedArchiveAttachment = {
 
 const ARCHIVE_FILE_PATTERN = /\.(zip|rar|7z)$/i;
 const PENDING_ASSISTANT_BODY = "__GENERAL_CHAT_PENDING__";
+const REFINING_ASSISTANT_PREFIX = "__GENERAL_CHAT_REFINING__\n";
 
 function formatThreadMeta(updatedAt: string, messageCount: number) {
   const date = new Date(updatedAt);
@@ -86,17 +87,20 @@ function getFileTypePriority(file: File) {
 }
 
 function parseStoredSources(body: string) {
+  const normalizedBody = body.startsWith(REFINING_ASSISTANT_PREFIX)
+    ? body.slice(REFINING_ASSISTANT_PREFIX.length).trim()
+    : body;
   const marker = "\n\nИсточники:\n";
-  const index = body.indexOf(marker);
+  const index = normalizedBody.indexOf(marker);
   if (index === -1) {
     return {
-      text: body,
+      text: normalizedBody,
       sources: [] as Array<{ title: string; url: string }>,
     };
   }
 
-  const text = body.slice(0, index).trim();
-  const sourcesBlock = body.slice(index + marker.length).trim();
+  const text = normalizedBody.slice(0, index).trim();
+  const sourcesBlock = normalizedBody.slice(index + marker.length).trim();
   const sources = sourcesBlock
     .split("\n")
     .map((line) => line.replace(/^\d+\.\s*/, "").trim())
@@ -419,7 +423,8 @@ export function TenderGeneralChat({
         (message) =>
           message.role === "assistant" &&
           (message.body === PENDING_ASSISTANT_BODY ||
-            message.body === "Получил запрос. Читаю файлы и готовлю ответ...")
+            message.body === "Получил запрос. Читаю файлы и готовлю ответ..." ||
+            message.body.startsWith(REFINING_ASSISTANT_PREFIX))
       ),
     [sortedMessages]
   );
@@ -1080,6 +1085,8 @@ export function TenderGeneralChat({
                   isAssistant &&
                   (message.body === PENDING_ASSISTANT_BODY ||
                     message.body === "Получил запрос. Читаю файлы и готовлю ответ...");
+                const isRefiningAssistantMessage =
+                  isAssistant && message.body.startsWith(REFINING_ASSISTANT_PREFIX);
                 return (
                   <article
                     key={message.id}
@@ -1096,7 +1103,15 @@ export function TenderGeneralChat({
                             Готовлю ответ...
                           </div>
                         ) : (
-                          <div className="mt-4 text-[16px] leading-8">{renderAssistantMarkdown(parsed.text)}</div>
+                          <div className="mt-4">
+                            {isRefiningAssistantMessage ? (
+                              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#eef4ff] px-3 py-1 text-xs font-medium text-[#0d5bd7]">
+                                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[#0d5bd7]" />
+                                Уточняю ответ по файлам...
+                              </div>
+                            ) : null}
+                            <div className="text-[16px] leading-8">{renderAssistantMarkdown(parsed.text)}</div>
+                          </div>
                         )}
                         {!isPendingAssistantMessage && parsed.text.trim() ? (
                           <div className="mt-5 flex items-center gap-2">

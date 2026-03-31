@@ -20,6 +20,7 @@ const MAX_RECENT_ATTACHMENT_BLOCK_CHARS = 2400;
 const MAX_RECENT_ATTACHMENT_CONTEXT_CHARS = 10000;
 const MAX_ATTACHMENT_SUMMARY_CHARS = 1800;
 const PENDING_ASSISTANT_BODY = "__GENERAL_CHAT_PENDING__";
+const REFINING_ASSISTANT_PREFIX = "__GENERAL_CHAT_REFINING__\n";
 
 function getOpenAiOutputText(payload: any) {
   const outputs = Array.isArray(payload?.output) ? payload.output : [];
@@ -1032,6 +1033,46 @@ ${!attachedFilesOnly && recentAttachmentMemoryBlocks.length > 0 && !useDirectFil
 Последний вопрос:
 ${message || "Проанализируй прикреплённые файлы и помоги сотруднику по ним."}
 `.trim();
+
+      const quickPrompt = `
+Ты — рабочий GPT-ассистент GOSZAKON.
+Дай быстрый черновой ответ по последнему вопросу. Кратко и по делу.
+Если прямые файлы уже приложены, опирайся на них в первую очередь.
+Если данных ещё мало, честно скажи, что это предварительный вывод.
+
+Файлы:
+${effectiveFileReadStates.length > 0 ? effectiveFileReadStates.map((item, index) => `${index + 1}. ${item}`).join("\n") : "Файлы не приложены."}
+
+${currentAttachmentMemoryBlocks.length > 0 ? `Быстрая память по текущим файлам:\n${currentAttachmentMemoryBlocks.map((item, index) => `${index + 1}. ${trimForPrompt(item, 900)}`).join("\n\n")}` : ""}
+
+Вопрос:
+${message || "Проанализируй прикреплённые файлы и помоги сотруднику по ним."}
+`.trim();
+
+      if (uploadedCurrentFiles.length > 0 || currentAttachmentMemoryBlocks.length > 0) {
+        try {
+          const quickPayload = await requestOpenAiResponse({
+            apiKey,
+            model,
+            prompt: quickPrompt,
+            inputFiles: uploadedCurrentFiles,
+            useWebSearch: false,
+            reasoningEffort: "low",
+            timeoutMs: 8000,
+          });
+          const quickAnswer = getOpenAiOutputText(quickPayload);
+          if (quickAnswer) {
+            await prisma.tenderChatMessage.update({
+              where: { id: assistantMessage.id },
+              data: {
+                body: `${REFINING_ASSISTANT_PREFIX}${quickAnswer}`,
+              },
+            });
+          }
+        } catch {
+          // continue to the full pass quietly
+        }
+      }
 
       let payload;
       try {

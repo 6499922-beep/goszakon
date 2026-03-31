@@ -22,15 +22,38 @@ const MAX_ATTACHMENT_SUMMARY_CHARS = 1800;
 const PENDING_ASSISTANT_BODY = "__GENERAL_CHAT_PENDING__";
 const PENDING_ASSISTANT_PREFIX = `${PENDING_ASSISTANT_BODY}\n`;
 
-function encodePendingAssistantBody(responseId: string) {
-  return `${PENDING_ASSISTANT_PREFIX}${responseId}`;
+type PendingAssistantMeta = {
+  status: "pending" | "processing";
+  userMessageId: number;
+  useWebSearch: boolean;
+  attachedFilesOnly: boolean;
+};
+
+function encodePendingAssistantMeta(meta: PendingAssistantMeta) {
+  return `${PENDING_ASSISTANT_PREFIX}${JSON.stringify(meta)}`;
 }
 
-function decodePendingAssistantResponseId(body: string | null | undefined) {
+function decodePendingAssistantMeta(body: string | null | undefined): PendingAssistantMeta | null {
   const normalized = String(body ?? "").trim();
   if (!normalized.startsWith(PENDING_ASSISTANT_PREFIX)) return null;
-  const responseId = normalized.slice(PENDING_ASSISTANT_PREFIX.length).trim();
-  return responseId || null;
+
+  const raw = normalized.slice(PENDING_ASSISTANT_PREFIX.length).trim();
+  if (!raw.startsWith("{")) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as PendingAssistantMeta;
+    if (!parsed || typeof parsed !== "object") return null;
+    if (!Number.isInteger(parsed.userMessageId) || parsed.userMessageId <= 0) return null;
+    if (parsed.status !== "pending" && parsed.status !== "processing") return null;
+    return {
+      status: parsed.status,
+      userMessageId: parsed.userMessageId,
+      useWebSearch: Boolean(parsed.useWebSearch),
+      attachedFilesOnly: Boolean(parsed.attachedFilesOnly),
+    };
+  } catch {
+    return null;
+  }
 }
 
 function getOpenAiOutputText(payload: any) {
@@ -173,134 +196,6 @@ async function requestOpenAiResponse({
   throw new Error("Не удалось получить ответ GPT после повторных попыток.");
 }
 
-async function createOpenAiBackgroundResponse({
-  apiKey,
-  model,
-  prompt,
-  inputFiles = [],
-  useWebSearch,
-  reasoningEffort = "high",
-}: {
-  apiKey: string;
-  model: string;
-  prompt: string;
-  inputFiles?: Array<{ fileId: string }>;
-  useWebSearch?: boolean;
-  reasoningEffort?: "low" | "medium" | "high";
-}) {
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      background: true,
-      reasoning: {
-        effort: reasoningEffort,
-      },
-      ...(useWebSearch
-        ? {
-            tools: [{ type: "web_search" }],
-          }
-        : {}),
-      input: [
-        {
-          role: "user",
-          content: [
-            { type: "input_text", text: prompt },
-            ...inputFiles.map((item) => ({
-              type: "input_file",
-              file_id: item.fileId,
-            })),
-          ],
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI background response error: ${response.status} ${errorText.slice(0, 500)}`);
-  }
-
-  const payload = (await response.json()) as { id?: string };
-  if (!payload?.id) {
-    throw new Error("OpenAI не вернул response_id для background-прохода.");
-  }
-
-  return payload.id;
-}
-
-async function fetchOpenAiResponseStatus({
-  apiKey,
-  responseId,
-}: {
-  apiKey: string;
-  responseId: string;
-}) {
-  const response = await fetch(`https://api.openai.com/v1/responses/${responseId}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI response fetch error: ${response.status} ${errorText.slice(0, 500)}`);
-  }
-
-  return response.json();
-}
-
-async function uploadOpenAiUserFile({
-  apiKey,
-  fileName,
-  mimeType,
-  buffer,
-}: {
-  apiKey: string;
-  fileName: string;
-  mimeType: string;
-  buffer: Buffer;
-}) {
-  const formData = new FormData();
-  formData.append("purpose", "user_data");
-  formData.append(
-    "file",
-    new Blob([new Uint8Array(buffer)], { type: mimeType || "application/octet-stream" }),
-    fileName
-  );
-
-  const response = await fetch("https://api.openai.com/v1/files", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI file upload error: ${response.status} ${errorText.slice(0, 500)}`);
-  }
-
-  const payload = (await response.json()) as { id?: string };
-  if (!payload?.id) {
-    throw new Error("OpenAI не вернул file_id для вложения.");
-  }
-
-  return payload.id;
-}
-
-async function readStoredAttachmentBuffer(storagePath: string) {
-  const normalizedStoragePath = storagePath.replace(/^\/+/, "");
-  const absolutePath = path.join(process.cwd(), "public", normalizedStoragePath);
-  return readFile(absolutePath);
-}
-
 async function buildAttachmentSummary({
   apiKey,
   model,
@@ -367,6 +262,7 @@ async function ensureAttachmentSummaries({
   model: string;
   attachments: Array<{
     id: number;
+    messageId?: number | null;
     title: string;
     fileName: string;
     mimeType: string | null;
@@ -378,22 +274,20 @@ async function ensureAttachmentSummaries({
     summaryText: string | null;
   }>;
 }) {
-  const updates: Array<{ id: number; summaryText: string }> = [];
-
-  for (const attachment of attachments) {
-    if (attachment.summaryText?.trim()) continue;
-
-    const summaryText = await buildAttachmentSummary({
-      apiKey,
-      model,
-      title: attachment.title,
-      documentKind: attachment.documentKind,
-      extractionNote: attachment.extractionNote,
-      extractedText: attachment.extractedText,
-    });
-
-    updates.push({ id: attachment.id, summaryText });
-  }
+  const attachmentsToSummarize = attachments.filter((attachment) => !attachment.summaryText?.trim());
+  const updates = await Promise.all(
+    attachmentsToSummarize.map(async (attachment) => {
+      const summaryText = await buildAttachmentSummary({
+        apiKey,
+        model,
+        title: attachment.title,
+        documentKind: attachment.documentKind,
+        extractionNote: attachment.extractionNote,
+        extractedText: attachment.extractedText,
+      });
+      return { id: attachment.id, summaryText };
+    })
+  );
 
   if (updates.length > 0) {
     await Promise.all(
@@ -422,6 +316,7 @@ async function ensureAttachmentExtraction({
   prisma: ReturnType<typeof getPrisma>;
   attachments: Array<{
     id: number;
+    messageId?: number | null;
     title: string;
     fileName: string;
     mimeType: string | null;
@@ -435,6 +330,7 @@ async function ensureAttachmentExtraction({
 }): Promise<
   Array<{
     id: number;
+    messageId?: number | null;
     title: string;
     fileName: string;
     mimeType: string | null;
@@ -699,6 +595,196 @@ async function loadThreadState(threadId: number, userId: number) {
   };
 }
 
+async function resolvePendingAssistant({
+  prisma,
+  threadId,
+  assistantMessageId,
+  meta,
+  apiKey,
+  model,
+}: {
+  prisma: ReturnType<typeof getPrisma>;
+  threadId: number;
+  assistantMessageId: number;
+  meta: PendingAssistantMeta;
+  apiKey: string;
+  model: string;
+}) {
+  if (meta.status === "processing") {
+    return;
+  }
+
+  const lockBody = encodePendingAssistantMeta({ ...meta, status: "processing" });
+  const lockResult = await prisma.tenderChatMessage.updateMany({
+    where: {
+      id: assistantMessageId,
+      threadId,
+      body: encodePendingAssistantMeta(meta),
+    },
+    data: {
+      body: lockBody,
+    },
+  });
+
+  if (lockResult.count === 0) {
+    return;
+  }
+
+  const recentMessages = await prisma.tenderChatMessage.findMany({
+    where: { threadId },
+    orderBy: { createdAt: "asc" },
+    take: 20,
+  });
+  const userMessage = recentMessages.find((item) => item.id === meta.userMessageId);
+  const recentAttachments = await prisma.tenderChatAttachment.findMany({
+    where: {
+      threadId,
+      messageId: {
+        not: null,
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 12,
+    select: {
+      id: true,
+      title: true,
+      fileName: true,
+      mimeType: true,
+      fileSize: true,
+      storagePath: true,
+      documentKind: true,
+      extractionNote: true,
+      extractedText: true,
+      summaryText: true,
+      messageId: true,
+    },
+  });
+
+  let preparedAttachments = await ensureAttachmentExtraction({
+    prisma,
+    attachments: recentAttachments.map((item) => ({
+      id: item.id,
+      messageId: item.messageId,
+      title: item.title,
+      fileName: item.fileName,
+      mimeType: item.mimeType,
+      fileSize: item.fileSize,
+      storagePath: item.storagePath,
+      documentKind: item.documentKind,
+      extractionNote: item.extractionNote,
+      extractedText: item.extractedText,
+      summaryText: item.summaryText,
+    })),
+  });
+
+  preparedAttachments = await ensureAttachmentSummaries({
+    prisma,
+    apiKey,
+    model,
+    attachments: preparedAttachments,
+  });
+
+  const currentAttachments = preparedAttachments.filter((item) => item.messageId === meta.userMessageId);
+  const previousAttachments = preparedAttachments
+    .filter((item) => item.messageId !== meta.userMessageId)
+    .filter((item) => Boolean(item.summaryText || item.extractedText))
+    .slice(0, 3);
+
+  const historyItems = recentMessages
+    .filter((item) => item.id !== assistantMessageId)
+    .slice(-6)
+    .map(
+      (item) =>
+        `${item.authorName || (item.role === TenderChatMessageRole.ASSISTANT ? "GPT" : "Пользователь")}: ${trimForPrompt(item.body, 500)}`
+    );
+
+  const currentAttachmentBlocks = squeezeItemsToBudget(
+    currentAttachments
+      .map((item) =>
+        [
+          `Файл: ${item.title}`,
+          `Тип: ${item.documentKind || "Документ"}`,
+          `Статус чтения: ${item.extractionNote || "Файл сохранён на сервере"}`,
+          `Выжимка: ${trimForPrompt(item.summaryText || item.extractedText || "", 1800)}`,
+        ].join("\n")
+      )
+      .slice(0, 8)
+      .map((block) => trimForPrompt(block, 2200)),
+    16000
+  );
+
+  const previousAttachmentBlocks = meta.attachedFilesOnly
+    ? []
+    : squeezeItemsToBudget(
+        previousAttachments.map((item) =>
+          trimForPrompt(
+            [
+              `Файл: ${item.title}`,
+              `Выжимка: ${item.summaryText || item.extractedText || item.extractionNote || ""}`,
+            ].join("\n"),
+            1000
+          )
+        ),
+        2400
+      );
+
+  const prompt = `
+Ты — рабочий GPT-ассистент GOSZAKON внутри внутреннего чата.
+Отвечай по-русски, уверенно, конкретно и по существу.
+Главный источник истины сейчас — выжимки по прикреплённым файлам этой реплики.
+
+Правила:
+- не придумывай факты;
+- если данных не хватает, скажи это прямо;
+- если файл прочитан не полностью, прямо отмечай это;
+- делай практический вывод и следующий шаг, если это уместно;
+${meta.attachedFilesOnly ? "- отвечай только по прикреплённым файлам этой реплики;" : ""}
+
+История:
+${squeezeItemsToBudget(historyItems, 2200).join("\n") || "История пока пустая."}
+
+Текущие файлы:
+${currentAttachmentBlocks.join("\n\n---\n\n") || "Файлы этой реплики не подготовлены."}
+
+${!meta.attachedFilesOnly && previousAttachmentBlocks.length > 0 ? `Память по прошлым файлам ветки:\n${previousAttachmentBlocks.join("\n\n---\n\n")}` : ""}
+
+Последний вопрос:
+${userMessage?.body || "Проанализируй прикреплённые файлы и помоги сотруднику."}
+  `.trim();
+
+  try {
+    const payload = await requestOpenAiResponse({
+      apiKey,
+      model,
+      prompt,
+      useWebSearch: meta.useWebSearch && currentAttachments.length === 0,
+      reasoningEffort: "high",
+      timeoutMs: 90000,
+    });
+    const answer = getOpenAiOutputText(payload) || "GPT завершил проход, но не вернул текста ответа.";
+    const webSources = meta.useWebSearch ? getOpenAiWebSources(payload) : [];
+    const finalAnswer =
+      webSources.length > 0
+        ? `${answer}\n\nИсточники:\n${webSources
+            .map((item, index) => `${index + 1}. ${item.title} — ${item.url}`)
+            .join("\n")}`
+        : answer;
+
+    await prisma.tenderChatMessage.update({
+      where: { id: assistantMessageId },
+      data: { body: finalAnswer },
+    });
+  } catch (error) {
+    console.error("[general-chat] pending resolve failed", assistantMessageId, error);
+    await prisma.tenderChatMessage.update({
+      where: { id: assistantMessageId },
+      data: {
+        body: "Не удалось завершить полный проход по файлам. Попробуй повторить запрос в новой ветке или сузить комплект файлов.",
+      },
+    });
+  }
+}
+
 async function parseIncomingRequest(request: Request) {
   const contentType = request.headers.get("content-type") || "";
 
@@ -793,7 +879,6 @@ export async function POST(request: Request) {
       throw new Error("OPENAI_API_KEY is not configured");
     }
 
-    const model = process.env.OPENAI_CHAT_MODEL || process.env.OPENAI_MODEL || "gpt-5";
     const fileSummary: string[] = [];
     const fileReadStates: string[] = [];
 
@@ -966,161 +1051,16 @@ export async function POST(request: Request) {
       userMessage.body = userMessageBody;
     }
 
-    const recentMessages = await prisma.tenderChatMessage.findMany({
-      where: { threadId: thread.id },
-      orderBy: { createdAt: "asc" },
-      take: 20,
-    });
-    const recentAttachments = await prisma.tenderChatAttachment.findMany({
-      where: {
-        threadId: thread.id,
-        messageId: {
-          not: null,
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      select: {
-        id: true,
-        title: true,
-        fileName: true,
-        mimeType: true,
-        fileSize: true,
-        storagePath: true,
-        documentKind: true,
-        extractionNote: true,
-        extractedText: true,
-        summaryText: true,
-      },
-    });
-    const messageAttachments = recentAttachments.filter((item) =>
-      createdAttachments.some((created) => created.id === item.id)
-    );
-    const uploadedCurrentFiles: Array<{ fileId: string; fileName: string }> = [];
-    const directUploadFailures: string[] = [];
-    const uploadResults = await Promise.all(
-      messageAttachments.map(async (attachment) => {
-        if (!attachment.storagePath) {
-          return {
-            ok: false as const,
-            error: `${attachment.title}: файл ещё не сохранён на сервере`,
-          };
-        }
-
-        try {
-          const buffer = await readStoredAttachmentBuffer(attachment.storagePath);
-          const fileId = await uploadOpenAiUserFile({
-            apiKey,
-            fileName: attachment.fileName || attachment.title,
-            mimeType: attachment.mimeType || "application/octet-stream",
-            buffer,
-          });
-          return {
-            ok: true as const,
-            fileId,
-            fileName: attachment.fileName || attachment.title,
-          };
-        } catch (uploadError) {
-          return {
-            ok: false as const,
-            error: `${attachment.title}: ${
-              uploadError instanceof Error ? uploadError.message : "не удалось передать файл напрямую"
-            }`,
-          };
-        }
-      })
-    );
-
-    uploadResults.forEach((result) => {
-      if (result.ok) {
-        uploadedCurrentFiles.push({
-          fileId: result.fileId,
-          fileName: result.fileName,
-        });
-      } else {
-        directUploadFailures.push(result.error);
-      }
-    });
-
-    const effectiveFileReadStates =
-      messageAttachments.length > 0
-        ? messageAttachments.map(
-            (item) =>
-              `${item.title} — ${item.documentKind || "Документ"} — ${
-                item.extractionNote || "Файл сохранён на сервере"
-              }`
-          )
-        : fileReadStates;
-    const historyItems = recentMessages
-      .slice(-6)
-      .map(
-        (item) =>
-          `${item.authorName || (item.role === "ASSISTANT" ? "GPT" : "Пользователь")}: ${trimForPrompt(item.body, 600)}`
-      );
-    const compactHistoryText = squeezeItemsToBudget(historyItems, 3200).join("\n");
-    const recentAttachmentMemoryBlocks = attachedFilesOnly
-      ? []
-      : squeezeItemsToBudget(
-          recentAttachments
-            .filter((item) => !messageAttachments.some((current) => current.id === item.id))
-            .filter((item) => Boolean(item.summaryText || item.extractedText))
-            .map((item) =>
-              [
-                `Файл: ${item.title}`,
-                `Короткая память: ${trimForPrompt(
-                  item.summaryText || item.extractedText || item.extractionNote || "",
-                  900
-                )}`,
-              ].join("\n")
-            )
-            .slice(0, 2)
-            .map((block) => trimForPrompt(block, 1200)),
-          2400
-        );
-
-    const prompt = `
-Ты — полноценный рабочий GPT-ассистент внутри внутреннего чата GOSZAKON.
-Отвечай по-русски, уверенно, по делу и как в обычном чате, а не как в жёстком анализе.
-Можно давать развёрнутые ответы, если вопрос сложный.
-Если включён интернет-поиск, используй его там, где это реально помогает.
-Если вопрос про закупки, договоры, НМЦК, риски, ФАС, документы и стратегию — отвечай как сильный практический эксперт.
-
-Правила:
-- не придумывай факты;
-- если данных не хватает, скажи это прямо;
-- если вопрос юридически чувствительный, отмечай риск и неопределённость;
-- если уместно, предлагай следующий практический шаг;
-- если какой-то файл не удалось прочитать, явно скажи это;
-- не делай вид, что прочитал файл, если текст из него не извлёкся;
-- если приложены прямые файлы, в первую очередь опирайся именно на них;
-- если старая память ветки конфликтует с текущими файлами, доверяй текущим файлам;
-${attachedFilesOnly ? "- отвечай только по прикреплённым файлам и прямому вопросу, не опирайся на интернет и общие знания, кроме базовой интерпретации документа;" : ""}
-
-История чата:
-${compactHistoryText || "История пока пустая."}
-
-${uploadedCurrentFiles.length > 0 ? `Текущие файлы переданы тебе напрямую через OpenAI Files API:\n${uploadedCurrentFiles.map((item, index) => `${index + 1}. ${item.fileName}`).join("\n")}` : ""}
-${directUploadFailures.length > 0 ? `Не удалось передать напрямую часть файлов:\n${directUploadFailures.map((item, index) => `${index + 1}. ${item}`).join("\n")}` : ""}
-${effectiveFileReadStates.length > 0 ? `Статусы прикреплённых файлов:\n${effectiveFileReadStates.map((item, index) => `${index + 1}. ${item}`).join("\n")}` : ""}
-${!attachedFilesOnly && recentAttachmentMemoryBlocks.length > 0 ? `Короткая память по прошлым файлам ветки:\n${recentAttachmentMemoryBlocks.join("\n\n---\n\n")}` : ""}
-
-Последний вопрос:
-${message || "Проанализируй прикреплённые файлы и помоги сотруднику по ним."}
-`.trim();
-    const responseId = await createOpenAiBackgroundResponse({
-      apiKey,
-      model,
-      prompt,
-      inputFiles: uploadedCurrentFiles,
-      useWebSearch: useWebSearch && uploadedCurrentFiles.length === 0,
-      reasoningEffort: "high",
-    });
-
     const assistantMessage = await prisma.tenderChatMessage.create({
       data: {
         threadId: thread.id,
         role: TenderChatMessageRole.ASSISTANT,
-        body: encodePendingAssistantBody(responseId),
+        body: encodePendingAssistantMeta({
+          status: "pending",
+          userMessageId: userMessage.id,
+          useWebSearch,
+          attachedFilesOnly,
+        }),
         authorName: "GPT",
       },
     });
@@ -1197,51 +1137,24 @@ export async function GET(request: Request) {
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
+    const model = process.env.OPENAI_CHAT_MODEL || process.env.OPENAI_MODEL || "gpt-5";
     if (apiKey) {
       const pendingAssistants = state.messages.filter(
-        (message) =>
-          message.role === "assistant" &&
-          Boolean(decodePendingAssistantResponseId(message.body))
+        (message) => message.role === "assistant" && Boolean(decodePendingAssistantMeta(message.body))
       );
 
       for (const pendingMessage of pendingAssistants) {
-        const responseId = decodePendingAssistantResponseId(pendingMessage.body);
-        if (!responseId) continue;
+        const meta = decodePendingAssistantMeta(pendingMessage.body);
+        if (!meta) continue;
 
-        try {
-          const payload = await fetchOpenAiResponseStatus({
-            apiKey,
-            responseId,
-          });
-          const status = String(payload?.status || "").toLowerCase();
-
-          if (status === "completed") {
-            const answer =
-              getOpenAiOutputText(payload) || "GPT завершил проход, но не вернул текста ответа.";
-            const webSources = getOpenAiWebSources(payload);
-            const finalAnswer =
-              webSources.length > 0
-                ? `${answer}\n\nИсточники:\n${webSources
-                    .map((item, index) => `${index + 1}. ${item.title} — ${item.url}`)
-                    .join("\n")}`
-                : answer;
-
-            await prisma.tenderChatMessage.update({
-              where: { id: pendingMessage.id },
-              data: { body: finalAnswer },
-            });
-          } else if (status === "failed" || status === "cancelled" || status === "incomplete" || status === "expired") {
-            await prisma.tenderChatMessage.update({
-              where: { id: pendingMessage.id },
-              data: {
-                body:
-                  "Не удалось завершить полный проход по файлам. Попробуй повторить запрос в новой ветке или сузить комплект файлов.",
-              },
-            });
-          }
-        } catch (error) {
-          console.error("[general-chat] poll failed", responseId, error);
-        }
+        await resolvePendingAssistant({
+          prisma,
+          threadId,
+          assistantMessageId: pendingMessage.id,
+          meta,
+          apiKey,
+          model,
+        });
       }
     }
 

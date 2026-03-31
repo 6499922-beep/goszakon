@@ -733,6 +733,17 @@ async function resolvePendingAssistant({
     .filter((item) => item.messageId !== meta.userMessageId)
     .filter((item) => Boolean(item.summaryText || item.extractedText))
     .slice(0, 3);
+  const directEligibleAttachmentIds = new Set(
+    currentAttachments
+      .filter(
+        (item) =>
+          Boolean(item.storagePath) &&
+          !item.extractedText?.trim() &&
+          DIRECT_FILE_FALLBACK_PATTERN.test(item.fileName || item.title)
+      )
+      .slice(0, 4)
+      .map((item) => item.id)
+  );
 
   const historyItems = recentMessages
     .filter((item) => item.id !== assistantMessageId)
@@ -748,11 +759,19 @@ async function resolvePendingAssistant({
         [
           `Файл: ${item.title}`,
           `Тип: ${item.documentKind || "Документ"}`,
-          `Статус чтения: ${item.extractionNote || "Файл сохранён на сервере"}`,
+          `Статус чтения: ${
+            directEligibleAttachmentIds.has(item.id)
+              ? "Оригинал файла приложен к GPT напрямую. Серверное извлечение текста может быть неполным."
+              : item.extractionNote || "Файл сохранён на сервере"
+          }`,
           `Выжимка: ${trimForPrompt(
-            item.summaryText ||
-              item.extractedText ||
-              "Серверное извлечение текста не удалось. Если сам файл приложен к GPT напрямую, анализируй его по содержимому документа.",
+            directEligibleAttachmentIds.has(item.id)
+              ? item.summaryText ||
+                  item.extractedText ||
+                  "Опирайся прежде всего на сам приложенный файл. Не делай вывод, что анализ невозможен, только из-за пустого серверного extraction."
+              : item.summaryText ||
+                  item.extractedText ||
+                  "Серверное извлечение текста не удалось. Если сам файл приложен к GPT напрямую, анализируй его по содержимому документа.",
             1800
           )}`,
         ].join("\n")
@@ -806,12 +825,7 @@ ${userMessage?.body || "Проанализируй прикреплённые ф
     const directInputFiles = (
       await Promise.all(
         currentAttachments
-          .filter(
-            (item) =>
-              Boolean(item.storagePath) &&
-              !item.extractedText?.trim() &&
-              DIRECT_FILE_FALLBACK_PATTERN.test(item.fileName || item.title)
-          )
+          .filter((item) => directEligibleAttachmentIds.has(item.id))
           .slice(0, 4)
           .map(async (item) => {
             try {

@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import mammoth from "mammoth";
@@ -188,11 +188,20 @@ async function extractPdfText(file: TenderUploadedFile) {
       });
       const extractedText = (await readFile(textPath, "utf-8")).trim();
 
+      if (extractedText.length > 0) {
+        return {
+          extractedText,
+          extractionNote: "Текст из PDF удалось извлечь автоматически.",
+        };
+      }
+
+      const ocrText = await extractPdfTextWithOcr(absolutePath);
+
       return {
-        extractedText: extractedText.length > 0 ? extractedText : null,
+        extractedText: ocrText.length > 0 ? ocrText : null,
         extractionNote:
-          extractedText.length > 0
-            ? "Текст из PDF удалось извлечь автоматически."
+          ocrText.length > 0
+            ? "Текст из PDF распознан через OCR."
             : "PDF сохранён в системе, но текст из него пока не удалось извлечь автоматически. Его можно проверить вручную или загрузить версию в DOCX/XLSX, если она есть.",
       };
     });
@@ -202,6 +211,47 @@ async function extractPdfText(file: TenderUploadedFile) {
       extractionNote:
         "PDF сохранён в системе, но текст из него пока не удалось извлечь автоматически. Его можно проверить вручную или загрузить версию в DOCX/XLSX, если она есть.",
     };
+  }
+}
+
+async function extractPdfTextWithOcr(absolutePath: string) {
+  const tempDir = path.dirname(absolutePath);
+  const sourceName = path.basename(absolutePath, path.extname(absolutePath));
+  const imagePrefix = path.join(tempDir, `${sourceName}-page`);
+
+  try {
+    await execFileAsync("pdftoppm", ["-png", absolutePath, imagePrefix], {
+      maxBuffer: 20 * 1024 * 1024,
+    });
+
+    const files = await readdir(tempDir);
+    const pageImages = files
+      .filter((fileName) => fileName.startsWith(`${sourceName}-page`) && fileName.endsWith(".png"))
+      .sort((left, right) => left.localeCompare(right, "ru"));
+
+    const chunks: string[] = [];
+    for (const imageName of pageImages) {
+      const imagePath = path.join(tempDir, imageName);
+      try {
+        const { stdout } = await execFileAsync(
+          "tesseract",
+          [imagePath, "stdout", "-l", "rus+eng", "--psm", "6"],
+          {
+            maxBuffer: 20 * 1024 * 1024,
+          }
+        );
+        const text = String(stdout ?? "").replace(/\u0000/g, "").trim();
+        if (text) {
+          chunks.push(text);
+        }
+      } catch {
+        // ignore broken page OCR and continue with remaining pages
+      }
+    }
+
+    return chunks.join("\n\n--- OCR PAGE ---\n\n").trim();
+  } catch {
+    return "";
   }
 }
 

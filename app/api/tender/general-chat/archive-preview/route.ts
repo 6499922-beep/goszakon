@@ -3,6 +3,7 @@ import path from "node:path";
 import AdmZip from "adm-zip";
 import { NextResponse } from "next/server";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
+import { startTenderChatAttachmentSummaryJob } from "@/lib/tender-general-chat";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
 import { prepareTenderUploadDocuments } from "@/lib/tender-intake";
@@ -172,6 +173,8 @@ export async function POST(request: Request) {
     await mkdir(baseDir, { recursive: true });
 
     const createdAttachments = [];
+    const apiKey = process.env.OPENAI_API_KEY;
+    const model = process.env.OPENAI_CHAT_MODEL || process.env.OPENAI_MODEL || "gpt-5";
 
     for (const entry of documentEntries) {
       const preparedDocuments = await prepareTenderUploadDocuments({
@@ -208,6 +211,14 @@ export async function POST(request: Request) {
           extractedText: mergedText || null,
         },
       });
+
+      if (apiKey && mergedText.length > 0) {
+        startTenderChatAttachmentSummaryJob({
+          attachmentId: storedAttachment.id,
+          apiKey,
+          model,
+        });
+      }
 
       createdAttachments.push({
         attachmentId: storedAttachment.id,

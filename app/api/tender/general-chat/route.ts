@@ -19,7 +19,6 @@ const MAX_RECENT_ATTACHMENT_BLOCKS = 4;
 const MAX_RECENT_ATTACHMENT_BLOCK_CHARS = 2400;
 const MAX_RECENT_ATTACHMENT_CONTEXT_CHARS = 10000;
 const MAX_ATTACHMENT_SUMMARY_CHARS = 1800;
-const ATTACHMENT_SUMMARY_CHUNK_CHARS = 12000;
 const PENDING_ASSISTANT_BODY = "__GENERAL_CHAT_PENDING__";
 const PENDING_ASSISTANT_PREFIX = `${PENDING_ASSISTANT_BODY}\n`;
 
@@ -247,167 +246,6 @@ async function uploadOpenAiInputFile({
   throw new Error("Не удалось загрузить файл в OpenAI.");
 }
 
-async function buildAttachmentSummary({
-  apiKey,
-  model,
-  title,
-  documentKind,
-  extractionNote,
-  extractedText,
-}: {
-  apiKey: string;
-  model: string;
-  title: string;
-  documentKind: string | null;
-  extractionNote: string | null;
-  extractedText: string | null;
-}) {
-  const text = extractedText?.trim();
-
-  if (!text) {
-    return extractionNote?.trim() || "Текст автоматически не извлечён.";
-  }
-
-  const textChunks = chunkTextForSummary(text, ATTACHMENT_SUMMARY_CHUNK_CHARS);
-
-  const chunkSummaries: string[] = [];
-  for (let index = 0; index < textChunks.length; index += 1) {
-    const chunk = textChunks[index];
-    const prompt = `
-Ты готовишь серверную память по одному вложению рабочего чата GOSZAKON.
-Перед тобой часть документа. Нужно извлечь из этого фрагмента только полезные факты, цифры, сроки, условия, риски и важные формулировки.
-
-Правила:
-- не пересказывай воду;
-- не пиши вводных фраз;
-- не придумывай отсутствующее;
-- пиши по-русски;
-- если фрагмент служебный, коротко так и отметь.
-
-Название файла: ${title}
-Тип документа: ${documentKind || "Документ"}
-Статус чтения: ${extractionNote || "Текст извлечён"}
-Часть: ${index + 1} из ${textChunks.length}
-
-Фрагмент документа:
-${chunk}
-    `.trim();
-
-    try {
-      const payload = await requestOpenAiResponse({
-        apiKey,
-        model,
-        prompt,
-        useWebSearch: false,
-        reasoningEffort: "low",
-        timeoutMs: 25000,
-      });
-      const summary = getOpenAiOutputText(payload).trim();
-      chunkSummaries.push(summary || chunk);
-    } catch {
-      chunkSummaries.push(chunk);
-    }
-  }
-
-  const combinePrompt = `
-Ты готовишь серверную память по одному вложению рабочего чата GOSZAKON.
-Ниже даны выжимки по всем частям одного документа. Нужно собрать из них одну полную полезную сводку по всему файлу.
-
-Требования:
-- опирайся на все части документа, а не только на начало;
-- сохрани ключевые цифры, сроки, условия, риски, обязанности, санкции и выводы;
-- если это договор, обязательно сохрани: стороны, предмет, сроки, оплату, ответственность, неустойку, расторжение;
-- если это претензия, сохрани: факты, даты, ссылки на пункты, требования, сроки, приложенные доказательства;
-- если это ТЗ или документация, сохрани: предмет, требования, объёмы, сроки, ограничения;
-- формат ответа:
-  1. Что это за документ
-  2. Главные факты
-  3. Ключевые цифры и сроки
-  4. Риски / что важно проверить
-- по-русски
-- без воды
-
-Название файла: ${title}
-Тип документа: ${documentKind || "Документ"}
-Статус чтения: ${extractionNote || "Текст извлечён"}
-
-Выжимки по всем частям файла:
-${chunkSummaries.map((item, index) => `Часть ${index + 1}:\n${item}`).join("\n\n---\n\n")}
-  `.trim();
-
-  try {
-    const payload = await requestOpenAiResponse({
-      apiKey,
-      model,
-      prompt: combinePrompt,
-      useWebSearch: false,
-      reasoningEffort: "low",
-      timeoutMs: 30000,
-    });
-    return getOpenAiOutputText(payload) || trimForPrompt(text, MAX_ATTACHMENT_SUMMARY_CHARS);
-  } catch {
-    return trimForPrompt(text, MAX_ATTACHMENT_SUMMARY_CHARS);
-  }
-}
-
-async function ensureAttachmentSummaries({
-  prisma,
-  apiKey,
-  model,
-  attachments,
-}: {
-  prisma: ReturnType<typeof getPrisma>;
-  apiKey: string;
-  model: string;
-  attachments: Array<{
-    id: number;
-    messageId?: number | null;
-    title: string;
-    fileName: string;
-    mimeType: string | null;
-    fileSize: number | null;
-    storagePath: string | null;
-    documentKind: string | null;
-    extractionNote: string | null;
-    extractedText: string | null;
-    summaryText: string | null;
-  }>;
-}) {
-  const attachmentsToSummarize = attachments.filter((attachment) => !attachment.summaryText?.trim());
-  const updates = await Promise.all(
-    attachmentsToSummarize.map(async (attachment) => {
-      const summaryText = await buildAttachmentSummary({
-        apiKey,
-        model,
-        title: attachment.title,
-        documentKind: attachment.documentKind,
-        extractionNote: attachment.extractionNote,
-        extractedText: attachment.extractedText,
-      });
-      return { id: attachment.id, summaryText };
-    })
-  );
-
-  if (updates.length > 0) {
-    await Promise.all(
-      updates.map((item) =>
-        prisma.tenderChatAttachment.update({
-          where: { id: item.id },
-          data: { summaryText: item.summaryText },
-        })
-      )
-    );
-  }
-
-  return attachments.map((attachment) => {
-    const updated = updates.find((item) => item.id === attachment.id);
-    return {
-      ...attachment,
-      summaryText: updated?.summaryText || attachment.summaryText,
-    };
-  });
-}
-
 async function ensureAttachmentExtraction({
   prisma,
   attachments,
@@ -532,22 +370,6 @@ async function ensureAttachmentExtraction({
 
 function trimForPrompt(value: string | null | undefined, limit: number) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, limit);
-}
-
-function chunkTextForSummary(value: string, chunkSize: number) {
-  const normalized = String(value || "").trim();
-  if (!normalized) return [];
-
-  const chunks: string[] = [];
-  let start = 0;
-
-  while (start < normalized.length) {
-    const end = Math.min(start + chunkSize, normalized.length);
-    chunks.push(normalized.slice(start, end).trim());
-    start = end;
-  }
-
-  return chunks.filter(Boolean);
 }
 
 function squeezeItemsToBudget(items: string[], maxChars: number) {
@@ -790,13 +612,6 @@ async function resolvePendingAssistant({
       extractedText: item.extractedText,
       summaryText: item.summaryText,
     })),
-  });
-
-  preparedAttachments = await ensureAttachmentSummaries({
-    prisma,
-    apiKey,
-    model,
-    attachments: preparedAttachments,
   });
 
   const currentAttachments = preparedAttachments.filter((item) => item.messageId === meta.userMessageId);

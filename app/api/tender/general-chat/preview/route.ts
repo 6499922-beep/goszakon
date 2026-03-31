@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
+import { startTenderChatAttachmentSummaryJob } from "@/lib/tender-general-chat";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
 import { prepareTenderUploadDocuments } from "@/lib/tender-intake";
@@ -115,6 +116,15 @@ export async function POST(request: Request) {
         extractedText: mergedText || null,
       },
     });
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (apiKey && mergedText.length > 0) {
+      startTenderChatAttachmentSummaryJob({
+        attachmentId: storedAttachment.id,
+        apiKey,
+        model: process.env.OPENAI_CHAT_MODEL || process.env.OPENAI_MODEL || "gpt-5",
+      });
+    }
 
     return NextResponse.json({
       ok: true,

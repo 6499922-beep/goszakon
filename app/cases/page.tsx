@@ -263,62 +263,30 @@ export default async function CasesPage({ searchParams }: PageProps) {
             практику по номеру закупки, ИНН заказчика, нарушению, категории,
             региону или типу результата.
           </p>
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/cases/praktika-fas"
-              className="rounded-2xl bg-[#081a4b] px-6 py-4 text-center text-sm font-semibold text-white transition hover:bg-[#0d2568]"
-            >
-              Открыть обзор по темам
-            </Link>
-
-            <Link
-              href="/cases"
-              className="rounded-2xl border border-slate-300 bg-white px-6 py-4 text-center text-sm font-semibold text-[#081a4b] transition hover:bg-slate-50"
-            >
-              Перейти сразу к фильтрам
-            </Link>
-          </div>
         </div>
 
-        <div className="mt-8 grid gap-4 xl:grid-cols-4">
-          {PRACTICE_HUBS.map((item) => (
-            <Link
-              key={item.title}
-              href={item.href}
-              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <div className="text-lg font-semibold text-[#081a4b]">{item.title}</div>
-              <p className="mt-3 text-sm leading-7 text-slate-600">{item.description}</p>
-              <span className="mt-4 inline-flex text-sm font-semibold text-[#081a4b]">
-                {item.cta} →
+        <form className="hero-panel mt-8 rounded-[32px] border border-[rgba(8,26,75,0.08)] bg-[linear-gradient(135deg,rgba(8,26,75,0.06),rgba(255,255,255,0.98))] p-7 shadow-[0_30px_60px_rgba(15,23,42,0.08)]">
+          <div className="flex flex-col gap-5 border-b border-[rgba(8,26,75,0.08)] pb-6">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="rounded-full bg-[#081a4b] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white">
+                Поиск по базе
               </span>
-            </Link>
-          ))}
-        </div>
-
-        <div className="hero-panel mt-6 rounded-3xl p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="max-w-3xl">
-              <div className="text-base font-semibold text-[#081a4b]">
-                Нужен не просто список решений, а обзор по смыслу
-              </div>
-              <p className="mt-2 text-sm leading-7 text-slate-600">
-                Если не хотите начинать с общего архива, переходите в обзор
-                практики по темам: неоплата, РНП, неустойка и документация закупки.
-              </p>
+              <span className="text-sm text-slate-500">
+                Начните с номера закупки, ИНН, заказчика или типа нарушения
+              </span>
             </div>
 
-            <Link
-              href="/cases/praktika-fas"
-              className="inline-flex rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-[#081a4b] transition hover:bg-slate-100"
-            >
-              Перейти к обзору тем
-            </Link>
+            <div className="max-w-3xl">
+              <h2 className="text-2xl font-semibold tracking-[-0.02em] text-[#081a4b] md:text-3xl">
+                Найдите нужную практику сразу, без прокрутки и лишних переходов
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-slate-600 md:text-base">
+                База ищет по названию кейса, номеру закупки, ИНН, региону, нарушению
+                и категории. Ниже можно быстро сузить выдачу по фильтрам и свежести практики.
+              </p>
+            </div>
           </div>
-        </div>
 
-        <form className="hero-panel mt-8 rounded-3xl p-6">
           <div className="grid gap-4 lg:grid-cols-12">
             <div className="lg:col-span-12 xl:col-span-4">
               <label className="block text-sm font-medium text-slate-700">
@@ -435,6 +403,56 @@ export default async function CasesPage({ searchParams }: PageProps) {
             </div>
           </div>
         </form>
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Link
+            href="/cases/praktika-fas"
+            className="rounded-2xl bg-[#081a4b] px-6 py-4 text-center text-sm font-semibold text-white transition hover:bg-[#0d2568]"
+          >
+            Открыть обзор по темам
+          </Link>
+
+          <span className="inline-flex items-center rounded-2xl border border-slate-300 bg-white px-5 py-4 text-sm font-medium text-slate-600">
+            Или начните с готовой тематической подборки ниже
+          </span>
+        </div>
+
+        <div className="mt-6 grid gap-4 xl:grid-cols-4">
+          {PRACTICE_HUBS.map((item) => (
+            <Link
+              key={item.title}
+              href={item.href}
+              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className="text-lg font-semibold text-[#081a4b]">{item.title}</div>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{item.description}</p>
+              <span className="mt-4 inline-flex text-sm font-semibold text-[#081a4b]">
+                {item.cta} →
+              </span>
+            </Link>
+          ))}
+        </div>
+
+        <div className="hero-panel mt-6 rounded-3xl p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-3xl">
+              <div className="text-base font-semibold text-[#081a4b]">
+                Нужен не просто список решений, а обзор по смыслу
+              </div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Если не хотите начинать с общего архива, переходите в обзор
+                практики по темам: неоплата, РНП, неустойка и документация закупки.
+              </p>
+            </div>
+
+            <Link
+              href="/cases/praktika-fas"
+              className="inline-flex rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-[#081a4b] transition hover:bg-slate-100"
+            >
+              Перейти к обзору тем
+            </Link>
+          </div>
+        </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-500">
           <span>Найдено кейсов: {totalCount}</span>

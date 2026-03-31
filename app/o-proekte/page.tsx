@@ -64,34 +64,36 @@ export default function AboutUsPage() {
     <main className="min-h-screen bg-white text-slate-900">
       <section className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-6 py-20">
-          <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <div className="max-w-4xl">
+          <div className="grid items-start gap-10 xl:grid-cols-[minmax(0,760px)_320px] xl:justify-between">
+            <div>
               <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
                 О нас
               </div>
 
-              <h1 className="mt-6 max-w-4xl text-5xl font-bold tracking-tight text-[#081a4b] md:text-6xl">
+              <h1 className="mt-6 max-w-[760px] text-5xl font-bold tracking-tight text-[#081a4b] md:text-6xl">
                 GOSZAKON — проект, выросший из реальной практики в сфере закупок
               </h1>
 
-              <p className="mt-6 max-w-3xl text-lg leading-9 text-slate-700">
+              <div className="mt-6 max-w-[760px] space-y-4">
+                <p className="text-lg leading-9 text-slate-700">
                 Мы — практикующие участники рынка государственного заказа, которые более
                 10 лет работают в сфере закупок и знают систему не только по нормативной
                 базе, но и по собственному опыту участия в процедурах и исполнении контрактов.
-              </p>
+                </p>
 
-              <p className="mt-4 max-w-3xl text-lg leading-9 text-slate-700">
+                <p className="text-lg leading-9 text-slate-700">
                 За это время нами исполнено более 6000 тендеров и контрактов. Работая
                 в закупках, мы неоднократно сталкивались с ситуациями ограничения
                 конкуренции, спорной документации и конфликтов между заказчиками
                 и поставщиками.
-              </p>
+                </p>
 
-              <p className="mt-4 max-w-3xl text-lg leading-9 text-slate-700">
+                <p className="text-lg leading-9 text-slate-700">
                 Мы работаем по всей России: можем подключиться онлайн, приехать к
                 клиенту в регион и при необходимости помочь не только со спором,
                 но и с практическим обучением команды по закупочной работе.
-              </p>
+                </p>
+              </div>
 
               <div className="mt-8 flex flex-wrap gap-4">
                 <a
@@ -108,47 +110,9 @@ export default function AboutUsPage() {
                   {SITE_CONTACTS.email}
                 </a>
               </div>
-
-              <div className="mt-8 grid gap-4 md:grid-cols-2">
-                <Link
-                  href="/cases"
-                  className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:bg-white hover:shadow-sm"
-                >
-                  <div className="font-semibold text-[#081a4b]">Практика ФАС</div>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">
-                    База решений по жалобам, РНП, неоплате, неустойке и другим закупочным спорам.
-                  </p>
-                </Link>
-                <Link
-                  href="/spornye-praktiki"
-                  className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:bg-white hover:shadow-sm"
-                >
-                  <div className="font-semibold text-[#081a4b]">Спорные практики</div>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">
-                    Разбираем перекосы, которые заказчики пытаются сделать обычной практикой.
-                  </p>
-                </Link>
-              </div>
-
-              <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-6">
-                <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
-                  Формат работы
-                </div>
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  <div className="rounded-2xl bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm">
-                    Онлайн-подключение к спору, жалобе или срочной закупочной ситуации.
-                  </div>
-                  <div className="rounded-2xl bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm">
-                    Выезд к клиенту в регион, если задачу удобнее решать на месте.
-                  </div>
-                  <div className="rounded-2xl bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm">
-                    Практическое обучение команды по документации, ФАС и спорным закупочным блокам.
-                  </div>
-                </div>
-              </div>
             </div>
 
-            <div className="hidden space-y-4 lg:block">
+            <div className="hidden xl:block">
               <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-6 shadow-sm">
                 <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
                   Коротко о проекте
@@ -161,16 +125,52 @@ export default function AboutUsPage() {
                     </div>
                   ))}
                 </div>
-              </div>
-
-              <div className="rounded-[32px] bg-[#081a4b] p-6 text-white shadow-sm">
-                <div className="text-sm uppercase tracking-[0.14em] text-white/60">
-                  По всей России
+                <div className="mt-4 rounded-2xl bg-[#081a4b] p-5 text-white">
+                  <div className="text-sm font-semibold uppercase tracking-[0.12em] text-white/60">
+                    По всей России
+                  </div>
+                  <p className="mt-3 text-sm leading-7 text-white/85">
+                    Подключаемся онлайн, выезжаем в регион и при необходимости работаем с командой клиента на месте.
+                  </p>
                 </div>
-                <p className="mt-4 text-base leading-8 text-white/85">
-                  Подключаемся онлайн, выезжаем в регион и при необходимости
-                  работаем с командой клиента на месте.
-                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-10 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <Link
+              href="/cases"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:bg-white hover:shadow-sm"
+            >
+              <div className="font-semibold text-[#081a4b]">Практика ФАС</div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                База решений по жалобам, РНП, неоплате, неустойке и другим закупочным спорам.
+              </p>
+            </Link>
+            <Link
+              href="/spornye-praktiki"
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:bg-white hover:shadow-sm"
+            >
+              <div className="font-semibold text-[#081a4b]">Спорные практики</div>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Разбираем перекосы, которые заказчики пытаются сделать обычной практикой.
+              </p>
+            </Link>
+          </div>
+
+          <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6">
+            <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Формат работы
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm">
+                Онлайн-подключение к спору, жалобе или срочной закупочной ситуации.
+              </div>
+              <div className="rounded-2xl bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm">
+                Выезд к клиенту в регион, если задачу удобнее решать на месте.
+              </div>
+              <div className="rounded-2xl bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm">
+                Практическое обучение команды по документации, ФАС и спорным закупочным блокам.
               </div>
             </div>
           </div>

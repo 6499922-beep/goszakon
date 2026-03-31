@@ -5,7 +5,7 @@ APP_PATH="${APP_PATH:-/root/goszakon}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 APP_SERVICE="${APP_SERVICE:-app}"
 APP_CONTAINER="${APP_CONTAINER:-goszakon-app}"
-PROJECT_NAME="${PROJECT_NAME:-goszakon-public}"
+PROJECT_NAME="${PROJECT_NAME:-}"
 REMOVE_ORPHANS="${REMOVE_ORPHANS:-false}"
 RUN_DB_PUSH="${RUN_DB_PUSH:-true}"
 
@@ -15,7 +15,13 @@ git fetch origin main
 git reset --hard origin/main
 git clean -fd
 
-compose_cmd=(docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE")
+compose_cmd=(docker compose)
+
+if [ -n "$PROJECT_NAME" ]; then
+  compose_cmd+=(-p "$PROJECT_NAME")
+fi
+
+compose_cmd+=(-f "$COMPOSE_FILE")
 up_args=(-d --build)
 
 if [ "$REMOVE_ORPHANS" = "true" ]; then

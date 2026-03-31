@@ -8,7 +8,7 @@ BASE_URL="${BASE_URL:-https://goszakon.ru}"
 DISK_WARN_THRESHOLD="${DISK_WARN_THRESHOLD:-85}"
 DISK_PRUNE_THRESHOLD="${DISK_PRUNE_THRESHOLD:-92}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
-PROJECT_NAME="${PROJECT_NAME:-goszakon-public}"
+PROJECT_NAME="${PROJECT_NAME:-}"
 APP_CONTAINER="${APP_CONTAINER:-goszakon-app}"
 DB_CONTAINER="${DB_CONTAINER:-goszakon-db}"
 
@@ -41,7 +41,11 @@ fi
 
 if [[ "$app_status" != "running healthy" ]]; then
   log "app status abnormal: ${app_status}, restarting app container"
-  docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d --force-recreate app >> "$LOG_FILE" 2>&1 || true
+  if [ -n "$PROJECT_NAME" ]; then
+    docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d --force-recreate app >> "$LOG_FILE" 2>&1 || true
+  else
+    docker compose -f "$COMPOSE_FILE" up -d --force-recreate app >> "$LOG_FILE" 2>&1 || true
+  fi
   sleep 10
 fi
 
@@ -50,7 +54,11 @@ case_code="$(curl -sS -o /dev/null -w '%{http_code}' "${BASE_URL}/cases" || echo
 
 if [[ "$main_code" != "200" || "$case_code" != "200" ]]; then
   log "health endpoint failed: /=${main_code}, /cases=${case_code}; restarting app container"
-  docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d --force-recreate app >> "$LOG_FILE" 2>&1 || true
+  if [ -n "$PROJECT_NAME" ]; then
+    docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d --force-recreate app >> "$LOG_FILE" 2>&1 || true
+  else
+    docker compose -f "$COMPOSE_FILE" up -d --force-recreate app >> "$LOG_FILE" 2>&1 || true
+  fi
   sleep 10
   main_code="$(curl -sS -o /dev/null -w '%{http_code}' "${BASE_URL}/" || echo '000')"
   case_code="$(curl -sS -o /dev/null -w '%{http_code}' "${BASE_URL}/cases" || echo '000')"

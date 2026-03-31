@@ -18,6 +18,7 @@ Avoid manual one-off production fixes by separating:
    - `npm run build`
 4. Deploy code and static files:
    - `./scripts/deploy-prod.sh`
+   - `./scripts/deploy-tender-prod.sh` for the tender host only
 5. Import content into production database:
    - `./scripts/run-prod-script.sh scripts/import-fas-decisions-2025.mjs`
    - `./scripts/run-prod-script.sh scripts/import-court-materials.mjs`
@@ -42,7 +43,9 @@ Older scripts are still valid, but now act as specialized wrappers around the sa
 ## Why this is safer
 
 - `deploy-prod.sh` now targets the active production host by default.
-- `server-deploy.sh` deploys the public site compose file by default and waits for health.
+- `deploy-tender-prod.sh` targets the tender host separately.
+- `server-deploy.sh` deploys one compose stack at a time, with an explicit project name.
+- public and tender now use different compose project names, so one deploy cannot remove the other as an orphan.
 - The runtime Docker image now contains the `scripts/` directory, so import scripts can run inside the app container without ad hoc copying tricks.
 - `run-prod-script.sh` gives one predictable way to execute a content import on production.
 

@@ -7,6 +7,10 @@ LOG_FILE="/var/log/goszakon-monitor.log"
 BASE_URL="${BASE_URL:-https://goszakon.ru}"
 DISK_WARN_THRESHOLD="${DISK_WARN_THRESHOLD:-85}"
 DISK_PRUNE_THRESHOLD="${DISK_PRUNE_THRESHOLD:-92}"
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
+PROJECT_NAME="${PROJECT_NAME:-goszakon-public}"
+APP_CONTAINER="${APP_CONTAINER:-goszakon-app}"
+DB_CONTAINER="${DB_CONTAINER:-goszakon-db}"
 
 timestamp() {
   date '+%Y-%m-%d %H:%M:%S'
@@ -17,8 +21,8 @@ log() {
 }
 
 disk_usage="$(df -P / | awk 'NR==2 {gsub("%", "", $5); print $5}')"
-app_status="$(docker inspect --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' goszakon-app 2>/dev/null || echo 'missing missing')"
-db_status="$(docker inspect --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' goszakon-db 2>/dev/null || echo 'missing missing')"
+app_status="$(docker inspect --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' "$APP_CONTAINER" 2>/dev/null || echo 'missing missing')"
+db_status="$(docker inspect --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' "$DB_CONTAINER" 2>/dev/null || echo 'missing missing')"
 
 if [[ "$disk_usage" -ge "$DISK_WARN_THRESHOLD" ]]; then
   log "disk usage warning: ${disk_usage}% used on /"
@@ -37,7 +41,7 @@ fi
 
 if [[ "$app_status" != "running healthy" ]]; then
   log "app status abnormal: ${app_status}, restarting app container"
-  docker compose up -d --force-recreate app >> "$LOG_FILE" 2>&1 || true
+  docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d --force-recreate app >> "$LOG_FILE" 2>&1 || true
   sleep 10
 fi
 
@@ -46,7 +50,7 @@ case_code="$(curl -sS -o /dev/null -w '%{http_code}' "${BASE_URL}/cases" || echo
 
 if [[ "$main_code" != "200" || "$case_code" != "200" ]]; then
   log "health endpoint failed: /=${main_code}, /cases=${case_code}; restarting app container"
-  docker compose up -d --force-recreate app >> "$LOG_FILE" 2>&1 || true
+  docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d --force-recreate app >> "$LOG_FILE" 2>&1 || true
   sleep 10
   main_code="$(curl -sS -o /dev/null -w '%{http_code}' "${BASE_URL}/" || echo '000')"
   case_code="$(curl -sS -o /dev/null -w '%{http_code}' "${BASE_URL}/cases" || echo '000')"

@@ -16,9 +16,9 @@ if [ ! -f "$SCRIPT_PATH" ]; then
   exit 1
 fi
 
-PROD_HOST="${PROD_HOST:-185.185.142.238}"
+PROD_HOST="${PROD_HOST:-138.124.118.116}"
 PROD_PATH="${PROD_PATH:-/root/goszakon}"
-APP_CONTAINER="${APP_CONTAINER:-goszakon-app}"
+APP_CONTAINER="${APP_CONTAINER:-goszakon-tender-app}"
 REMOTE_SCRIPT_PATH="${PROD_PATH}/${SCRIPT_PATH}"
 
 scp -i ~/.ssh/id_ed25519_goszakon -o StrictHostKeyChecking=no "$SCRIPT_PATH" "root@${PROD_HOST}:${REMOTE_SCRIPT_PATH}"

@@ -63,8 +63,8 @@ export default function AboutUsPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
       <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl items-start gap-12 px-6 py-20 lg:grid-cols-[minmax(0,1.08fr)_minmax(320px,420px)]">
-          <div>
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="max-w-4xl">
             <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
               О нас
             </div>
@@ -147,7 +147,7 @@ export default function AboutUsPage() {
             </div>
           </div>
 
-          <div className="self-start space-y-4">
+          <div className="mt-12 grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-7 shadow-sm">
               <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
                 Правовая помощь в закупках
@@ -164,7 +164,7 @@ export default function AboutUsPage() {
               </p>
             </div>
 
-            <div className="grid gap-4">
+            <div className="grid gap-4 md:grid-cols-3">
               {strengths.slice(0, 3).map((item) => (
                 <div
                   key={item.title}
@@ -179,35 +179,35 @@ export default function AboutUsPage() {
                 </div>
               ))}
             </div>
+          </div>
 
-            <div className="rounded-[32px] bg-[#081a4b] p-7 text-white shadow-sm">
-              <div className="text-sm uppercase tracking-[0.14em] text-white/60">
-                По всей России
+          <div className="mt-6 rounded-[32px] bg-[#081a4b] p-7 text-white shadow-sm">
+            <div className="text-sm uppercase tracking-[0.14em] text-white/60">
+              По всей России
+            </div>
+
+            <h3 className="mt-4 text-2xl font-bold tracking-tight">
+              Подключаемся быстро и работаем в удобном для клиента формате
+            </h3>
+
+            <div className="mt-6 grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm font-semibold">Онлайн</div>
+                <p className="mt-2 text-sm leading-7 text-white/80">
+                  Быстро подключаемся к жалобе, спору или закупочной ситуации из любого региона.
+                </p>
               </div>
-
-              <h3 className="mt-4 text-2xl font-bold tracking-tight">
-                Подключаемся быстро и работаем в удобном для клиента формате
-              </h3>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-sm font-semibold">Онлайн</div>
-                  <p className="mt-2 text-sm leading-7 text-white/80">
-                    Быстро подключаемся к жалобе, спору или закупочной ситуации из любого региона.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-sm font-semibold">Выезд</div>
-                  <p className="mt-2 text-sm leading-7 text-white/80">
-                    При необходимости приезжаем к клиенту и работаем с командой на месте.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-sm font-semibold">Обучение</div>
-                  <p className="mt-2 text-sm leading-7 text-white/80">
-                    Помогаем не только в споре, но и встраиваем рабочую закупочную практику в команду.
-                  </p>
-                </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm font-semibold">Выезд</div>
+                <p className="mt-2 text-sm leading-7 text-white/80">
+                  При необходимости приезжаем к клиенту и работаем с командой на месте.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm font-semibold">Обучение</div>
+                <p className="mt-2 text-sm leading-7 text-white/80">
+                  Помогаем не только в споре, но и встраиваем рабочую закупочную практику в команду.
+                </p>
               </div>
             </div>
           </div>

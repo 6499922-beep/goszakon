@@ -63,7 +63,7 @@ export default function AboutUsPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
       <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl items-start gap-12 px-6 py-20 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="mx-auto grid max-w-7xl items-start gap-12 px-6 py-20 lg:grid-cols-[minmax(0,1.08fr)_minmax(320px,420px)]">
           <div>
             <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
               О нас
@@ -147,8 +147,8 @@ export default function AboutUsPage() {
             </div>
           </div>
 
-          <div className="self-start space-y-6">
-            <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-8 shadow-sm">
+          <div className="self-start space-y-4">
+            <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-7 shadow-sm">
               <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
                 Правовая помощь в закупках
               </div>
@@ -157,35 +157,35 @@ export default function AboutUsPage() {
                 Почему нам доверяют
               </h2>
 
-              <p className="mt-4 text-lg leading-9 text-slate-700">
+              <p className="mt-4 text-base leading-8 text-slate-700">
                 Мы понимаем закупочный спор не как внешний наблюдатель, а как
                 участники рынка, которые сами проходили через закупочные конфликты
                 и судебные споры.
               </p>
-
-              <div className="mt-8 space-y-4">
-                {strengths.slice(0, 3).map((item) => (
-                  <div
-                    key={item.title}
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                  >
-                    <div className="text-base font-semibold text-[#081a4b]">
-                      {item.title}
-                    </div>
-                    <p className="mt-2 text-sm leading-7 text-slate-600">
-                      {item.text}
-                    </p>
-                  </div>
-                ))}
-              </div>
             </div>
 
-            <div className="rounded-[32px] bg-[#081a4b] p-8 text-white shadow-sm">
+            <div className="grid gap-4">
+              {strengths.slice(0, 3).map((item) => (
+                <div
+                  key={item.title}
+                  className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm"
+                >
+                  <div className="text-base font-semibold text-[#081a4b]">
+                    {item.title}
+                  </div>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">
+                    {item.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-[32px] bg-[#081a4b] p-7 text-white shadow-sm">
               <div className="text-sm uppercase tracking-[0.14em] text-white/60">
                 По всей России
               </div>
 
-              <h3 className="mt-4 text-3xl font-bold tracking-tight">
+              <h3 className="mt-4 text-2xl font-bold tracking-tight">
                 Подключаемся быстро и работаем в удобном для клиента формате
               </h3>
 

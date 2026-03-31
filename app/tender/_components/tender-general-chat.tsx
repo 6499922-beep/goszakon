@@ -379,6 +379,7 @@ export function TenderGeneralChat({
   const [previewCache, setPreviewCache] = useState<Record<string, SelectedFilePreview>>({});
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isArchiveLoading, setIsArchiveLoading] = useState(false);
+  const [archiveNotice, setArchiveNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [procurementOnlyMode, setProcurementOnlyMode] = useState(false);
   const [attachedFilesOnlyMode, setAttachedFilesOnlyMode] = useState(false);
@@ -390,6 +391,7 @@ export function TenderGeneralChat({
   const archiveInputRef = useRef<HTMLInputElement | null>(null);
   const composerRef = useRef<HTMLFormElement | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
+  const filesToSendRef = useRef<HTMLDivElement | null>(null);
   const storageKey = `general-chat-mode:${threadId}`;
   const activePreviewFile = selectedFiles[activePreviewIndex] ?? null;
   const activePreviewKey = activePreviewFile
@@ -666,7 +668,13 @@ export function TenderGeneralChat({
       const next = [...current, ...selectedArchiveAttachmentIds];
       return [...new Set(next)];
     });
+    setArchiveNotice(
+      `Добавлено в чат: ${selectedArchiveAttachmentIds.length} файл${selectedArchiveAttachmentIds.length === 1 ? "" : selectedArchiveAttachmentIds.length < 5 ? "а" : "ов"}.`
+    );
     setSelectedArchiveAttachmentIds([]);
+    requestAnimationFrame(() => {
+      filesToSendRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
   }
 
   function addAllArchiveAttachmentsToChat() {
@@ -674,13 +682,18 @@ export function TenderGeneralChat({
     if (ids.length === 0) return;
 
     setAttachedArchiveAttachmentIds(ids);
+    setArchiveNotice(`Добавлены в чат все файлы из архива: ${ids.length}.`);
     setSelectedArchiveAttachmentIds([]);
+    requestAnimationFrame(() => {
+      filesToSendRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
   }
 
   function removeArchiveAttachmentFromChat(attachmentId: number) {
     setAttachedArchiveAttachmentIds((current) =>
       current.filter((item) => item !== attachmentId)
     );
+    setArchiveNotice("Файл убран из отправки в чат.");
   }
 
   async function handleArchiveUpload(files: FileList | null) {
@@ -688,6 +701,7 @@ export function TenderGeneralChat({
     if (!archive) return;
 
     setError(null);
+    setArchiveNotice(null);
     setIsArchiveLoading(true);
 
     try {
@@ -725,6 +739,9 @@ export function TenderGeneralChat({
         const next = [...current, ...payload.attachments!.map((item) => item.attachmentId)];
         return [...new Set(next)];
       });
+      setArchiveNotice(
+        `Архив распакован. Найдено файлов: ${payload.attachments.length}. Отметь нужные и нажми «Добавить выбранное».`
+      );
     } catch (archiveError) {
       setError(
         archiveError instanceof Error ? archiveError.message : "Не удалось распаковать архив."
@@ -1349,6 +1366,11 @@ export function TenderGeneralChat({
           <div className="mt-2 text-xs leading-5 text-slate-500">
             Архив раскладывается на конечные документы. Ты сам отмечаешь, что добавить в чат.
           </div>
+          {archiveNotice ? (
+            <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-xs font-medium leading-5 text-emerald-800">
+              {archiveNotice}
+            </div>
+          ) : null}
           {preparedArchiveAttachments.length > 0 ? (
             <div className="mt-3 space-y-2">
               <div className="flex flex-wrap gap-2">
@@ -1433,8 +1455,12 @@ export function TenderGeneralChat({
         </div>
 
         <div className="mt-4 rounded-[1.5rem] bg-[#fafbfc] px-4 py-4">
+          <div ref={filesToSendRef} />
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
             Файлы к отправке
+          </div>
+          <div className="mt-1 text-xs text-slate-500">
+            Сейчас в чат пойдут: {selectedFiles.length + attachedArchiveAttachments.length}
           </div>
           {selectedFiles.length > 0 || attachedArchiveAttachments.length > 0 ? (
             <div className="mt-3 space-y-2">

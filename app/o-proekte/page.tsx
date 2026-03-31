@@ -147,20 +147,69 @@ export default function AboutUsPage() {
             </div>
           </div>
 
-          <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-8 shadow-sm">
-            <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
-              Правовая помощь в закупках
+          <div className="space-y-6">
+            <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-8 shadow-sm">
+              <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
+                Правовая помощь в закупках
+              </div>
+
+              <h2 className="mt-4 text-3xl font-bold tracking-tight text-[#081a4b]">
+                Почему нам доверяют
+              </h2>
+
+              <p className="mt-4 text-lg leading-9 text-slate-700">
+                Мы понимаем закупочный спор не как внешний наблюдатель, а как
+                участники рынка, которые сами проходили через закупочные конфликты
+                и судебные споры.
+              </p>
+
+              <div className="mt-8 space-y-4">
+                {strengths.slice(0, 3).map((item) => (
+                  <div
+                    key={item.title}
+                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                  >
+                    <div className="text-base font-semibold text-[#081a4b]">
+                      {item.title}
+                    </div>
+                    <p className="mt-2 text-sm leading-7 text-slate-600">
+                      {item.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <h2 className="mt-4 text-3xl font-bold tracking-tight text-[#081a4b]">
-              Почему нам доверяют
-            </h2>
+            <div className="rounded-[32px] bg-[#081a4b] p-8 text-white shadow-sm">
+              <div className="text-sm uppercase tracking-[0.14em] text-white/60">
+                По всей России
+              </div>
 
-            <p className="mt-4 text-lg leading-9 text-slate-700">
-              Мы понимаем закупочный спор не как внешний наблюдатель, а как
-              участники рынка, которые сами проходили через закупочные конфликты
-              и судебные споры.
-            </p>
+              <h3 className="mt-4 text-3xl font-bold tracking-tight">
+                Подключаемся быстро и работаем в удобном для клиента формате
+              </h3>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-sm font-semibold">Онлайн</div>
+                  <p className="mt-2 text-sm leading-7 text-white/80">
+                    Быстро подключаемся к жалобе, спору или закупочной ситуации из любого региона.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-sm font-semibold">Выезд</div>
+                  <p className="mt-2 text-sm leading-7 text-white/80">
+                    При необходимости приезжаем к клиенту и работаем с командой на месте.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-sm font-semibold">Обучение</div>
+                  <p className="mt-2 text-sm leading-7 text-white/80">
+                    Помогаем не только в споре, но и встраиваем рабочую закупочную практику в команду.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

@@ -865,7 +865,7 @@ export async function POST(request: Request) {
         orderBy: { createdAt: "asc" },
         take: 20,
       });
-      let recentAttachments = await prisma.tenderChatAttachment.findMany({
+      const recentAttachments = await prisma.tenderChatAttachment.findMany({
         where: {
           threadId: thread.id,
           messageId: {
@@ -887,48 +887,55 @@ export async function POST(request: Request) {
           summaryText: true,
         },
       });
-      recentAttachments = await ensureAttachmentExtraction({
-        prisma,
-        attachments: recentAttachments,
-      });
-      const preparedRecentAttachments = await ensureAttachmentSummaries({
-        prisma,
-        apiKey,
-        model,
-        attachments: recentAttachments,
-      });
+      const preparedRecentAttachments = recentAttachments;
       const messageAttachments = preparedRecentAttachments.filter((item) =>
         createdAttachments.some((created) => created.id === item.id)
       );
       const uploadedCurrentFiles: Array<{ fileId: string; fileName: string }> = [];
       const directUploadFailures: string[] = [];
+      const uploadResults = await Promise.all(
+        messageAttachments.map(async (attachment) => {
+          if (!attachment.storagePath) {
+            return {
+              ok: false as const,
+              error: `${attachment.title}: файл ещё не сохранён на сервере`,
+            };
+          }
 
-      for (const attachment of messageAttachments) {
-        if (!attachment.storagePath) {
-          directUploadFailures.push(`${attachment.title}: файл ещё не сохранён на сервере`);
-          continue;
-        }
+          try {
+            const buffer = await readStoredAttachmentBuffer(attachment.storagePath);
+            const fileId = await uploadOpenAiUserFile({
+              apiKey,
+              fileName: attachment.fileName || attachment.title,
+              mimeType: attachment.mimeType || "application/octet-stream",
+              buffer,
+            });
+            return {
+              ok: true as const,
+              fileId,
+              fileName: attachment.fileName || attachment.title,
+            };
+          } catch (uploadError) {
+            return {
+              ok: false as const,
+              error: `${attachment.title}: ${
+                uploadError instanceof Error ? uploadError.message : "не удалось передать файл напрямую"
+              }`,
+            };
+          }
+        })
+      );
 
-        try {
-          const buffer = await readStoredAttachmentBuffer(attachment.storagePath);
-          const fileId = await uploadOpenAiUserFile({
-            apiKey,
-            fileName: attachment.fileName || attachment.title,
-            mimeType: attachment.mimeType || "application/octet-stream",
-            buffer,
-          });
+      uploadResults.forEach((result) => {
+        if (result.ok) {
           uploadedCurrentFiles.push({
-            fileId,
-            fileName: attachment.fileName || attachment.title,
+            fileId: result.fileId,
+            fileName: result.fileName,
           });
-        } catch (uploadError) {
-          directUploadFailures.push(
-            `${attachment.title}: ${
-              uploadError instanceof Error ? uploadError.message : "не удалось передать файл напрямую"
-            }`
-          );
+        } else {
+          directUploadFailures.push(result.error);
         }
-      }
+      });
 
       const effectiveFileReadStates =
         messageAttachments.length > 0
@@ -952,7 +959,10 @@ export async function POST(request: Request) {
           .map((item) =>
             [
               `Файл: ${item.title}`,
-              `Короткая память: ${trimForPrompt(item.summaryText || item.extractedText || item.extractionNote || "", MAX_ATTACHMENT_SUMMARY_CHARS)}`,
+              `Короткая память: ${trimForPrompt(
+                item.extractedText || item.summaryText || item.extractionNote || "",
+                MAX_ATTACHMENT_SUMMARY_CHARS
+              )}`,
             ].join("\n")
           )
           .slice(0, MAX_CURRENT_ATTACHMENT_BLOCKS)
@@ -963,6 +973,7 @@ export async function POST(request: Request) {
       const recentAttachmentMemoryBlocks = squeezeItemsToBudget(
         preparedRecentAttachments
           .filter((item) => !messageAttachments.some((current) => current.id === item.id))
+          .filter((item) => Boolean(item.summaryText || item.extractedText))
           .map((item) =>
             [
               `Файл: ${item.title}`,

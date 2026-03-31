@@ -63,7 +63,7 @@ export default function AboutUsPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
       <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl gap-12 px-6 py-20 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="mx-auto grid max-w-7xl items-start gap-12 px-6 py-20 lg:grid-cols-[1.05fr_0.95fr]">
           <div>
             <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
               О нас
@@ -147,7 +147,7 @@ export default function AboutUsPage() {
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="self-start space-y-6">
             <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-8 shadow-sm">
               <div className="text-sm uppercase tracking-[0.14em] text-slate-400">
                 Правовая помощь в закупках

@@ -64,48 +64,48 @@ export default function AboutUsPage() {
     <main className="min-h-screen bg-white text-slate-900">
       <section className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-6 py-20">
-          <div className="mx-auto max-w-5xl">
+          <div className="mx-auto max-w-4xl">
             <div>
               <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
                 О нас
               </div>
 
-              <h1 className="mt-6 max-w-4xl text-5xl font-bold tracking-tight text-[#081a4b] md:text-6xl">
+              <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-[1.02] tracking-tight text-[#081a4b] md:text-5xl xl:text-[64px]">
                 GOSZAKON — проект, выросший из реальной практики в сфере закупок
               </h1>
 
-              <div className="mt-6 max-w-4xl space-y-4">
-                <p className="text-lg leading-9 text-slate-700">
+              <div className="mt-7 max-w-3xl space-y-5">
+                <p className="text-[17px] leading-8 text-slate-700">
                 Мы — практикующие участники рынка государственного заказа, которые более
                 10 лет работают в сфере закупок и знают систему не только по нормативной
                 базе, но и по собственному опыту участия в процедурах и исполнении контрактов.
                 </p>
 
-                <p className="text-lg leading-9 text-slate-700">
+                <p className="text-[17px] leading-8 text-slate-700">
                 За это время нами исполнено более 6000 тендеров и контрактов. Работая
                 в закупках, мы неоднократно сталкивались с ситуациями ограничения
                 конкуренции, спорной документации и конфликтов между заказчиками
                 и поставщиками.
                 </p>
 
-                <p className="text-lg leading-9 text-slate-700">
+                <p className="text-[17px] leading-8 text-slate-700">
                 Мы работаем по всей России: можем подключиться онлайн, приехать к
                 клиенту в регион и при необходимости помочь не только со спором,
                 но и с практическим обучением команды по закупочной работе.
                 </p>
               </div>
 
-              <div className="mt-8 flex flex-wrap gap-4">
+              <div className="mt-9 flex flex-wrap gap-4">
                 <a
                   href={SITE_CONTACTS.phoneHref}
-                  className="rounded-2xl bg-[#081a4b] px-6 py-4 font-semibold text-white transition hover:bg-[#0d2568]"
+                  className="rounded-2xl bg-[#081a4b] px-6 py-3.5 text-base font-semibold text-white transition hover:bg-[#0d2568]"
                 >
                   {SITE_CONTACTS.phoneDisplay}
                 </a>
 
                 <a
                   href={SITE_CONTACTS.emailHref}
-                  className="rounded-2xl border border-slate-300 px-6 py-4 font-semibold transition hover:bg-slate-50"
+                  className="rounded-2xl border border-slate-300 px-6 py-3.5 text-base font-semibold transition hover:bg-slate-50"
                 >
                   {SITE_CONTACTS.email}
                 </a>
@@ -113,7 +113,7 @@ export default function AboutUsPage() {
             </div>
           </div>
 
-          <div className="mx-auto mt-10 grid max-w-5xl gap-4 lg:grid-cols-2">
+          <div className="mx-auto mt-12 grid max-w-4xl gap-4 lg:grid-cols-2">
             <Link
               href="/cases"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"

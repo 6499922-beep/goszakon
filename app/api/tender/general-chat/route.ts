@@ -12,10 +12,13 @@ export const dynamic = "force-dynamic";
 const ARCHIVE_FILE_PATTERN = /\.(zip|rar|7z)$/i;
 const MAX_HISTORY_MESSAGES = 8;
 const MAX_HISTORY_CHARS = 9000;
-const MAX_FILE_BLOCKS = 4;
-const MAX_FILE_BLOCK_CHARS = 3200;
-const MAX_FILE_CONTEXT_CHARS = 12000;
-const MAX_ATTACHMENT_SUMMARY_CHARS = 1400;
+const MAX_CURRENT_ATTACHMENT_BLOCKS = 12;
+const MAX_CURRENT_ATTACHMENT_BLOCK_CHARS = 4200;
+const MAX_CURRENT_ATTACHMENT_CONTEXT_CHARS = 30000;
+const MAX_RECENT_ATTACHMENT_BLOCKS = 4;
+const MAX_RECENT_ATTACHMENT_BLOCK_CHARS = 2400;
+const MAX_RECENT_ATTACHMENT_CONTEXT_CHARS = 10000;
+const MAX_ATTACHMENT_SUMMARY_CHARS = 1800;
 const PENDING_ASSISTANT_BODY = "__GENERAL_CHAT_PENDING__";
 
 function getOpenAiOutputText(payload: any) {
@@ -856,17 +859,31 @@ export async function POST(request: Request) {
         );
       const historyText = squeezeItemsToBudget(historyItems, MAX_HISTORY_CHARS).join("\n");
 
-      const attachmentMemoryBlocks = squeezeItemsToBudget(
-        preparedRecentAttachments
+      const currentAttachmentMemoryBlocks = squeezeItemsToBudget(
+        messageAttachments
           .map((item) =>
             [
               `Файл: ${item.title}`,
               `Короткая память: ${trimForPrompt(item.summaryText || item.extractedText || item.extractionNote || "", MAX_ATTACHMENT_SUMMARY_CHARS)}`,
             ].join("\n")
           )
-          .slice(0, MAX_FILE_BLOCKS)
-          .map((block) => trimForPrompt(block, MAX_FILE_BLOCK_CHARS)),
-        MAX_FILE_CONTEXT_CHARS
+          .slice(0, MAX_CURRENT_ATTACHMENT_BLOCKS)
+          .map((block) => trimForPrompt(block, MAX_CURRENT_ATTACHMENT_BLOCK_CHARS)),
+        MAX_CURRENT_ATTACHMENT_CONTEXT_CHARS
+      );
+
+      const recentAttachmentMemoryBlocks = squeezeItemsToBudget(
+        preparedRecentAttachments
+          .filter((item) => !messageAttachments.some((current) => current.id === item.id))
+          .map((item) =>
+            [
+              `Файл: ${item.title}`,
+              `Короткая память: ${trimForPrompt(item.summaryText || item.extractedText || item.extractionNote || "", 1200)}`,
+            ].join("\n")
+          )
+          .slice(0, MAX_RECENT_ATTACHMENT_BLOCKS)
+          .map((block) => trimForPrompt(block, MAX_RECENT_ATTACHMENT_BLOCK_CHARS)),
+        MAX_RECENT_ATTACHMENT_CONTEXT_CHARS
       );
 
       const prompt = `
@@ -888,20 +905,21 @@ ${attachedFilesOnly ? "- отвечай только по прикреплённ
 История чата:
 ${historyText || "История пока пустая."}
 
-${preparedRecentAttachments.length > 0 ? `Память сервера по последним файлам в этой ветке:\n${preparedRecentAttachments
+${messageAttachments.length > 0 ? `Текущие прикреплённые файлы этой реплики:\n${messageAttachments
   .map(
     (item, index) =>
       `${index + 1}. ${item.title} — ${item.documentKind || "Документ"} — ${item.extractionNote || "без статуса"}${
         item.summaryText
-          ? `\n${trimForPrompt(item.summaryText, MAX_ATTACHMENT_SUMMARY_CHARS)}`
+          ? `\n${trimForPrompt(item.summaryText, 2400)}`
           : item.extractedText
-            ? `\n${trimForPrompt(item.extractedText, 900)}`
+            ? `\n${trimForPrompt(item.extractedText, 1800)}`
             : ""
       }`
   )
   .join("\n\n")}` : ""}
-${effectiveFileReadStates.length > 0 ? `Прикреплённые файлы:\n${effectiveFileReadStates.map((item, index) => `${index + 1}. ${item}`).join("\n")}` : ""}
-${attachmentMemoryBlocks.length > 0 ? `Короткая память по файлам:\n${attachmentMemoryBlocks.join("\n\n---\n\n")}` : ""}
+${effectiveFileReadStates.length > 0 ? `Статусы прикреплённых файлов:\n${effectiveFileReadStates.map((item, index) => `${index + 1}. ${item}`).join("\n")}` : ""}
+${currentAttachmentMemoryBlocks.length > 0 ? `Рабочая память по текущим файлам:\n${currentAttachmentMemoryBlocks.join("\n\n---\n\n")}` : ""}
+${!attachedFilesOnly && recentAttachmentMemoryBlocks.length > 0 ? `Дополнительная память по предыдущим файлам этой ветки:\n${recentAttachmentMemoryBlocks.join("\n\n---\n\n")}` : ""}
 
 Последний вопрос:
 ${message || "Проанализируй прикреплённые файлы и помоги сотруднику по ним."}
@@ -930,7 +948,7 @@ ${historyText || "История пока пустая."}
 ${effectiveFileReadStates.length > 0 ? effectiveFileReadStates.map((item, index) => `${index + 1}. ${item}`).join("\n") : "Файлы не приложены."}
 
 Короткий контекст:
-${attachmentMemoryBlocks.length > 0 ? attachmentMemoryBlocks.map((item, index) => `${index + 1}. ${trimForPrompt(item, 900)}`).join("\n\n") : "Извлечённого текста нет."}
+${currentAttachmentMemoryBlocks.length > 0 ? currentAttachmentMemoryBlocks.map((item, index) => `${index + 1}. ${trimForPrompt(item, 1200)}`).join("\n\n") : "Извлечённого текста нет."}
 
 Вопрос:
 ${message || "Проанализируй прикреплённые файлы и помоги сотруднику по ним."}

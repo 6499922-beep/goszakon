@@ -64,13 +64,13 @@ export default function AboutUsPage() {
     <main className="min-h-screen bg-white text-slate-900">
       <section className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-6 py-20">
-          <div className="mx-auto max-w-4xl">
-            <div>
+          <div className="grid items-start gap-10 xl:grid-cols-[minmax(0,1.1fr)_360px]">
+            <div className="max-w-4xl">
               <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
                 О нас
               </div>
 
-              <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-[1.02] tracking-tight text-[#081a4b] md:text-5xl xl:text-[64px]">
+              <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-[1.02] tracking-tight text-[#081a4b] md:text-5xl xl:text-[60px]">
                 GOSZAKON — проект, выросший из реальной практики в сфере закупок
               </h1>
 
@@ -111,9 +111,30 @@ export default function AboutUsPage() {
                 </a>
               </div>
             </div>
+            <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-6 shadow-sm">
+              <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+                Коротко о проекте
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                {stats.map((item) => (
+                  <div key={item.label} className="rounded-2xl bg-white p-4 shadow-sm">
+                    <div className="text-2xl font-bold text-[#081a4b]">{item.value}</div>
+                    <div className="mt-1 text-sm leading-6 text-slate-600">{item.label}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 rounded-2xl bg-[#081a4b] p-5 text-white">
+                <div className="text-sm font-semibold uppercase tracking-[0.12em] text-white/60">
+                  По всей России
+                </div>
+                <p className="mt-3 text-sm leading-7 text-white/85">
+                  Подключаемся онлайн, выезжаем в регион и при необходимости работаем с командой клиента на месте.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="mx-auto mt-12 grid max-w-4xl gap-4 lg:grid-cols-2">
+          <div className="mt-10 grid gap-4 lg:grid-cols-3">
             <Link
               href="/cases"
               className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:bg-white hover:shadow-sm"
@@ -140,12 +161,12 @@ export default function AboutUsPage() {
                 Онлайн-подключение к спору, жалобе или срочной закупочной ситуации. Выезд к клиенту в регион, если задачу удобнее решать на месте.
               </p>
             </div>
-            <div className="rounded-3xl bg-[#081a4b] p-6 text-white shadow-sm">
-              <div className="text-sm font-semibold uppercase tracking-[0.12em] text-white/60">
-                По всей России
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+              <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+                Формат помощи
               </div>
-              <p className="mt-3 text-sm leading-7 text-white/85">
-                Подключаемся онлайн, выезжаем в регион и при необходимости работаем с командой клиента на месте.
+              <p className="mt-3 text-sm leading-7 text-slate-700">
+                Жалобы в ФАС, споры по исполнению и оплате, РНП, спорная документация, судебная защита и практическое сопровождение закупочной работы.
               </p>
             </div>
           </div>
@@ -184,36 +205,6 @@ export default function AboutUsPage() {
             </div>
           </div>
 
-          <div className="mt-6 rounded-[32px] bg-[#081a4b] p-7 text-white shadow-sm">
-            <div className="text-sm uppercase tracking-[0.14em] text-white/60">
-              По всей России
-            </div>
-
-            <h3 className="mt-4 text-2xl font-bold tracking-tight">
-              Подключаемся быстро и работаем в удобном для клиента формате
-            </h3>
-
-            <div className="mt-6 grid gap-3 md:grid-cols-3">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-sm font-semibold">Онлайн</div>
-                <p className="mt-2 text-sm leading-7 text-white/80">
-                  Быстро подключаемся к жалобе, спору или закупочной ситуации из любого региона.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-sm font-semibold">Выезд</div>
-                <p className="mt-2 text-sm leading-7 text-white/80">
-                  При необходимости приезжаем к клиенту и работаем с командой на месте.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-sm font-semibold">Обучение</div>
-                <p className="mt-2 text-sm leading-7 text-white/80">
-                  Помогаем не только в споре, но и встраиваем рабочую закупочную практику в команду.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 

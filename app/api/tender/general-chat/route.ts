@@ -197,6 +197,56 @@ async function requestOpenAiResponse({
   throw new Error("Не удалось получить ответ GPT после повторных попыток.");
 }
 
+async function uploadOpenAiInputFile({
+  apiKey,
+  fileName,
+  mimeType,
+  buffer,
+}: {
+  apiKey: string;
+  fileName: string;
+  mimeType: string;
+  buffer: Buffer;
+}) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const formData = new FormData();
+    const fileBytes = new Uint8Array(buffer.byteLength);
+    fileBytes.set(buffer);
+    formData.append("purpose", "assistants");
+    formData.append("file", new Blob([fileBytes], { type: mimeType }), fileName);
+
+    const response = await fetch("https://api.openai.com/v1/files", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: formData,
+    });
+
+    if (response.ok) {
+      const payload = await response.json();
+      const fileId = typeof payload?.id === "string" ? payload.id.trim() : "";
+      if (fileId) return fileId;
+    }
+
+    const errorText = await response.text().catch(() => "");
+    const isRetryable =
+      response.status === 429 ||
+      response.status === 500 ||
+      response.status === 502 ||
+      response.status === 503 ||
+      response.status === 504;
+
+    if (!isRetryable || attempt === 2) {
+      throw new Error(`OpenAI file upload error: ${response.status} ${errorText.slice(0, 500)}`);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+  }
+
+  throw new Error("Не удалось загрузить файл в OpenAI.");
+}
+
 async function buildAttachmentSummary({
   apiKey,
   model,
@@ -797,6 +847,37 @@ async function resolvePendingAssistant({
         MAX_RECENT_ATTACHMENT_CONTEXT_CHARS
       );
 
+  const directPdfFiles = await Promise.all(
+    currentAttachments
+      .filter((item) => {
+        const name = (item.fileName || item.title || "").toLowerCase();
+        const mime = (item.mimeType || "").toLowerCase();
+        const looksLikePdf = mime.includes("pdf") || name.endsWith(".pdf");
+        const textLength = item.extractedText?.trim().length || 0;
+        return looksLikePdf && textLength < 4000 && Boolean(item.storagePath);
+      })
+      .map(async (item) => {
+        try {
+          const absoluteStoragePath = path.join(
+            process.cwd(),
+            "public",
+            item.storagePath!.replace(/^\/+/, "")
+          );
+          const buffer = await readFile(absoluteStoragePath);
+          const fileId = await uploadOpenAiInputFile({
+            apiKey,
+            fileName: item.fileName || item.title,
+            mimeType: item.mimeType || "application/pdf",
+            buffer,
+          });
+          return { fileId };
+        } catch (error) {
+          console.error("[general-chat] direct pdf upload failed", item.id, error);
+          return null;
+        }
+      })
+  ).then((items) => items.filter((item): item is { fileId: string } => Boolean(item?.fileId)));
+
   const prompt = `
 Ты — рабочий GPT-ассистент GOSZAKON внутри внутреннего чата.
 Отвечай по-русски, уверенно, конкретно и по существу.
@@ -813,6 +894,7 @@ async function resolvePendingAssistant({
 - ограничения и оговорки выноси в конец коротким блоком "Что не видно из документов", а не ставь их в центр ответа;
 - не пиши фразы вроде "сейчас содержательно проанализировать нельзя", если по видимым фрагментам уже можно сделать рабочий вывод;
 - делай практический вывод и следующий шаг, если это уместно;
+- если к запросу приложены реальные PDF-файлы напрямую в GPT, используй и их содержимое тоже, а не только серверную сводку;
 ${meta.attachedFilesOnly ? "- отвечай только по прикреплённым файлам этой реплики;" : ""}
 
 История:
@@ -832,6 +914,7 @@ ${userMessage?.body || "Проанализируй прикреплённые ф
       apiKey,
       model,
       prompt,
+      inputFiles: directPdfFiles,
       useWebSearch: meta.useWebSearch && currentAttachments.length === 0,
       reasoningEffort: "high",
       timeoutMs: 90000,

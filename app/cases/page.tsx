@@ -249,23 +249,7 @@ export default async function CasesPage({ searchParams }: PageProps) {
   return (
     <main className="min-h-screen bg-transparent text-slate-900">
       <div className="mx-auto max-w-6xl px-6 py-16">
-        <div className="max-w-3xl">
-          <div className="inline-flex rounded-full border border-[color:var(--line)] bg-[rgba(255,253,249,0.9)] px-4 py-2 text-sm font-medium text-slate-600">
-            База практики ФАС
-          </div>
-
-          <h1 className="mt-5 text-5xl font-bold tracking-[-0.03em] text-[#081a4b] md:text-6xl">
-            База практики ФАС
-          </h1>
-
-          <p className="mt-4 text-lg leading-8 text-slate-600">
-            Не просто архив решений, а рабочая база по закупочным спорам. Ищите
-            практику по номеру закупки, ИНН заказчика, нарушению, категории,
-            региону или типу результата.
-          </p>
-        </div>
-
-        <form className="hero-panel mt-8 rounded-[32px] border border-[rgba(8,26,75,0.08)] bg-[linear-gradient(135deg,rgba(8,26,75,0.08),rgba(255,255,255,0.98))] p-7 shadow-[0_30px_60px_rgba(15,23,42,0.08)]">
+        <form className="hero-panel rounded-[32px] border border-[rgba(8,26,75,0.08)] bg-[linear-gradient(135deg,rgba(8,26,75,0.08),rgba(255,255,255,0.98))] p-7 shadow-[0_30px_60px_rgba(15,23,42,0.08)]">
           <div className="flex flex-col gap-5 border-b border-[rgba(8,26,75,0.08)] pb-6">
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-full bg-[#081a4b] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white">
@@ -409,6 +393,22 @@ export default async function CasesPage({ searchParams }: PageProps) {
             </div>
           </div>
         </form>
+
+        <div className="mt-10 max-w-3xl">
+          <div className="inline-flex rounded-full border border-[color:var(--line)] bg-[rgba(255,253,249,0.9)] px-4 py-2 text-sm font-medium text-slate-600">
+            База практики ФАС
+          </div>
+
+          <h1 className="mt-5 text-5xl font-bold tracking-[-0.03em] text-[#081a4b] md:text-6xl">
+            База практики ФАС
+          </h1>
+
+          <p className="mt-4 text-lg leading-8 text-slate-600">
+            Не просто архив решений, а рабочая база по закупочным спорам. Ищите
+            практику по номеру закупки, ИНН заказчика, нарушению, категории,
+            региону или типу результата.
+          </p>
+        </div>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link

@@ -1385,11 +1385,51 @@ export function TenderGeneralChat({
                 <button
                   type="button"
                   onClick={addAllArchiveAttachmentsToChat}
-                  className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-[#0d5bd7] hover:text-[#0d5bd7]"
+                  disabled={preparedArchiveAttachments.length === 0}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-[#0d5bd7] hover:text-[#0d5bd7] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Добавить всё
                 </button>
               </div>
+              {attachedArchiveAttachments.length > 0 ? (
+                <div className="rounded-2xl border border-[#cfe0ff] bg-[#eef4ff] px-3 py-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[#0d5bd7]">
+                    Уже пойдут в чат
+                  </div>
+                  <div className="mt-2 text-xs leading-5 text-slate-600">
+                    Эти файлы уже добавлены в отправку. После нажатия `Отправить` вопрос уйдёт вместе с ними.
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {attachedArchiveAttachments.slice(0, 5).map((item) => (
+                      <div
+                        key={`archive-attached-${item.attachmentId}`}
+                        className="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium text-slate-700">
+                            {item.fileName}
+                          </div>
+                          <div className="text-xs text-[#0d5bd7]">
+                            Добавлен в чат
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeArchiveAttachmentFromChat(item.attachmentId)}
+                          className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
+                        >
+                          Убрать
+                        </button>
+                      </div>
+                    ))}
+                    {attachedArchiveAttachments.length > 5 ? (
+                      <div className="text-xs text-slate-500">
+                        И ещё: {attachedArchiveAttachments.length - 5}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
               {preparedArchiveAttachments.slice(0, 6).map((item) => (
                 <div key={item.attachmentId} className="rounded-2xl bg-white px-3 py-3">
                   <label className="flex items-start gap-3">

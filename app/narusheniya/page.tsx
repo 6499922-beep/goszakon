@@ -1,19 +1,29 @@
 import Link from "next/link";
 
 export default function ViolationsPage() {
+  const quickLinks = [
+    { label: "Товарный знак", href: "/narusheniya-tovarnyj-znak" },
+    { label: "Нацрежим", href: "/narusheniya-nacionalnyj-rezhim" },
+    { label: "Ограничение конкуренции", href: "/narusheniya-ogranichenie-konkurencii" },
+    { label: "Практика ФАС", href: "/cases" },
+  ];
+
   const activeCategories = [
     {
       title: "Товарный знак",
+      badge: "Частая жалоба",
       text: "Ситуации, когда заказчик указывает конкретный товарный знак без допуска эквивалента или фактически ограничивает круг участников через описание товара.",
       href: "/narusheniya-tovarnyj-znak",
     },
     {
       title: "Национальный режим",
+      badge: "Высокий риск ошибки",
       text: "Ошибки в применении ограничений, запретов и условий допуска, которые влияют на состав участников и результаты закупки.",
       href: "/narusheniya-nacionalnyj-rezhim",
     },
     {
       title: "Ограничение конкуренции",
+      badge: "Сильная аргументация",
       text: "Закупочные условия, которые искусственно сужают рынок, создают преимущества конкретному участнику или делают закупку недоступной для конкурентов.",
       href: "/narusheniya-ogranichenie-konkurencii",
     },
@@ -61,15 +71,27 @@ export default function ViolationsPage() {
             Практический раздел GOSZAKON
           </div>
 
-          <h1 className="mt-6 max-w-5xl text-5xl font-bold leading-[1.02] tracking-tight text-[#081a4b] md:text-7xl">
+          <h1 className="mt-6 max-w-4xl text-4xl font-bold leading-[1.04] tracking-tight text-[#081a4b] md:text-6xl">
             Нарушения в закупках и основания для жалобы в ФАС
           </h1>
 
-          <p className="mt-6 max-w-4xl text-xl leading-9 text-slate-700">
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-700 md:text-xl md:leading-9">
             Это не просто список спорных тем, а навигация по реальным основаниям жалоб.
             Здесь можно быстро понять, к какой категории относится нарушение,
             где у поставщика сильная позиция и на какую практику стоит опираться.
           </p>
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            {quickLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-[#081a4b] transition hover:border-slate-300 hover:bg-white"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
@@ -151,15 +173,18 @@ export default function ViolationsPage() {
               <Link
                 key={item.title}
                 href={item.href}
-                className="flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                className="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:border-slate-300 hover:shadow-md"
               >
+                <div className="inline-flex w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  {item.badge}
+                </div>
                 <h3 className="text-2xl font-semibold leading-9 text-[#081a4b]">
                   {item.title}
                 </h3>
                 <p className="mt-4 text-base leading-8 text-slate-700">
                   {item.text}
                 </p>
-                <span className="mt-5 text-sm font-semibold text-[#081a4b]">
+                <span className="mt-6 text-sm font-semibold text-[#081a4b] transition group-hover:translate-x-1">
                   Открыть раздел →
                 </span>
               </Link>

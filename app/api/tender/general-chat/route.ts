@@ -246,128 +246,6 @@ async function uploadOpenAiInputFile({
   throw new Error("Не удалось загрузить файл в OpenAI.");
 }
 
-async function ensureAttachmentExtraction({
-  prisma,
-  attachments,
-}: {
-  prisma: ReturnType<typeof getPrisma>;
-  attachments: Array<{
-    id: number;
-    messageId?: number | null;
-    title: string;
-    fileName: string;
-    mimeType: string | null;
-    fileSize: number | null;
-    storagePath: string | null;
-    documentKind: string | null;
-    extractionNote: string | null;
-    extractedText: string | null;
-    summaryText: string | null;
-  }>;
-}): Promise<
-  Array<{
-    id: number;
-    messageId?: number | null;
-    title: string;
-    fileName: string;
-    mimeType: string | null;
-    fileSize: number | null;
-    storagePath: string | null;
-    documentKind: string | null;
-    extractionNote: string | null;
-    extractedText: string | null;
-    summaryText: string | null;
-  }>
-> {
-  const updates: Array<{
-    id: number;
-    title: string;
-    documentKind: string | null;
-    extractionNote: string | null;
-    extractedText: string | null;
-    summaryText?: string | null;
-  }> = [];
-
-  for (const attachment of attachments) {
-    if (attachment.extractedText?.trim() || !attachment.storagePath) continue;
-
-    try {
-      const absoluteStoragePath = path.join(
-        process.cwd(),
-        "public",
-        attachment.storagePath.replace(/^\/+/, "")
-      );
-      const buffer = await readFile(absoluteStoragePath);
-      const preparedDocuments = await prepareTenderUploadDocuments({
-        name: attachment.fileName || attachment.title,
-        type: attachment.mimeType || "application/octet-stream",
-        size: attachment.fileSize || buffer.byteLength,
-        buffer,
-      });
-
-      const mergedText = preparedDocuments
-        .map((item) => item.extractedText?.trim())
-        .filter((item): item is string => Boolean(item))
-        .join("\n\n---\n\n")
-        .trim();
-
-      const firstPrepared = preparedDocuments[0];
-      updates.push({
-        id: attachment.id,
-        title: firstPrepared?.title || attachment.title,
-        documentKind: firstPrepared?.documentKind || attachment.documentKind,
-        extractionNote:
-          firstPrepared?.extractionNote ||
-          attachment.extractionNote ||
-          "Файл прочитан в фоне.",
-        extractedText: mergedText || null,
-        summaryText: null,
-      });
-    } catch (error) {
-      console.error("[general-chat] attachment extraction failed", attachment.id, error);
-      updates.push({
-        id: attachment.id,
-        title: attachment.title,
-        documentKind: attachment.documentKind,
-        extractionNote: "Файл не удалось прочитать автоматически.",
-        extractedText: null,
-        summaryText: null,
-      });
-    }
-  }
-
-  if (updates.length > 0) {
-    await Promise.all(
-      updates.map((item) =>
-        prisma.tenderChatAttachment.update({
-          where: { id: item.id },
-          data: {
-            title: item.title,
-            documentKind: item.documentKind,
-            extractionNote: item.extractionNote,
-            extractedText: item.extractedText,
-            summaryText: item.summaryText ?? null,
-          },
-        })
-      )
-    );
-  }
-
-  return attachments.map((attachment) => {
-    const updated = updates.find((item) => item.id === attachment.id);
-    return updated
-      ? {
-          ...attachment,
-          title: updated.title,
-          documentKind: updated.documentKind,
-          extractionNote: updated.extractionNote,
-          extractedText: updated.extractedText,
-          summaryText: updated.summaryText ?? null,
-        }
-      : attachment;
-  });
-}
-
 function trimForPrompt(value: string | null | undefined, limit: number) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, limit);
 }
@@ -597,22 +475,19 @@ async function resolvePendingAssistant({
     },
   });
 
-  let preparedAttachments = await ensureAttachmentExtraction({
-    prisma,
-    attachments: recentAttachments.map((item) => ({
-      id: item.id,
-      messageId: item.messageId,
-      title: item.title,
-      fileName: item.fileName,
-      mimeType: item.mimeType,
-      fileSize: item.fileSize,
-      storagePath: item.storagePath,
-      documentKind: item.documentKind,
-      extractionNote: item.extractionNote,
-      extractedText: item.extractedText,
-      summaryText: item.summaryText,
-    })),
-  });
+  const preparedAttachments = recentAttachments.map((item) => ({
+    id: item.id,
+    messageId: item.messageId,
+    title: item.title,
+    fileName: item.fileName,
+    mimeType: item.mimeType,
+    fileSize: item.fileSize,
+    storagePath: item.storagePath,
+    documentKind: item.documentKind,
+    extractionNote: item.extractionNote,
+    extractedText: item.extractedText,
+    summaryText: item.summaryText,
+  }));
 
   const currentAttachments = preparedAttachments.filter((item) => item.messageId === meta.userMessageId);
   const previousAttachments = preparedAttachments

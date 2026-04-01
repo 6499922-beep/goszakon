@@ -2,10 +2,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
-import { startTenderChatAttachmentSummaryJob } from "@/lib/tender-general-chat";
+import { startTenderChatAttachmentPreparationJob } from "@/lib/tender-general-chat";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
-import { prepareTenderUploadDocuments } from "@/lib/tender-intake";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,18 +73,6 @@ export async function POST(request: Request) {
     }
 
     const fileBuffer = Buffer.from(await file.arrayBuffer());
-    const preparedDocuments = await prepareTenderUploadDocuments({
-      name: file.name,
-      type: file.type || "application/octet-stream",
-      size: file.size,
-      buffer: fileBuffer,
-    });
-
-    const mergedText = preparedDocuments
-      .map((item) => item.extractedText?.trim())
-      .filter((item): item is string => Boolean(item))
-      .join("\n\n---\n\n")
-      .trim();
 
     const timestamp = Date.now();
     const baseDir = path.join(
@@ -96,7 +83,7 @@ export async function POST(request: Request) {
       `thread-${thread.id}`
     );
     await mkdir(baseDir, { recursive: true });
-    const safeName = sanitizeAttachmentFileName(file.name || preparedDocuments[0]?.title || "attachment");
+    const safeName = sanitizeAttachmentFileName(file.name || "attachment");
     const storedFileName = `${timestamp}-${safeName || "attachment"}`;
     const relativeStoragePath = `/docs/general-chat/thread-${thread.id}/${storedFileName}`;
     const absoluteStoragePath = path.join(baseDir, storedFileName);
@@ -106,20 +93,20 @@ export async function POST(request: Request) {
       data: {
         threadId: thread.id,
         messageId: null,
-        title: preparedDocuments[0]?.title || file.name,
+        title: file.name,
         fileName: file.name,
         mimeType: file.type || "application/octet-stream",
         fileSize: file.size,
         storagePath: relativeStoragePath,
-        documentKind: preparedDocuments[0]?.documentKind || "Документ",
-        extractionNote: preparedDocuments[0]?.extractionNote || "Файл подготовлен к анализу.",
-        extractedText: mergedText || null,
+        documentKind: "Документ",
+        extractionNote: "Файл загружен. Идёт чтение и разбор.",
+        extractedText: null,
       },
     });
 
     const apiKey = process.env.OPENAI_API_KEY;
-    if (apiKey && mergedText.length > 0) {
-      startTenderChatAttachmentSummaryJob({
+    if (apiKey) {
+      startTenderChatAttachmentPreparationJob({
         attachmentId: storedAttachment.id,
         apiKey,
         model: process.env.OPENAI_CHAT_MODEL || process.env.OPENAI_MODEL || "gpt-5",
@@ -132,11 +119,11 @@ export async function POST(request: Request) {
         attachmentId: storedAttachment.id,
         fileName: file.name,
         fileType: file.type || "application/octet-stream",
-        documentKind: preparedDocuments[0]?.documentKind || "Документ",
-        extracted: mergedText.length > 0,
-        statusLabel: mergedText.length > 0 ? "Текст извлечён" : "Текст не извлечён",
-        text: mergedText.slice(0, 6000),
-        note: preparedDocuments[0]?.extractionNote || "Файл подготовлен к анализу.",
+        documentKind: "Документ",
+        extracted: false,
+        statusLabel: "Читаю файл...",
+        text: "",
+        note: "Файл загружен. Идёт чтение и подготовка к анализу.",
       },
     });
   } catch (error) {

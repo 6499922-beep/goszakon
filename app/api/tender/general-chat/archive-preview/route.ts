@@ -3,10 +3,9 @@ import path from "node:path";
 import AdmZip from "adm-zip";
 import { NextResponse } from "next/server";
 import { getCurrentTenderUser } from "@/lib/admin-auth";
-import { startTenderChatAttachmentSummaryJob } from "@/lib/tender-general-chat";
+import { startTenderChatAttachmentPreparationJob } from "@/lib/tender-general-chat";
 import { getPrisma } from "@/lib/prisma";
 import { tenderHasCapability } from "@/lib/tender-permissions";
-import { prepareTenderUploadDocuments } from "@/lib/tender-intake";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -177,21 +176,8 @@ export async function POST(request: Request) {
     const model = process.env.OPENAI_CHAT_MODEL || process.env.OPENAI_MODEL || "gpt-5";
 
     for (const entry of documentEntries) {
-      const preparedDocuments = await prepareTenderUploadDocuments({
-        name: entry.fileName,
-        type: getMimeTypeByName(entry.fileName),
-        size: entry.buffer.byteLength,
-        buffer: entry.buffer,
-      });
-
-      const mergedText = preparedDocuments
-        .map((item) => item.extractedText?.trim())
-        .filter((item): item is string => Boolean(item))
-        .join("\n\n---\n\n")
-        .trim();
-
       const timestamp = Date.now();
-      const safeName = sanitizeAttachmentFileName(entry.fileName || preparedDocuments[0]?.title || "attachment");
+      const safeName = sanitizeAttachmentFileName(entry.fileName || "attachment");
       const storedFileName = `${timestamp}-${safeName || "attachment"}`;
       const relativeStoragePath = `/docs/general-chat/thread-${thread.id}/${storedFileName}`;
       const absoluteStoragePath = path.join(baseDir, storedFileName);
@@ -201,19 +187,19 @@ export async function POST(request: Request) {
         data: {
           threadId: thread.id,
           messageId: null,
-          title: preparedDocuments[0]?.title || entry.fileName,
+          title: entry.fileName,
           fileName: entry.fileName,
           mimeType: getMimeTypeByName(entry.fileName),
           fileSize: entry.buffer.byteLength,
           storagePath: relativeStoragePath,
-          documentKind: preparedDocuments[0]?.documentKind || "Документ",
-          extractionNote: preparedDocuments[0]?.extractionNote || "Файл подготовлен к анализу.",
-          extractedText: mergedText || null,
+          documentKind: "Документ",
+          extractionNote: "Файл загружен. Идёт чтение и разбор.",
+          extractedText: null,
         },
       });
 
-      if (apiKey && mergedText.length > 0) {
-        startTenderChatAttachmentSummaryJob({
+      if (apiKey) {
+        startTenderChatAttachmentPreparationJob({
           attachmentId: storedAttachment.id,
           apiKey,
           model,
@@ -223,11 +209,11 @@ export async function POST(request: Request) {
       createdAttachments.push({
         attachmentId: storedAttachment.id,
         fileName: entry.fileName,
-        documentKind: preparedDocuments[0]?.documentKind || "Документ",
-        extracted: mergedText.length > 0,
-        statusLabel: mergedText.length > 0 ? "Текст извлечён" : "Текст не извлечён",
-        note: preparedDocuments[0]?.extractionNote || "Файл подготовлен к анализу.",
-        text: mergedText.slice(0, 3000),
+        documentKind: "Документ",
+        extracted: false,
+        statusLabel: "Читаю файл...",
+        note: "Файл загружен. Идёт чтение и подготовка к анализу.",
+        text: "",
       });
     }
 

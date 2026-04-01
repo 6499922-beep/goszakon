@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SITE_CONTACTS } from "@/lib/site-config";
 
 export default function ProcurementReviewPage() {
   const situations = [
@@ -69,10 +70,10 @@ export default function ProcurementReviewPage() {
               </Link>
 
               <a
-                href="tel:84956680706"
+                href={SITE_CONTACTS.phoneHref}
                 className="rounded-2xl border border-slate-300 px-6 py-4 font-semibold transition hover:bg-slate-50"
               >
-                +7 936 135-03-03
+                {SITE_CONTACTS.phoneDisplay}
               </a>
             </div>
           </div>
@@ -164,17 +165,17 @@ export default function ProcurementReviewPage() {
 
             <div className="mt-8 flex flex-col gap-4">
               <a
-                href="tel:84956680706"
+                href={SITE_CONTACTS.phoneHref}
                 className="rounded-2xl bg-white px-6 py-4 text-center font-semibold text-[#081a4b] transition hover:bg-slate-100"
               >
-                Позвонить: +7 936 135-03-03
+                Позвонить: {SITE_CONTACTS.phoneDisplay}
               </a>
 
               <a
-                href="mailto:info@goszakon.ru"
+                href={SITE_CONTACTS.emailHref}
                 className="rounded-2xl border border-white/30 px-6 py-4 text-center font-semibold transition hover:bg-white/10"
               >
-                info@goszakon.ru
+                {SITE_CONTACTS.email}
               </a>
 
               <Link

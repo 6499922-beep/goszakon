@@ -50,6 +50,28 @@ export default async function HomePage() {
     "Работаем не только по спору, но и по выстраиванию закупочной практики команды.",
   ];
 
+  const problemScenarios = [
+    "жалоба в ФАС на документацию или отклонение заявки",
+    "неоплата по контракту и удержание денег из оплаты",
+    "риск включения в РНП или защита от включения",
+    "спорные условия закупки, нацрежим и ограничение конкуренции",
+  ];
+
+  const audienceRoutes = [
+    {
+      title: "Поставщикам",
+      text: "Жалобы в ФАС, РНП, неоплата, удержания, неустойка и судебная защита по закупочным конфликтам.",
+      href: "/postavshikam/riski",
+      cta: "Перейти к сценариям поставщика",
+    },
+    {
+      title: "Заказчикам",
+      text: "Аудит закупки, защита в ФАС, нацрежим, документация, оспаривание штрафов и сопровождение закупок.",
+      href: "/zakazchikam",
+      cta: "Перейти к разделу для заказчиков",
+    },
+  ];
+
   return (
     <main className="min-h-screen bg-transparent text-slate-900">
       <section className="border-b border-[color:var(--line)] bg-transparent">
@@ -60,32 +82,25 @@ export default async function HomePage() {
                 GOSZAKON • Правовая помощь в закупках
               </div>
 
-              <h1 className="mt-6 max-w-4xl text-5xl font-bold tracking-[-0.03em] text-[#081a4b] md:text-6xl xl:text-[78px] xl:leading-[0.94]">
-                Практика ФАС и защита интересов в закупках
+              <h1 className="mt-6 max-w-4xl text-5xl font-bold tracking-[-0.03em] text-[#081a4b] md:text-6xl xl:text-[72px] xl:leading-[0.94]">
+                Практика ФАС, споры по закупкам и защита интересов поставщиков и заказчиков
               </h1>
 
               <p className="mt-6 max-w-2xl text-[19px] leading-9 text-slate-700">
-                Помогаем поставщикам и заказчикам в закупочных спорах: жалобы в ФАС,
-                РНП, неоплата по контрактам, спорные условия документации,
-                судебная защита и правовая оценка перспектив спора.
+                Мы не общие юристы по тендерам, а практическая команда по закупочным конфликтам:
+                жалобы в ФАС, РНП, неоплата по контрактам, спорная документация,
+                неустойка, ограничения конкуренции и продолжение спора в суде.
               </p>
 
-              <p className="mt-4 max-w-2xl text-[19px] leading-9 text-slate-700">
-                Работаем по всей России: подключаемся онлайн, выезжаем к клиенту
-                и при необходимости обучаем команду, чтобы спорные закупочные
-                ситуации не повторялись.
-              </p>
-
-              <div className="accent-wash mt-8 rounded-3xl p-6">
-                <div className="text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6a3a]">
-                  Важно
-                </div>
-
-                <p className="mt-3 text-base leading-8 text-slate-700">
-                  База практики на сайте основана на реальной закупочной практике нашей команды,
-                  делах, в которых участвовали мы, и кейсах наших клиентов. Мы не просто
-                  пересказываем решения ФАС — мы работаем с этими спорами на практике.
-                </p>
+              <div className="mt-8 grid gap-3 md:grid-cols-2">
+                {problemScenarios.map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-2xl border border-[color:var(--line)] bg-[rgba(255,253,249,0.9)] px-5 py-4 text-sm font-medium leading-7 text-slate-700 shadow-sm"
+                  >
+                    {item}
+                  </div>
+                ))}
               </div>
 
               <div className="mt-8 flex flex-wrap gap-4">
@@ -136,7 +151,7 @@ export default async function HomePage() {
             <div className="xl:pt-16">
               <div className="hero-panel rounded-[32px] p-8">
                 <div className="text-sm uppercase tracking-[0.16em] text-[#8b6a3a]">
-                  Почему нам доверяют
+                  Почему сюда приходят
                 </div>
 
                 <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -158,9 +173,9 @@ export default async function HomePage() {
                   </div>
 
                   <p className="mt-3 text-base leading-8 text-white/90">
-                    Поэтому сайт построен не как абстрактный блог, а как рабочая база
-                    решений, выводов и спорных ситуаций, с которыми сталкиваются
-                    поставщики и заказчики в реальной работе.
+                    Поэтому сайт построен не как блог, а как рабочая база решений,
+                    конфликтов и правовых выводов, с которыми поставщики и заказчики
+                    реально сталкиваются в закупках.
                   </p>
 
                   <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -193,7 +208,42 @@ export default async function HomePage() {
 
       <section className="section-wash border-b border-[color:var(--line)]">
         <div className="mx-auto max-w-7xl px-6 py-20">
-          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="max-w-3xl">
+            <div className="inline-flex rounded-full border border-[color:var(--line)] bg-[rgba(255,253,249,0.92)] px-4 py-2 text-sm font-medium text-slate-600">
+              С чего начать
+            </div>
+
+            <h2 className="mt-5 text-4xl font-bold tracking-tight text-[#081a4b] md:text-5xl">
+              Быстрые входы по вашей ситуации
+            </h2>
+
+            <p className="mt-5 text-lg leading-9 text-slate-700">
+              На сайте уже есть два понятных маршрута: отдельно для поставщика в споре
+              и отдельно для заказчика, которому нужно выстроить закупку, защититься в ФАС
+              или пройти сложную процедуру без лишнего риска.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-2">
+            {audienceRoutes.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="hero-panel rounded-[32px] p-8 transition hover:-translate-y-1 hover:shadow-md"
+              >
+                <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#8b6a3a]">
+                  Маршрут
+                </div>
+                <h3 className="mt-4 text-3xl font-bold text-[#081a4b]">{item.title}</h3>
+                <p className="mt-4 text-base leading-8 text-slate-700">{item.text}</p>
+                <span className="mt-6 block text-sm font-semibold text-[#081a4b]">
+                  {item.cta} →
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          <div className="mt-12 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div>
               <div className="inline-flex rounded-full border border-[color:var(--line)] bg-[rgba(255,253,249,0.92)] px-4 py-2 text-sm font-medium text-slate-600">
                 Отдельное направление
@@ -268,12 +318,13 @@ export default async function HomePage() {
             </div>
 
             <h2 className="mt-5 text-4xl font-bold text-[#081a4b]">
-              Как устроен сайт
+              Где искать практику и рабочие выводы
             </h2>
 
             <p className="mt-5 text-lg leading-9 text-slate-700">
               Мы разделяем базу решений ФАС, типовые нарушения и аналитические материалы,
-              чтобы пользователю было проще найти нужную практику и понять правовую логику спора.
+              чтобы пользователю было проще быстро выйти на нужную практику и понять,
+              как строить правовую позицию по спору.
             </p>
           </div>
 

@@ -11,14 +11,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const ARCHIVE_FILE_PATTERN = /\.(zip|rar|7z)$/i;
 const MAX_HISTORY_MESSAGES = 8;
-const MAX_HISTORY_CHARS = 9000;
 const MAX_CURRENT_ATTACHMENT_BLOCKS = 12;
-const MAX_CURRENT_ATTACHMENT_BLOCK_CHARS = 4200;
-const MAX_CURRENT_ATTACHMENT_CONTEXT_CHARS = 30000;
+const MAX_CURRENT_ATTACHMENT_BLOCK_CHARS = 18000;
+const MAX_CURRENT_ATTACHMENT_CONTEXT_CHARS = 100000;
 const MAX_RECENT_ATTACHMENT_BLOCKS = 4;
-const MAX_RECENT_ATTACHMENT_BLOCK_CHARS = 2400;
-const MAX_RECENT_ATTACHMENT_CONTEXT_CHARS = 10000;
-const MAX_ATTACHMENT_SUMMARY_CHARS = 1800;
+const MAX_RECENT_ATTACHMENT_BLOCK_CHARS = 1600;
+const MAX_RECENT_ATTACHMENT_CONTEXT_CHARS = 5000;
 const PENDING_ASSISTANT_BODY = "__GENERAL_CHAT_PENDING__";
 const PENDING_ASSISTANT_PREFIX = `${PENDING_ASSISTANT_BODY}\n`;
 
@@ -510,7 +508,7 @@ async function resolvePendingAssistant({
           `Файл: ${item.title}`,
           `Тип: ${item.documentKind || "Документ"}`,
           `Статус чтения: ${item.extractionNote || "Файл сохранён на сервере"}`,
-          `Полная сводка по файлу: ${
+          `Полный извлечённый текст / OCR по файлу: ${
             item.summaryText?.trim() ||
             item.extractedText ||
             "Текст автоматически не извлечён. Используй это как ограничение и не придумывай содержимое документа."
@@ -572,6 +570,7 @@ async function resolvePendingAssistant({
 Ты — рабочий GPT-ассистент GOSZAKON внутри внутреннего чата.
 Отвечай по-русски, уверенно, конкретно и по существу.
 Главный источник истины сейчас — извлечённый текст по прикреплённым файлам этой реплики.
+Если по текущему файлу есть полный извлечённый текст или OCR, считай его основным содержанием документа и анализируй по нему максимально полно.
 
 Правила:
 - не придумывай факты;
@@ -580,6 +579,7 @@ async function resolvePendingAssistant({
 - не описывай внутреннюю кухню системы словами "реплика", "память", "выжимки", "prompt", "подготовка файлов";
 - не говори "у меня сейчас есть только часть файлов" или "файлы не подготовлены целиком";
 - если текста документа не хватает, говори по-человечески: "этот файл не удалось прочитать автоматически полностью" или "по этому документу не видно нужного фрагмента";
+- если полный текст по текущему документу виден, не ссылайся на "фрагменты" и не пиши, что документ не прочитан целиком;
 - если в видимых фрагментах уже есть достаточно фактов для содержательного вывода, сначала дай этот вывод по существу;
 - ограничения и оговорки выноси в конец коротким блоком "Что не видно из документов", а не ставь их в центр ответа;
 - не пиши фразы вроде "сейчас содержательно проанализировать нельзя", если по видимым фрагментам уже можно сделать рабочий вывод;

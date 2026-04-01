@@ -5,6 +5,12 @@ import { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { getCasePath } from "@/lib/cases";
 import { SITE_CONTACTS, SITE_URL } from "@/lib/site-config";
+import {
+  buildResultSummary,
+  buildSuccessRate,
+  buildTopRegions,
+  buildTopViolations,
+} from "@/lib/customer-case-stats";
 
 export const revalidate = 3600;
 
@@ -19,85 +25,6 @@ function normalizeInn(value: string) {
 function formatDate(value?: Date | null) {
   if (!value) return "Дата не указана";
   return new Intl.DateTimeFormat("ru-RU").format(value);
-}
-
-function buildResultSummary(items: Array<{ result?: string | null }>) {
-  let justified = 0;
-  let partial = 0;
-  let rejected = 0;
-
-  for (const item of items) {
-    const raw = (item.result || "").toLowerCase();
-
-    if (raw.includes("част")) {
-      partial += 1;
-      continue;
-    }
-
-    if (
-      raw.includes("обосн") ||
-      raw.includes("удовлетвор") ||
-      raw.includes("нарушени") ||
-      raw.includes("выдано предписание")
-    ) {
-      justified += 1;
-      continue;
-    }
-
-    if (
-      raw.includes("необосн") ||
-      raw.includes("отказ") ||
-      raw.includes("не выявлено") ||
-      raw.includes("оставлена без удовлетворения")
-    ) {
-      rejected += 1;
-    }
-  }
-
-  return {
-    justified,
-    partial,
-    rejected,
-  };
-}
-
-function buildTopViolations(items: Array<{ violation?: string | null }>) {
-  const counts = new Map<string, number>();
-
-  for (const item of items) {
-    const violation = (item.violation || "").trim();
-    if (!violation) continue;
-    counts.set(violation, (counts.get(violation) || 0) + 1);
-  }
-
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 4)
-    .map(([title, count]) => ({ title, count }));
-}
-
-function buildTopRegions(items: Array<{ region?: string | null }>) {
-  const counts = new Map<string, number>();
-
-  for (const item of items) {
-    const region = (item.region || "").trim();
-    if (!region) continue;
-    counts.set(region, (counts.get(region) || 0) + 1);
-  }
-
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([title, count]) => ({ title, count }));
-}
-
-function buildSuccessRate(params: {
-  totalCases: number;
-  justified: number;
-  partial: number;
-}) {
-  if (!params.totalCases) return 0;
-  return Math.round(((params.justified + params.partial) / params.totalCases) * 100);
 }
 
 function buildConclusion(params: {

@@ -51,6 +51,12 @@ export default function ViolationsPage() {
     "Искусственно короткие сроки поставки и иные неисполнимые условия документации.",
   ];
 
+  const complaintExamples = [
+    "В жалобах по товарному знаку участники обычно указывают, что описание товара не допускает реальной поставки эквивалента и фактически ориентировано на одного производителя.",
+    "По национальному режиму сильные жалобы строятся вокруг того, что заказчик неверно выбрал механизм ограничения, запрета или условия допуска и этим изменил результат закупки.",
+    "По документации поставщики часто указывают, что совокупность короткого срока поставки, специальных требований к производителю и избыточных документов делает участие формально открытым, но фактически недоступным.",
+  ];
+
   const weakerGrounds = [
     "Формальное несогласие с любым неудобным условием без связи с практикой ФАС.",
     "Жалоба на спорный пункт, который не повлиял на возможность участия или результат закупки.",
@@ -208,6 +214,22 @@ export default function ViolationsPage() {
                   <p className="text-base leading-8 text-slate-700">{item}</p>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6">
+              <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+                Как это звучит в жалобах
+              </div>
+              <div className="mt-4 space-y-4">
+                {complaintExamples.map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <p className="text-sm leading-7 text-slate-700">{item}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

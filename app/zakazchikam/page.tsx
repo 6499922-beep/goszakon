@@ -186,6 +186,46 @@ export default async function CustomersPage({ searchParams }: PageProps) {
     "Проводим практическое обучение команды по документации, нацрежиму, защите в ФАС и типовым ошибкам закупки.",
   ];
 
+  const routeCards = [
+    {
+      title: "До публикации закупки",
+      text: "Аудит документации, НМЦК, нацрежима, проекта договора и слабых мест процедуры до появления жалобы.",
+      href: "/zakazchikam/audit-zakupki",
+      cta: "Снять риски до публикации",
+    },
+    {
+      title: "Если жалоба уже подана",
+      text: "Быстро собираем позицию заказчика, подбираем документы и сопровождаем закупку на стадии ФАС.",
+      href: "/zakazchikam/zashita-v-fas",
+      cta: "Подготовить защиту в ФАС",
+    },
+    {
+      title: "Если уже есть штраф или предписание",
+      text: "Разбираем штраф за документацию, нацрежим или процедуру и помогаем оспаривать его дальше.",
+      href: "/zakazchikam/osparivanie-shtrafa-za-zakupochnuyu-dokumentaciyu",
+      cta: "Разобрать штраф или предписание",
+    },
+    {
+      title: "Если спор уже ушел в суд",
+      text: "Выстраиваем дальнейшую судебную защиту закупки, документации и позиции заказчика.",
+      href: "/zakazchikam/sudebnaya-zashita",
+      cta: "Перейти к судебной защите",
+    },
+  ];
+
+  const quickTools = [
+    {
+      title: "Статистика по контрагентам",
+      text: "Смотрите, у каких заказчиков жалобы встречаются чаще и по каким темам конфликт повторяется из раза в раз.",
+      href: "/zakazchikam/statistika-po-kontragentam",
+    },
+    {
+      title: "Риски закупки для заказчика",
+      text: "Карта типовых ошибок: документация, нацрежим, сроки поставки, ограничение конкуренции, проект договора.",
+      href: "/zakazchikam/riski-zakupki",
+    },
+  ];
+
   const riskBlocks = [
     "Закупка распадается уже после публикации, потому что слабая документация не выдерживает жалобу.",
     "ФАС видит нарушение там, где заказчик пытался решить практическую задачу, но оформил ее юридически слабо.",
@@ -235,6 +275,27 @@ export default async function CustomersPage({ searchParams }: PageProps) {
               </Link>
             </div>
           </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-2">
+            {routeCards.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-7 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
+              >
+                <div className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Маршрут
+                </div>
+                <h2 className="mt-3 text-2xl font-semibold leading-8 text-[#081a4b]">
+                  {item.title}
+                </h2>
+                <p className="mt-3 text-base leading-8 text-slate-700">{item.text}</p>
+                <div className="mt-5 text-sm font-semibold text-[#081a4b]">
+                  {item.cta} →
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -254,6 +315,27 @@ export default async function CustomersPage({ searchParams }: PageProps) {
               >
                 <p className="text-base leading-8 text-slate-700">{item}</p>
               </div>
+            ))}
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-2">
+            {quickTools.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Быстрый инструмент
+                </div>
+                <h2 className="mt-3 text-2xl font-semibold leading-8 text-[#081a4b]">
+                  {item.title}
+                </h2>
+                <p className="mt-3 text-base leading-8 text-slate-700">{item.text}</p>
+                <div className="mt-5 text-sm font-semibold text-[#081a4b]">
+                  Открыть →
+                </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -282,6 +364,19 @@ export default async function CustomersPage({ searchParams }: PageProps) {
 
       <section className="border-b border-slate-200 bg-slate-50">
         <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="mb-10 max-w-3xl">
+            <div className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+              Поиск по базе
+            </div>
+            <h2 className="mt-5 text-3xl font-bold tracking-tight text-[#081a4b] md:text-4xl">
+              Посмотреть, что уже происходило у конкретного заказчика
+            </h2>
+            <p className="mt-4 text-lg leading-8 text-slate-700">
+              Поиск по ИНН и наименованию помогает быстро понять, насколько конфликтная
+              практика уже видна по конкретному заказчику и какие темы жалоб повторяются.
+            </p>
+          </div>
+
           <CustomerInnSearch />
 
           {query ? (
@@ -343,7 +438,7 @@ export default async function CustomersPage({ searchParams }: PageProps) {
             </div>
           ) : null}
 
-          <div className="mb-10 max-w-3xl">
+          <div className="mb-10 mt-16 max-w-3xl">
             <h2 className="text-3xl font-bold tracking-tight text-[#081a4b] md:text-4xl">
               Чем помогаем заказчикам
             </h2>

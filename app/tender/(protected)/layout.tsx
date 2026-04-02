@@ -43,6 +43,9 @@ export default async function TenderProtectedLayout({
         ...(tenderHasCapability(role, "procurement_comments")
           ? [{ title: "GPT-чат", href: "/chat" }]
           : []),
+        ...(tenderHasCapability(role, "vpn_access")
+          ? [{ title: "VPN", href: "/vpn" }]
+          : []),
         ...(tenderHasCapability(role, "procurements_list")
           ? [{ title: "Загрузка и распознавание", href: "/procurements/new" }]
           : []),
@@ -52,6 +55,9 @@ export default async function TenderProtectedLayout({
         { title: "Загрузка и распознавание", href: "/procurements/new" },
         ...(tenderHasCapability(role, "procurement_comments")
           ? [{ title: "GPT-чат", href: "/chat" }]
+          : []),
+        ...(tenderHasCapability(role, "vpn_access")
+          ? [{ title: "VPN", href: "/vpn" }]
           : []),
         ...(tenderHasCapability(role, "procurements_list")
           ? [{ title: "Архив", href: "/procurements/archive" }]
@@ -72,6 +78,9 @@ export default async function TenderProtectedLayout({
           : []),
         ...(tenderHasCapability(role, "procurement_comments")
           ? [{ title: "GPT-чат", href: "/chat" }]
+          : []),
+        ...(tenderHasCapability(role, "vpn_access")
+          ? [{ title: "VPN", href: "/vpn" }]
           : []),
         ...(tenderHasCapability(role, "companies_manage")
           ? [{ title: "Компании", href: "/companies" }]

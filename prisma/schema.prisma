@@ -98,6 +98,7 @@ model Admin {
   chatThreads  TenderChatThread[]
   chatMessages TenderChatMessage[]
   promptConfigs TenderPromptConfig[]
+  vpnProfile   TenderVpnProfile?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -162,6 +163,21 @@ model TenderChatAttachment {
 
   @@index([threadId, createdAt])
   @@index([messageId])
+}
+
+model TenderVpnProfile {
+  id             Int      @id @default(autoincrement())
+  adminId        Int      @unique
+  label          String
+  endpoint       String
+  clientAddress  String   @unique
+  clientPublicKey String
+  serverPublicKey String
+  configText     String   @db.Text
+  isActive       Boolean  @default(true)
+  admin          Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 enum TenderUserRole {

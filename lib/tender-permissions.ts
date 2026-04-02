@@ -10,6 +10,8 @@ export type TenderCapability =
   | "procurement_documents"
   | "procurement_submission"
   | "procurement_comments"
+  | "vpn_access"
+  | "vpn_manage"
   | "companies_manage"
   | "rules_manage"
   | "users_manage"
@@ -27,6 +29,8 @@ const capabilityMatrix: Record<TenderUserRole, Set<TenderCapability>> = {
     "procurement_documents",
     "procurement_submission",
     "procurement_comments",
+    "vpn_access",
+    "vpn_manage",
     "companies_manage",
     "rules_manage",
     "users_manage",
@@ -38,11 +42,13 @@ const capabilityMatrix: Record<TenderUserRole, Set<TenderCapability>> = {
     "procurement_create",
     "procurement_initial",
     "procurement_comments",
+    "vpn_access",
   ]),
   [TenderUserRole.ANALYST]: new Set<TenderCapability>([
     "procurements_list",
     "procurement_pricing",
     "procurement_comments",
+    "vpn_access",
   ]),
   [TenderUserRole.MANAGER]: new Set<TenderCapability>([
     "overview",
@@ -54,6 +60,8 @@ const capabilityMatrix: Record<TenderUserRole, Set<TenderCapability>> = {
     "procurement_documents",
     "procurement_submission",
     "procurement_comments",
+    "vpn_access",
+    "vpn_manage",
     "companies_manage",
     "rules_manage",
     "users_manage",
@@ -65,15 +73,18 @@ const capabilityMatrix: Record<TenderUserRole, Set<TenderCapability>> = {
     "procurement_documents",
     "procurement_submission",
     "procurement_comments",
+    "vpn_access",
   ]),
   [TenderUserRole.FAS_SPECIALIST]: new Set<TenderCapability>([
     "procurements_list",
     "procurement_comments",
+    "vpn_access",
     "fas_access",
   ]),
   [TenderUserRole.FAS_MANAGER]: new Set<TenderCapability>([
     "procurements_list",
     "procurement_comments",
+    "vpn_access",
     "fas_access",
     "fas_manage",
   ]),

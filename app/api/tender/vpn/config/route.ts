@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const currentUser = await getCurrentTenderUser();
 
-  if (!currentUser || !tenderHasCapability(currentUser.role, "vpn_access")) {
+  if (!currentUser || !tenderHasCapability(currentUser.role, "vpn_manage")) {
     return NextResponse.json({ ok: false, error: "Недостаточно прав." }, { status: 403 });
   }
 

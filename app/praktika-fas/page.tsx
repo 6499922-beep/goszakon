@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getPrisma } from "@/lib/prisma";
 import { SITE_CONTACTS } from "@/lib/site-config";
 import { THEMATIC_PRACTICE_PAGES } from "@/lib/thematic-practice-pages";
 
@@ -9,7 +10,14 @@ export const metadata: Metadata = {
     "10 обзорных страниц по ключевым темам практики ФАС: товарный знак, национальный режим, отклонение заявок, условия оплаты, неустойка, сроки поставки и ограничения конкуренции.",
 };
 
-export default function FasPracticeHubPage() {
+export const dynamic = "force-dynamic";
+
+export default async function FasPracticeHubPage() {
+  const prisma = getPrisma();
+  const publishedCaseCount = await prisma.case.count({
+    where: { published: true },
+  });
+
   return (
     <main className="min-h-screen bg-transparent text-slate-900">
       <section className="border-b border-[color:var(--line)] bg-transparent">
@@ -27,7 +35,8 @@ export default function FasPracticeHubPage() {
               задерживают оплату и создают спор уже на стадии документации.
             </p>
             <p className="mt-4 max-w-3xl text-lg leading-9 text-slate-700">
-              Здесь удобно начинать с темы, а не с одного кейса: так быстрее
+              Мы уже сами собрали {publishedCaseCount} решений и жалоб ФАС и разложили
+              их так, чтобы удобно было начинать с темы, а не с одного кейса: так быстрее
               понять, какие доводы обычно работают, где заказчик чаще ошибается
               и на чем вообще строится сильная жалоба в ФАС.
             </p>

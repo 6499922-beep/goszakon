@@ -8,16 +8,21 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const prisma = getPrisma();
 
-  const latestMaterials = await prisma.material.findMany({
-    where: { isPublished: true },
-    orderBy: [
-      { isFeatured: "desc" },
-      { decisionDate: "desc" },
-      { publishedAt: "desc" },
-      { updatedAt: "desc" },
-    ],
-    take: 3,
-  });
+  const [latestMaterials, publishedCaseCount] = await Promise.all([
+    prisma.material.findMany({
+      where: { isPublished: true },
+      orderBy: [
+        { isFeatured: "desc" },
+        { decisionDate: "desc" },
+        { publishedAt: "desc" },
+        { updatedAt: "desc" },
+      ],
+      take: 3,
+    }),
+    prisma.case.count({
+      where: { published: true },
+    }),
+  ]);
 
   const services = [
     {
@@ -177,6 +182,17 @@ export default async function HomePage() {
                     конфликтов и правовых выводов, с которыми поставщики и заказчики
                     реально сталкиваются в закупках.
                   </p>
+
+                  <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-sm font-semibold uppercase tracking-[0.12em] text-white/60">
+                      Что уже собрано
+                    </div>
+                    <p className="mt-2 text-sm leading-7 text-white/90">
+                      Мы уже сами собрали и разложили {publishedCaseCount} решений и
+                      жалоб ФАС по нарушениям, регионам, заказчикам и типовым
+                      закупочным конфликтам.
+                    </p>
+                  </div>
 
                   <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="text-sm font-semibold uppercase tracking-[0.12em] text-white/60">

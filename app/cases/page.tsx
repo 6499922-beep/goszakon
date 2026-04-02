@@ -159,7 +159,14 @@ export default async function CasesPage({ searchParams }: PageProps) {
       : {}),
   };
 
-  const totalCount = await prisma.case.count({ where });
+  const [totalPublishedCount, totalCount] = await Promise.all([
+    prisma.case.count({
+      where: {
+        published: true,
+      },
+    }),
+    prisma.case.count({ where }),
+  ]);
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const skip = (safePage - 1) * PAGE_SIZE;
@@ -256,7 +263,8 @@ export default async function CasesPage({ searchParams }: PageProps) {
                 Поиск по базе
               </span>
               <span className="text-sm text-slate-500">
-                Начните с номера закупки, ИНН, заказчика или типа нарушения
+                Мы уже собрали и разложили {totalPublishedCount} жалоб и решений ФАС.
+                Начните с номера закупки, ИНН, заказчика или типа нарушения.
               </span>
             </div>
 
@@ -404,9 +412,11 @@ export default async function CasesPage({ searchParams }: PageProps) {
           </h1>
 
           <p className="mt-4 text-lg leading-8 text-slate-600">
-            Не просто архив решений, а рабочая база по закупочным спорам. Ищите
-            практику по номеру закупки, ИНН заказчика, нарушению, категории,
-            региону или типу результата.
+            Это не просто архив решений, а база, которую мы сами собираем,
+            перечитываем и раскладываем по нарушениям, заказчикам, регионам и
+            типовым закупочным спорам. Сейчас в ней уже {totalPublishedCount} решений
+            и жалоб ФАС. Ищите практику по номеру закупки, ИНН заказчика,
+            нарушению, категории, региону или типу результата.
           </p>
         </div>
 
